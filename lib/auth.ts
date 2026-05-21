@@ -1,0 +1,93 @@
+import type { NextAuthOptions } from "next-auth"
+import CredentialsProvider from "next-auth/providers/credentials"
+
+const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000"
+
+export const authOptions: NextAuthOptions = {
+  providers: [
+    CredentialsProvider({
+      name: "Credentials",
+      credentials: {
+        email: { label: "Email", type: "email" },
+        password: { label: "Password", type: "password" },
+        isRegister: { label: "Is Register", type: "text" },
+        id: { label: "ID", type: "text" },
+        name: { label: "Name", type: "text" },
+        token: { label: "Token", type: "text" },
+      },
+      async authorize(credentials) {
+        if (credentials?.isRegister === "true") {
+          return {
+            id: credentials.id as string,
+            name: credentials.name as string,
+            email: credentials.email as string,
+            accessToken: credentials.token as string,
+          }
+        }
+
+        if (!credentials?.email || !credentials?.password) return null
+
+        try {
+          const res = await fetch(`${API_URL}/auth/login`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json", Accept: "application/json" },
+            body: JSON.stringify({
+              email: credentials.email,
+              password: credentials.password,
+            }),
+          })
+
+          const data = await res.json().catch(() => null)
+
+          if (!res.ok || !data?.success) {
+            throw new Error(data?.message || "Invalid email or password")
+          }
+
+          const user = data?.data?.user || data?.user
+          const token = data?.data?.token || data?.token
+
+          if (user && token) {
+            return {
+              id: String(user.id),
+              name: user.name ?? user.full_name ?? "",
+              email: user.email,
+              accessToken: token,
+            }
+          }
+          
+          throw new Error("Invalid response from server")
+        } catch (error: any) {
+          throw new Error(error.message || "An error occurred during login")
+        }
+      },
+    }),
+  ],
+
+  callbacks: {
+    async jwt({ token, user }) {
+      if (user) {
+        token.accessToken = (user as typeof user & { accessToken: string }).accessToken
+        token.id = user.id
+      }
+      return token
+    },
+    async session({ session, token }) {
+      if (session.user) {
+        ; (session as typeof session & { accessToken: string }).accessToken = token.accessToken as string
+          ; (session.user as typeof session.user & { id: string }).id = token.id as string
+      }
+      return session
+    },
+  },
+
+  pages: {
+    signIn: "/login",
+    error: "/login",
+  },
+
+  session: {
+    strategy: "jwt",
+  },
+
+  secret: process.env.NEXTAUTH_SECRET,
+}
