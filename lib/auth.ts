@@ -1,10 +1,15 @@
 import type { NextAuthOptions } from "next-auth"
 import CredentialsProvider from "next-auth/providers/credentials"
+import GoogleProvider from "next-auth/providers/google"
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000"
 
 export const authOptions: NextAuthOptions = {
   providers: [
+    GoogleProvider({
+      clientId: process.env.GOOGLE_CLIENT_ID as string,
+      clientSecret: process.env.GOOGLE_CLIENT_SECRET as string,
+    }),
     CredentialsProvider({
       name: "Credentials",
       credentials: {
@@ -54,7 +59,7 @@ export const authOptions: NextAuthOptions = {
               accessToken: token,
             }
           }
-          
+
           throw new Error("Invalid response from server")
         } catch (error: any) {
           throw new Error(error.message || "An error occurred during login")
@@ -64,8 +69,45 @@ export const authOptions: NextAuthOptions = {
   ],
 
   callbacks: {
-    async jwt({ token, user }) {
-      if (user) {
+    async signIn({ account, profile, user }) {
+      if (account?.provider === "google") {
+        try {
+          // Send the Google access token to Laravel to verify and get/create a user
+          const response = await fetch(`${API_URL}/auth/google`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json", Accept: "application/json" },
+            body: JSON.stringify({
+              id_token: account.access_token,
+            }),
+          });
+
+          const data = await response.json();
+          const backendToken = data?.data?.token || data?.token;
+          const backendUser = data?.data?.user || data?.user;
+
+          if (response.ok && backendToken) {
+            // Mutate account object so the backend token is passed to the jwt callback
+            (account as any).backendToken = backendToken;
+            (account as any).backendUserId = backendUser?.id ? String(backendUser.id) : user.id;
+            return true;
+          }
+          return false; // Deny sign-in if Laravel backend fails or no token returned
+        } catch (error) {
+          console.error("Google signIn error:", error);
+          return false;
+        }
+      }
+      return true;
+    },
+
+    async jwt({ token, user, account }) {
+      if (account?.provider === "google") {
+        // This runs only on initial sign in for OAuth
+        if ((account as any).backendToken) {
+          token.accessToken = (account as any).backendToken;
+          token.id = (account as any).backendUserId;
+        }
+      } else if (user) {
         token.accessToken = (user as typeof user & { accessToken: string }).accessToken
         token.id = user.id
       }
