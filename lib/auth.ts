@@ -72,7 +72,7 @@ export const authOptions: NextAuthOptions = {
     async signIn({ account, profile, user }) {
       if (account?.provider === "google") {
 
-        console.info("account", account)
+        console.info("accountt", account)
         try {
           const response = await fetch(`${API_URL}/auth/google`, {
             method: "POST",
@@ -82,7 +82,9 @@ export const authOptions: NextAuthOptions = {
             }),
           });
 
-          console.info("response", response);
+          console.info("Access Token: ", account.access_token)
+
+          console.info("Response", response);
 
           const data = await response.json();
           const backendToken = data?.data?.token || data?.token;
