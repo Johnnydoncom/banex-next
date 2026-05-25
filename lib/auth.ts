@@ -71,6 +71,9 @@ export const authOptions: NextAuthOptions = {
   callbacks: {
     async signIn({ account, profile, user }) {
       if (account?.provider === "google") {
+
+        console.log("user", user)
+        console.info("account", account)
         try {
           // Send the Google access token to Laravel to verify and get/create a user
           const response = await fetch(`${API_URL}/auth/google`, {
