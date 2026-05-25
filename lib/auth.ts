@@ -80,9 +80,11 @@ export const authOptions: NextAuthOptions = {
             method: "POST",
             headers: { "Content-Type": "application/json", Accept: "application/json" },
             body: JSON.stringify({
-              id_token: account.access_token,
+              id_token: account?.access_token,
             }),
           });
+
+          console.info("response", response);
 
           const data = await response.json();
           const backendToken = data?.data?.token || data?.token;
