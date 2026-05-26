@@ -72,11 +72,8 @@ export const authOptions: NextAuthOptions = {
     async signIn({ account, profile, user }) {
       if (account?.provider === "google") {
 
-        console.info("accountt", account)
-        console.info("profile", profile)
-        console.info("user", user)
-
         try {
+
           const response = await fetch(`${API_URL}/auth/google`, {
             method: "POST",
             headers: { "Content-Type": "application/json", Accept: "application/json" },
@@ -84,10 +81,6 @@ export const authOptions: NextAuthOptions = {
               id_token: account.id_token
             }),
           });
-
-          console.info("Access Token: ", account.access_token)
-
-          console.info("Response", response);
 
           const data = await response.json();
           const backendToken = data?.data?.token || data?.token;
