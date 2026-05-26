@@ -73,6 +73,9 @@ export const authOptions: NextAuthOptions = {
       if (account?.provider === "google") {
 
         console.info("accountt", account)
+        console.info("profile", profile)
+        console.info("user", user)
+
         try {
           const response = await fetch(`${API_URL}/auth/google`, {
             method: "POST",
