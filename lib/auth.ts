@@ -81,7 +81,7 @@ export const authOptions: NextAuthOptions = {
             method: "POST",
             headers: { "Content-Type": "application/json", Accept: "application/json" },
             body: JSON.stringify({
-              id_token: account.access_token
+              id_token: account.id_token
             }),
           });
 
