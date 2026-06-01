@@ -44,6 +44,8 @@ export const authOptions: NextAuthOptions = {
 
           const data = await res.json().catch(() => null)
 
+          console.info("LoginData: ", data)
+
           if (!res.ok || !data?.success) {
             throw new Error(data?.message || "Invalid email or password")
           }
@@ -56,6 +58,7 @@ export const authOptions: NextAuthOptions = {
               id: String(user.id),
               name: user.name ?? user.full_name ?? "",
               email: user.email,
+              role: user.type,
               accessToken: token,
             }
           }
@@ -83,6 +86,9 @@ export const authOptions: NextAuthOptions = {
           });
 
           const data = await response.json();
+
+          console.info("GoogleLoginData: ", data)
+
           const backendToken = data?.data?.token || data?.token;
           const backendUser = data?.data?.user || data?.user;
 
@@ -90,6 +96,7 @@ export const authOptions: NextAuthOptions = {
             // Mutate account object so the backend token is passed to the jwt callback
             (account as any).backendToken = backendToken;
             (account as any).backendUserId = backendUser?.id ? String(backendUser.id) : user.id;
+            (account as any).backendUserType = backendUser?.type;
             return true;
           }
           return false; // Deny sign-in if Laravel backend fails or no token returned
@@ -107,10 +114,12 @@ export const authOptions: NextAuthOptions = {
         if ((account as any).backendToken) {
           token.accessToken = (account as any).backendToken;
           token.id = (account as any).backendUserId;
+          token.role = (account as any).backendUserType;
         }
       } else if (user) {
         token.accessToken = (user as typeof user & { accessToken: string }).accessToken
         token.id = user.id
+        token.role = (user as any).type
       }
       return token
     },
@@ -118,6 +127,7 @@ export const authOptions: NextAuthOptions = {
       if (session.user) {
         ; (session as typeof session & { accessToken: string }).accessToken = token.accessToken as string
           ; (session.user as typeof session.user & { id: string }).id = token.id as string
+          ; (session.user as any).role = token.type as string
       }
       return session
     },
