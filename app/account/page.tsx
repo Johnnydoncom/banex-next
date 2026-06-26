@@ -102,37 +102,72 @@ export default function AccountOverview() {
         <StatCard label="Addresses" value={counts.addresses} icon={MapPin} accent="amber" />
       </section>
 
-      <section className="rounded-2xl border border-border bg-card">
-        <div className="flex items-center justify-between border-b border-border px-5 py-4">
-          <p className="font-display text-sm font-semibold">Recent orders</p>
-          <Link href="/account/orders" className="text-xs font-medium text-brand hover:underline">See all</Link>
-        </div>
-        {orders.length === 0 ? (
-          <div className="px-5 py-10 text-center">
-            <p className="text-sm font-medium">No orders yet</p>
-            <p className="mt-1 text-xs text-muted-foreground">Your purchases will appear here.</p>
-            <Link href="/shop" className="mt-4 inline-flex rounded-full bg-gradient-brand px-4 py-2 text-xs font-semibold text-primary-foreground">
-              Browse the mall
+      {/* Vendor CTA */}
+      {user && (user as any)?.type !== "vendor" && (user as any)?.type !== "admin" && (
+        <section className="flex flex-col sm:flex-row items-center justify-between gap-4 rounded-2xl border border-brand/20 bg-gradient-to-r from-brand/10 to-brand/5 p-6">
+          <div>
+            <h2 className="font-display text-lg font-bold">Start Selling on Banex Mall</h2>
+            <p className="mt-1 text-sm text-muted-foreground">Open your store, reach thousands of customers, and grow your business today.</p>
+          </div>
+          <Link href="/account/become-vendor" className="inline-flex flex-none items-center gap-2 rounded-xl bg-gradient-brand px-6 py-3 text-sm font-semibold text-primary-foreground shadow-brand">
+            Become a Vendor
+          </Link>
+        </section>
+      )}
+
+      <div className="grid gap-6 lg:grid-cols-3">
+        <section className="lg:col-span-2 rounded-2xl border border-border bg-card">
+          <div className="flex items-center justify-between border-b border-border px-5 py-4">
+            <p className="font-display text-sm font-semibold">Recent orders</p>
+            <Link href="/account/orders" className="text-xs font-medium text-brand hover:underline">See all</Link>
+          </div>
+          {orders.length === 0 ? (
+            <div className="px-5 py-10 text-center">
+              <p className="text-sm font-medium">No orders yet</p>
+              <p className="mt-1 text-xs text-muted-foreground">Your purchases will appear here.</p>
+              <Link href="/shop" className="mt-4 inline-flex rounded-full bg-gradient-brand px-4 py-2 text-xs font-semibold text-primary-foreground">
+                Browse the mall
+              </Link>
+            </div>
+          ) : (
+            <ul className="divide-y divide-border">
+              {orders.map((o) => (
+                <li key={o.id} className="flex items-center justify-between gap-3 px-5 py-3.5">
+                  <div className="min-w-0">
+                    <p className="truncate text-sm font-semibold">{o.order_number}</p>
+                    <p className="text-[11px] text-muted-foreground">
+                      {new Date(o.created_at).toLocaleDateString()} · ₦{Number(o.total).toLocaleString()}
+                    </p>
+                  </div>
+                  <span className={`rounded-full px-2.5 py-1 text-[10px] font-semibold uppercase ${statusTone(o.status)}`}>
+                    {o.status}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          )}
+        </section>
+
+        <section className="rounded-2xl border border-border bg-card">
+          <div className="border-b border-border px-5 py-4">
+            <p className="font-display text-sm font-semibold">Quick Links</p>
+          </div>
+          <div className="p-3">
+            <Link href="/account/profile" className="flex items-center justify-between rounded-xl px-3 py-2.5 text-sm font-medium hover:bg-surface">
+              Account Details <ArrowRight className="h-4 w-4 text-muted-foreground" />
+            </Link>
+            <Link href="/account/addresses" className="flex items-center justify-between rounded-xl px-3 py-2.5 text-sm font-medium hover:bg-surface">
+              Delivery Addresses <ArrowRight className="h-4 w-4 text-muted-foreground" />
+            </Link>
+            <Link href="/account/settings" className="flex items-center justify-between rounded-xl px-3 py-2.5 text-sm font-medium hover:bg-surface">
+              Change Password <ArrowRight className="h-4 w-4 text-muted-foreground" />
+            </Link>
+            <Link href="/contact" className="flex items-center justify-between rounded-xl px-3 py-2.5 text-sm font-medium hover:bg-surface">
+              Help & Support <ArrowRight className="h-4 w-4 text-muted-foreground" />
             </Link>
           </div>
-        ) : (
-          <ul className="divide-y divide-border">
-            {orders.map((o) => (
-              <li key={o.id} className="flex items-center justify-between gap-3 px-5 py-3.5">
-                <div className="min-w-0">
-                  <p className="truncate text-sm font-semibold">{o.order_number}</p>
-                  <p className="text-[11px] text-muted-foreground">
-                    {new Date(o.created_at).toLocaleDateString()} · ₦{Number(o.total).toLocaleString()}
-                  </p>
-                </div>
-                <span className={`rounded-full px-2.5 py-1 text-[10px] font-semibold uppercase ${statusTone(o.status)}`}>
-                  {o.status}
-                </span>
-              </li>
-            ))}
-          </ul>
-        )}
-      </section>
+        </section>
+      </div>
     </div>
   )
 }

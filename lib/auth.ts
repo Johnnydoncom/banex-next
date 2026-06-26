@@ -119,7 +119,7 @@ export const authOptions: NextAuthOptions = {
       } else if (user) {
         token.accessToken = (user as typeof user & { accessToken: string }).accessToken
         token.id = user.id
-        token.role = (user as any).type
+        token.role = (user as any).role
       }
       return token
     },
@@ -127,7 +127,7 @@ export const authOptions: NextAuthOptions = {
       if (session.user) {
         ; (session as typeof session & { accessToken: string }).accessToken = token.accessToken as string
           ; (session.user as typeof session.user & { id: string }).id = token.id as string
-          ; (session.user as any).role = token.type as string
+          ; (session.user as any).role = token.role as string
       }
       return session
     },
