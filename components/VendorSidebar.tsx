@@ -3,27 +3,28 @@
 import Link from "next/link"
 import { Star, MapPin, Bike, Store, Search } from "lucide-react"
 import { useMemo, useState } from "react"
-import { vendors, sortedByProminence, type Vendor } from "@/lib/vendors"
+import { GenericSeller } from "@/lib/generic-api"
 
 type Props = {
+  sellers: GenericSeller[]
   selectedSlug?: string
   onSelect?: (slug: string | undefined) => void
   filterCategory?: string
 }
 
-export function VendorSidebar({ selectedSlug, onSelect, filterCategory }: Props) {
+export function VendorSidebar({ sellers, selectedSlug, onSelect, filterCategory }: Props) {
   const [q, setQ] = useState("")
   const list = useMemo(() => {
-    let v: Vendor[] = sortedByProminence
+    let v: GenericSeller[] = sellers
     if (filterCategory && filterCategory !== "all") {
-      v = v.filter((x) => x.categories.includes(filterCategory))
+      v = v.filter((x) => x.category?.slug === filterCategory)
     }
     if (q.trim()) {
       const s = q.toLowerCase()
-      v = v.filter((x) => x.name.toLowerCase().includes(s) || x.tagline.toLowerCase().includes(s))
+      v = v.filter((x) => x.shop_name?.toLowerCase().includes(s) || x.description?.toLowerCase().includes(s))
     }
     return v
-  }, [q, filterCategory])
+  }, [q, filterCategory, sellers])
 
   return (
     <aside className="rounded-2xl border border-border bg-card">
@@ -32,7 +33,7 @@ export function VendorSidebar({ selectedSlug, onSelect, filterCategory }: Props)
           <Store className="h-4 w-4 text-brand" /> Mall vendors
         </p>
         <Link href="/vendors" className="text-[11px] font-medium text-brand hover:underline">
-          All ({vendors.length})
+          All ({sellers.length})
         </Link>
       </div>
       <div className="border-b border-border px-3 py-2.5">
@@ -70,26 +71,30 @@ export function VendorSidebar({ selectedSlug, onSelect, filterCategory }: Props)
                 }`}
               >
                 <div className="relative h-11 w-11 flex-none overflow-hidden rounded-lg">
-                  <img src={v.avatar} alt={v.name} className="h-full w-full object-cover" loading="lazy" />
-                  {v.tier === "Anchor" && (
+                  <img src={v.cover_image_url || "/assets/placeholder.jpg"} alt={v.shop_name} className="h-full w-full object-cover" loading="lazy" />
+                  {v.tier === "premium" && (
                     <span className="absolute -right-1 -top-1 rounded-full bg-gradient-brand px-1 text-[8px] font-bold text-primary-foreground">★</span>
                   )}
                 </div>
                 <div className="min-w-0 flex-1">
                   <p className="flex items-center gap-1 truncate text-xs font-semibold text-foreground">
-                    {v.name}
-                    <span className={`h-1.5 w-1.5 flex-none rounded-full ${v.openNow ? "bg-emerald-500" : "bg-muted-foreground/40"}`} />
+                    {v.shop_name}
+                    <span className={`h-1.5 w-1.5 flex-none rounded-full ${v.is_open ? "bg-emerald-500" : "bg-muted-foreground/40"}`} />
                   </p>
-                  <p className="mt-0.5 flex items-center gap-2 text-[10px] text-muted-foreground">
-                    <span className="inline-flex items-center gap-0.5">
-                      <Star className="h-2.5 w-2.5 fill-brand text-brand" /> {v.rating}
-                    </span>
-                    <span className="inline-flex items-center gap-0.5">
-                      <MapPin className="h-2.5 w-2.5" /> {v.stall}
-                    </span>
-                    {v.deliveryMins > 0 && (
+                  <p className="mt-0.5 flex flex-wrap items-center gap-2 text-[10px] text-muted-foreground">
+                    {v.rating_average && (
                       <span className="inline-flex items-center gap-0.5">
-                        <Bike className="h-2.5 w-2.5" /> {v.deliveryMins}m
+                        <Star className="h-2.5 w-2.5 fill-brand text-brand" /> {v.rating_average}
+                      </span>
+                    )}
+                    {v.location && (
+                      <span className="inline-flex items-center gap-0.5">
+                        <MapPin className="h-2.5 w-2.5" /> {v.location}
+                      </span>
+                    )}
+                    {v.delivery_estimate_minutes && (
+                      <span className="inline-flex items-center gap-0.5">
+                        <Bike className="h-2.5 w-2.5" /> {v.delivery_estimate_minutes}m
                       </span>
                     )}
                   </p>

@@ -1,29 +1,37 @@
-"use client"
-
 import Link from "next/link"
-import { useParams, notFound, useRouter } from "next/navigation"
-import { motion } from "framer-motion"
+import { notFound } from "next/navigation"
 import {
   Star, Bike, MapPin, Clock, Phone, MessageCircle, ShieldCheck,
   Store, Navigation, Package, ChevronLeft, BadgeCheck,
 } from "lucide-react"
 import { Header } from "@/components/Header"
 import { Footer } from "@/components/Footer"
-import { ProductCard } from "@/components/ProductCard"
-import { getVendor } from "@/lib/vendors"
-import { products, formatNaira, type Product } from "@/lib/products"
-import { useCart } from "@/components/CartContext"
-import { toast } from "sonner"
+import { ApiProductCard } from "@/components/ApiProductCard"
+import { fetchGenericSeller } from "@/lib/generic-api"
+import { VendorOrderAll, VendorQuickOrder } from "./components/VendorActions"
+import type { Metadata } from "next"
 
-export default function VendorPage() {
-  const params = useParams()
-  const slug = typeof params?.slug === "string" ? params.slug : ""
-  const vendor = getVendor(slug)
-  const router = useRouter()
+export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
+  try {
+    const resolvedParams = await params
+    const { seller } = await fetchGenericSeller(resolvedParams.slug)
+    if (seller) {
+      return { title: `${seller.shop_name} | Banex Mall`, description: seller.description || `Shop from ${seller.shop_name} on Banex Mall` }
+    }
+  } catch (e) {}
+  return { title: "Vendor | Banex Mall" }
+}
 
-  const { add, open } = useCart()
+export default async function VendorPage({ params }: { params: Promise<{ slug: string }> }) {
+  let sellerData;
+  try {
+    const resolvedParams = await params
+    sellerData = await fetchGenericSeller(resolvedParams.slug)
+  } catch(e) {
+    // If not found
+  }
 
-  if (!vendor) {
+  if (!sellerData?.seller) {
     return (
       <div className="flex min-h-screen flex-col items-center justify-center px-4">
         <h1 className="font-display text-4xl">Vendor not found</h1>
@@ -32,29 +40,15 @@ export default function VendorPage() {
     )
   }
 
-  const items = products.filter((p) => vendor.productSlugs.includes(p.slug))
-
-  const orderInStore = (item: (typeof items)[number]) => {
-    const seller = item.sellers[0]
-    add({
-      id: `${item.id}-${seller.id}`,
-      productId: item.id, productSlug: item.slug, productName: item.name, productImage: item.image,
-      sellerId: vendor.id, sellerName: vendor.name, price: seller.price,
-    })
-    toast.success(`Added · rider ETA ${vendor.deliveryMins} min`)
-    open()
-  }
-
-  const orderAll = () => {
-    if (!items.length) return
-    const item = items[0]
-    const seller = item.sellers[0]
-    add({
-      id: `${item.id}-${vendor.id}`,
-      productId: item.id, productSlug: item.slug, productName: item.name, productImage: item.image,
-      sellerId: vendor.id, sellerName: vendor.name, price: seller.price,
-    })
-    router.push("/checkout")
+  const vendor = sellerData.seller
+  const items = sellerData.products || []
+  
+  const formatNaira = (amount: number) => {
+    return new Intl.NumberFormat("en-NG", {
+      style: "currency",
+      currency: "NGN",
+      maximumFractionDigits: 0,
+    }).format(amount)
   }
 
   return (
@@ -70,27 +64,24 @@ export default function VendorPage() {
       {/* Vendor hero */}
       <section className="mx-auto max-w-7xl px-4 py-6 md:px-8">
         <div className="relative overflow-hidden rounded-3xl border border-border">
-          <img src={vendor.banner} alt={vendor.name} className="h-56 w-full object-cover md:h-72" />
+          <img src={vendor.cover_image_url || "/assets/placeholder.jpg"} alt={vendor.shop_name} className="h-56 w-full object-cover md:h-72" />
           <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/30 to-transparent" />
           <div className="absolute inset-x-0 bottom-0 p-6 text-white md:p-8">
             <div className="flex flex-wrap items-center gap-2">
-              {vendor.tier === "Anchor" && (
-                <span className="rounded-full bg-gradient-brand px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider shadow-soft">★ Anchor tenant</span>
-              )}
-              {vendor.tier === "Premium" && (
+              {vendor.tier === "premium" && (
                 <span className="rounded-full bg-card/90 px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-brand-deep">Premium</span>
               )}
-              {vendor.verified && (
+              {vendor.is_kyc_verified && (
                 <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500 px-2 py-0.5 text-[10px] font-semibold">
                   <BadgeCheck className="h-3 w-3" /> Verified
                 </span>
               )}
-              <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-semibold ${vendor.openNow ? "bg-emerald-500" : "bg-muted/80 text-foreground"}`}>
-                <span className={`h-1.5 w-1.5 rounded-full ${vendor.openNow ? "bg-white" : "bg-foreground"}`} /> {vendor.openNow ? "Open now" : "Closed"}
+              <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-semibold ${vendor.is_open ? "bg-emerald-500" : "bg-muted/80 text-foreground"}`}>
+                <span className={`h-1.5 w-1.5 rounded-full ${vendor.is_open ? "bg-white" : "bg-foreground"}`} /> {vendor.is_open ? "Open now" : "Closed"}
               </span>
             </div>
-            <h1 className="mt-3 font-display text-3xl font-extrabold drop-shadow md:text-5xl">{vendor.name}</h1>
-            <p className="mt-1 max-w-2xl text-sm opacity-95 md:text-base">{vendor.tagline}</p>
+            <h1 className="mt-3 font-display text-3xl font-extrabold drop-shadow md:text-5xl">{vendor.shop_name}</h1>
+            <p className="mt-1 max-w-2xl text-sm opacity-95 md:text-base">{vendor.description}</p>
           </div>
         </div>
       </section>
@@ -98,13 +89,13 @@ export default function VendorPage() {
       {/* Meta strip */}
       <section className="mx-auto max-w-7xl px-4 md:px-8">
         <div className="grid gap-3 rounded-2xl border border-border bg-card p-4 sm:grid-cols-2 md:grid-cols-4 md:p-5">
-          <Meta icon={Star} label="Rating" value={`${vendor.rating} · ${vendor.reviews} reviews`} />
-          <Meta icon={MapPin} label="In-store" value={`${vendor.floor} floor · Stall ${vendor.stall}`} />
-          <Meta icon={Clock} label="Hours" value={vendor.hours} />
+          <Meta icon={Star} label="Rating" value={`${vendor.rating_average || "New"} · ${vendor.reviews_count || 0} reviews`} />
+          <Meta icon={MapPin} label="In-store" value={vendor.location || "Banex Mall"} />
+          <Meta icon={Clock} label="Hours" value="9 AM - 6 PM" />
           <Meta
             icon={Bike}
             label="Rider delivery"
-            value={vendor.deliveryMins ? `${vendor.deliveryMins} min · ${formatNaira(vendor.riderFee)}` : "Visit / pickup"}
+            value={vendor.delivery_estimate_minutes ? `${vendor.delivery_estimate_minutes} min · ${formatNaira(vendor.delivery_fee || 0)}` : "Visit / pickup"}
           />
         </div>
       </section>
@@ -112,13 +103,7 @@ export default function VendorPage() {
       {/* CTAs */}
       <section className="mx-auto max-w-7xl px-4 py-6 md:px-8">
         <div className="flex flex-wrap gap-3">
-          <button
-            onClick={orderAll}
-            disabled={!items.length}
-            className="inline-flex items-center gap-2 rounded-full bg-gradient-brand px-5 py-3 text-sm font-semibold text-primary-foreground disabled:opacity-60"
-          >
-            <Bike className="h-4 w-4" /> Order from this shop
-          </button>
+          <VendorOrderAll items={items} vendor={vendor} />
           <Link
             href="/mall-map"
             className="inline-flex items-center gap-2 rounded-full border border-border bg-card px-5 py-3 text-sm font-semibold hover:border-brand hover:text-brand"
@@ -126,13 +111,13 @@ export default function VendorPage() {
             <Navigation className="h-4 w-4" /> Visit in-store
           </Link>
           <a
-            href={`tel:+2348001234${vendor.id.length}${vendor.id.length}`}
+            href={`tel:${vendor.phone || "+2348000000000"}`}
             className="inline-flex items-center gap-2 rounded-full border border-border bg-card px-5 py-3 text-sm font-semibold hover:border-brand hover:text-brand"
           >
             <Phone className="h-4 w-4" /> Call shop
           </a>
           <a
-            href={`https://wa.me/2348001234567?text=${encodeURIComponent(`Hi ${vendor.name}, I'd like to order from your Banex Mall shop.`)}`}
+            href={`https://wa.me/${vendor.whatsapp ? vendor.whatsapp.replace(/[^\d]/g, "") : "2348000000000"}?text=${encodeURIComponent(`Hi ${vendor.shop_name}, I'd like to order from your Banex Mall shop.`)}`}
             target="_blank" rel="noreferrer"
             className="inline-flex items-center gap-2 rounded-full border border-border bg-card px-5 py-3 text-sm font-semibold hover:border-brand hover:text-brand"
           >
@@ -158,21 +143,17 @@ export default function VendorPage() {
 
         {items.length ? (
           <div className="mt-6 grid grid-cols-2 gap-5 md:grid-cols-3 lg:grid-cols-4">
-            {items.map((p: Product, i: number) => (
+            {items.map((p) => (
               <div key={p.id} className="relative">
-                <ProductCard product={p} index={i} />
-                <button
-                  onClick={() => orderInStore(p)}
-                  className="absolute bottom-3 right-3 inline-flex items-center gap-1 rounded-full bg-gradient-brand px-3 py-1.5 text-[11px] font-semibold text-primary-foreground shadow-soft"
-                >
-                  <Bike className="h-3 w-3" /> Quick order
-                </button>
+                {/* Need to adapt ProductCard to use GenericProduct! */}
+                <ApiProductCard product={p as any} />
+                <VendorQuickOrder item={p} vendor={vendor} />
               </div>
             ))}
           </div>
         ) : (
           <p className="mt-6 rounded-2xl border border-dashed border-border bg-card p-10 text-center text-sm text-muted-foreground">
-            This vendor hasn't listed items online yet — visit them at <strong>{vendor.floor} floor · {vendor.stall}</strong>.
+            This vendor hasn't listed items online yet — visit them at <strong>{vendor.location || "Banex Mall"}</strong>.
           </p>
         )}
       </section>
@@ -182,11 +163,11 @@ export default function VendorPage() {
         <div className="grid gap-6 rounded-2xl border border-border bg-card p-6 md:grid-cols-3 md:p-8">
           <div className="md:col-span-2">
             <p className="inline-flex items-center gap-2 font-display text-base font-semibold">
-              <Store className="h-4 w-4 text-brand" /> About {vendor.name}
+              <Store className="h-4 w-4 text-brand" /> About {vendor.shop_name}
             </p>
             <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
-              {vendor.name} is a {vendor.tier.toLowerCase()} tenant of Banex Mall, located on the {vendor.floor.toLowerCase()} floor.
-              The shop has been serving customers with {vendor.tagline.toLowerCase()} and now ships across the city through Banex riders,
+              {vendor.shop_name} is a {vendor.tier || "standard"} tenant of Banex Mall, located at {vendor.location || "the mall"}.
+              The shop has been serving customers and now ships across the city through Banex riders,
               with same-hour delivery on most orders within Abuja.
             </p>
           </div>

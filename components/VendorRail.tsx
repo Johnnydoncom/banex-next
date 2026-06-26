@@ -1,18 +1,20 @@
 import Link from "next/link"
 import { ArrowRight } from "lucide-react"
-import { sortedByProminence } from "@/lib/vendors"
-import { VendorCard } from "@/components/VendorCard"
+import { GenericSeller } from "@/lib/generic-api"
+import { MallVendorCard } from "@/components/MallVendorCard"
 
 export function VendorRail({
+  vendors,
   limit = 8,
   title = "Mall vendors",
   eyebrow = "Tenant prominence",
 }: {
+  vendors: GenericSeller[]
   limit?: number
   title?: string
   eyebrow?: string
 }) {
-  const list = sortedByProminence.slice(0, limit)
+  const list = vendors.slice(0, limit)
   return (
     <section className="mx-auto max-w-7xl px-4 py-12 md:px-8">
       <div className="flex items-end justify-between">
@@ -28,8 +30,8 @@ export function VendorRail({
         </Link>
       </div>
       <div className="mt-7 grid grid-cols-2 gap-5 md:grid-cols-3 lg:grid-cols-4">
-        {list.map((v, i) => (
-          <VendorCard key={v.id} vendor={v} index={i} />
+        {list.map((v) => (
+          <MallVendorCard key={v.id} vendor={v} />
         ))}
       </div>
     </section>

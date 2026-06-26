@@ -2,10 +2,29 @@
 
 import Link from "next/link"
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger, SheetClose } from "@/components/ui/sheet"
-import { Menu, ChevronRight, Store, Truck, HelpCircle, User, MapPin } from "lucide-react"
-import { categories } from "@/lib/categories"
+import { Menu, ChevronRight, Store, Truck, HelpCircle, User, MapPin, Smartphone, Laptop, Sofa, Shirt, Sparkles, Dumbbell, Baby, PawPrint, Apple, Briefcase, Car, Home } from "lucide-react"
+import { GenericCategory } from "@/lib/generic-api"
 
-export function MobileNav() {
+// Helper to map backend icon string to a Lucide component
+export function getCategoryIcon(iconName: string | null) {
+  switch (iconName) {
+    case "car": return Car
+    case "house": return Home
+    case "smartphone": return Smartphone
+    case "laptop": return Laptop
+    case "sofa": return Sofa
+    case "shirt": return Shirt
+    case "sparkles": return Sparkles
+    case "dumbbell": return Dumbbell
+    case "baby": return Baby
+    case "paw": return PawPrint
+    case "apple": return Apple
+    case "briefcase": return Briefcase
+    default: return Store
+  }
+}
+
+export function MobileNav({ categories }: { categories: GenericCategory[] }) {
   return (
     <Sheet>
       <SheetTrigger
@@ -43,11 +62,11 @@ export function MobileNav() {
                 </Link>
               </SheetClose>
               {categories.map((c) => {
-                const Icon = c.icon
+                const Icon = getCategoryIcon(c.icon)
                 return (
                   <SheetClose asChild key={c.slug}>
                     <Link
-                      href={`/shop?category=${c.slug}`}
+                      href={`/shop/${c.slug}`}
                       className="flex items-center justify-between px-4 py-3 text-sm"
                     >
                       <span className="flex items-center gap-3">

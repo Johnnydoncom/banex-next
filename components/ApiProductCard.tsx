@@ -1,13 +1,13 @@
 import Link from "next/link"
 import { MapPin, Star } from "lucide-react"
-import type { ApiProduct } from "@/lib/api-types"
+import { GenericProduct } from "@/lib/generic-api"
 
 function formatNaira(amount: number) {
   return new Intl.NumberFormat("en-NG", { style: "currency", currency: "NGN", maximumFractionDigits: 0 }).format(amount)
 }
 
-export function ApiProductCard({ product }: { product: ApiProduct }) {
-  const primaryImage = product.images.find((i) => i.is_primary) ?? product.images[0]
+export function ApiProductCard({ product }: { product: GenericProduct }) {
+  const primaryImage = product.images?.find((i) => i.is_primary) ?? product.images?.[0]
 
   return (
     <Link

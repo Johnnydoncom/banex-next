@@ -5,6 +5,8 @@ This version has breaking changes — APIs, conventions, and file structure may 
 
 Next.js v16
 
+All frontend pages must be server components first, unless they use client-specific features like hooks or state management. Use RSC where possible.
+
 Backend
 -   Laravel 12
 -   PHP 8.4

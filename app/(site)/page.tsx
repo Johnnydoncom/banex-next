@@ -25,7 +25,7 @@ import { Header } from "@/components/Header"
 import { Footer } from "@/components/Footer"
 import { MallVendorCard } from "@/components/MallVendorCard"
 import { ApiProductCard } from "@/components/ApiProductCard"
-import type { ApiHomepageResponse, ApiCategory } from "@/lib/api-types"
+import { fetchGenericHome, GenericCategory, GenericSeller } from "@/lib/generic-api"
 
 // ─── SEO ─────────────────────────────────────────────────────────────────────
 
@@ -68,34 +68,15 @@ const CATEGORY_IMAGES: Record<string, string> = {
   "services-jobs": "/assets/cat-watch.jpg",
 }
 
-// ─── Data fetching ────────────────────────────────────────────────────────────
-
-async function getHomepageData() {
-  const apiUrl = process.env.NEXT_PUBLIC_API_URL ?? "https://api-marketplace.banexmall.com/api"
-  const res = await fetch(`${apiUrl}/generic/home`, {
-    // Always served from cache; only revalidated on the next deployment or manual purge.
-    cache: "force-cache",
-  })
-
-  if (!res.ok) {
-    // Log server-side, render graceful fallback
-    console.error("[homepage] Failed to fetch /generic/home:", res.status, res.statusText)
-    return null
-  }
-
-  const json: ApiHomepageResponse = await res.json()
-  return json.data
-}
-
 // ─── Category card (pure server UI) ──────────────────────────────────────────
 
-function CategoryCard({ cat }: { cat: ApiCategory }) {
-  const Icon = ICON_MAP[cat.icon] ?? Store
+function CategoryCard({ cat }: { cat: GenericCategory }) {
+  const Icon = cat.icon ? (ICON_MAP[cat.icon] ?? Store) : Store
   const image = cat.image_url ?? CATEGORY_IMAGES[cat.slug]
 
   return (
     <Link
-      href={`/shop?category=${cat.slug}`}
+      href={`/shop/${cat.slug}`}
       className="group flex flex-col items-center rounded-2xl border border-border bg-card p-4 text-center transition-all hover:-translate-y-0.5 hover:border-brand hover:shadow-soft"
     >
       <div className="relative h-20 w-20 overflow-hidden rounded-full border border-border bg-surface">
@@ -127,13 +108,18 @@ function CategoryCard({ cat }: { cat: ApiCategory }) {
 // ─── Page (Server Component) ──────────────────────────────────────────────────
 
 export default async function Home() {
-  const data = await getHomepageData()
+  let data;
+  try {
+    data = await fetchGenericHome()
+  } catch(e) {
+    console.error("[homepage] Failed to fetch /generic/home")
+  }
 
   const categories = data?.categories ?? []
   const mallVendors = data?.mall_vendors ?? []
   const featuredListings = data?.featured_listings ?? []
   const popularListings = data?.popular_listings ?? []
-  const openVendors = mallVendors.filter((v) => v.is_open).length
+  const openVendors = mallVendors.filter((v: GenericSeller) => v.is_open).length
 
   return (
     <div className="min-h-screen">

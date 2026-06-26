@@ -28,7 +28,11 @@ type FetchOptions = {
 }
 
 function buildUrl(path: string, params?: FetchOptions["params"]) {
-  const url = new URL(path.startsWith("/") ? path : `/${path}`, API_URL)
+  // Fix URL construction to properly append paths to the base URL
+  const baseUrl = API_URL.endsWith("/") ? API_URL.slice(0, -1) : API_URL
+  const endpointPath = path.startsWith("/") ? path : `/${path}`
+  const url = new URL(`${baseUrl}${endpointPath}`)
+  
   if (params) {
     Object.entries(params).forEach(([key, value]) => {
       if (value !== undefined) url.searchParams.set(key, String(value))

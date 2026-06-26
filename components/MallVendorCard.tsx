@@ -1,6 +1,6 @@
 import Link from "next/link"
 import { BadgeCheck, Bike, Clock, MapPin, Star } from "lucide-react"
-import type { ApiMallVendor } from "@/lib/api-types"
+import { GenericSeller } from "@/lib/generic-api"
 
 function formatNaira(amount: number) {
   return new Intl.NumberFormat("en-NG", { style: "currency", currency: "NGN", maximumFractionDigits: 0 }).format(amount)
@@ -10,7 +10,7 @@ export function MallVendorCard({
   vendor,
   compact = false,
 }: {
-  vendor: ApiMallVendor
+  vendor: GenericSeller
   compact?: boolean
 }) {
   const tierLabel =
