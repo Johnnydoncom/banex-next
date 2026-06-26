@@ -24,6 +24,7 @@ export type NavItem = {
   icon: LucideIcon
   exact?: boolean
   badge?: number
+  group?: string
 }
 
 type Props = {
@@ -102,41 +103,66 @@ export function AdminShell({ title, subtitle, nav, accent, children, guard }: Pr
 
   const sidebarWidth = collapsed ? "w-[68px]" : "w-64"
 
-  const SidebarNav = ({ showLabels = true }: { showLabels?: boolean }) => (
-    <nav className="flex flex-col gap-0.5">
-      {nav.map((item) => {
-        const active = isActive(item.to, item.exact)
-        return (
-          <Link
-            key={item.to}
-            href={item.to}
-            title={!showLabels ? item.label : undefined}
-            className={`group relative flex items-center gap-3 rounded-xl px-3 py-2.5 text-[13px] font-medium transition-all ${
-              active
-                ? `bg-gradient-to-r ${accentClasses} text-primary-foreground shadow-sm`
-                : "text-muted-foreground hover:bg-surface hover:text-foreground"
-            } ${!showLabels ? "justify-center" : ""}`}
-          >
-            <item.icon
-              className={`h-[18px] w-[18px] flex-shrink-0 ${
-                active ? "text-primary-foreground" : "text-brand"
-              }`}
-            />
-            {showLabels && <span>{item.label}</span>}
-            {showLabels && item.badge != null && item.badge > 0 && (
-              <span className={`ml-auto rounded-full px-2 py-0.5 text-[10px] font-bold ${
-                active
-                  ? "bg-white/20 text-primary-foreground"
-                  : "bg-brand/10 text-brand-deep"
-              }`}>
-                {item.badge}
-              </span>
+  const SidebarNav = ({ showLabels = true }: { showLabels?: boolean }) => {
+    const groups: { name: string; items: NavItem[] }[] = []
+    nav.forEach(item => {
+      const groupName = item.group || "General"
+      let group = groups.find(g => g.name === groupName)
+      if (!group) {
+        group = { name: groupName, items: [] }
+        groups.push(group)
+      }
+      group.items.push(item)
+    })
+
+    return (
+      <div className="flex flex-col gap-4">
+        {groups.map((group, i) => (
+          <div key={group.name} className="flex flex-col gap-0.5">
+            {showLabels && group.name !== "General" && group.name !== "Main" && (
+              <p className="px-3 pb-1 pt-1 text-[10px] font-bold uppercase tracking-wider text-muted-foreground/50">
+                {group.name}
+              </p>
             )}
-          </Link>
-        )
-      })}
-    </nav>
-  )
+            {!showLabels && i > 0 && (
+              <div className="mx-3 my-1 h-px bg-border" />
+            )}
+            {group.items.map((item) => {
+              const active = isActive(item.to, item.exact)
+              return (
+                <Link
+                  key={item.to}
+                  href={item.to}
+                  title={!showLabels ? item.label : undefined}
+                  className={`group relative flex items-center gap-3 rounded-xl px-3 py-2.5 text-[13px] font-medium transition-all ${
+                    active
+                      ? `bg-gradient-to-r ${accentClasses} text-primary-foreground shadow-sm`
+                      : "text-muted-foreground hover:bg-surface hover:text-foreground"
+                  } ${!showLabels ? "justify-center" : ""}`}
+                >
+                  <item.icon
+                    className={`h-[18px] w-[18px] flex-shrink-0 ${
+                      active ? "text-primary-foreground" : "text-brand"
+                    }`}
+                  />
+                  {showLabels && <span>{item.label}</span>}
+                  {showLabels && item.badge != null && item.badge > 0 && (
+                    <span className={`ml-auto rounded-full px-2 py-0.5 text-[10px] font-bold ${
+                      active
+                        ? "bg-white/20 text-primary-foreground"
+                        : "bg-brand/10 text-brand-deep"
+                    }`}>
+                      {item.badge}
+                    </span>
+                  )}
+                </Link>
+              )
+            })}
+          </div>
+        ))}
+      </div>
+    )
+  }
 
   return (
     <div className="flex min-h-screen bg-surface/40">

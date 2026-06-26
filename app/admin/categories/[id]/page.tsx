@@ -27,10 +27,10 @@ export default function AdminCategoryEditPage({ params }: { params: Promise<{ id
   const [saving, setSaving] = useState(false)
 
   useEffect(() => {
-    if (!isNew && session?.accessToken) {
+    if (session?.accessToken && id !== "new") {
       loadCategory()
     }
-  }, [isNew, session])
+  }, [session?.accessToken, id])
 
   const loadCategory = async () => {
     try {

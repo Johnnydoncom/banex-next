@@ -55,6 +55,36 @@ async function proxyFetch<T>(path: string, token: string, method = "GET", body?:
   return data as ApiEnvelope<T>
 }
 
+async function proxyFetchFormData<T>(path: string, token: string, method = "POST", formData: FormData): Promise<ApiEnvelope<T>> {
+  const url = `/api/proxy${path}`
+  const headers: Record<string, string> = {
+    Accept: "application/json",
+    Authorization: `Bearer ${token}`,
+  }
+  
+  // Note: Do not set Content-Type for FormData, the browser handles it (including the boundary string).
+
+  const res = await fetch(url, {
+    method,
+    headers,
+    body: formData,
+  })
+
+  const textData = await res.text()
+  let data
+  try {
+    data = textData ? JSON.parse(textData) : null
+  } catch {
+    data = null
+  }
+
+  if (!res.ok) {
+    throw new Error(data?.message || `Request failed with status ${res.status}`)
+  }
+
+  return data as ApiEnvelope<T>
+}
+
 // ─── Admin Categories ─────────────────────────────────────────────────────────
 
 export type AdminCategory = {
@@ -134,6 +164,10 @@ export async function fetchAdminSellers(token: string) {
   return proxyFetch<AdminSellersData>("/admin/sellers", token)
 }
 
+export async function updateAdminSellerStatus(slug: string, action: "approve" | "reject" | "suspend", token: string) {
+  return proxyFetch<{ seller: AdminSeller }>(`/admin/sellers/${slug}/${action}`, token, "POST")
+}
+
 // ─── Admin Products ───────────────────────────────────────────────────────────
 
 export type AdminProduct = {
@@ -171,6 +205,10 @@ export async function fetchAdminProducts(token: string) {
 
 export async function fetchAdminProduct(id: string, token: string) {
   return proxyFetch<{ product: AdminProduct }>(`/admin/products/${id}`, token)
+}
+
+export async function createAdminProduct(formData: FormData, token: string) {
+  return proxyFetchFormData<{ product: AdminProduct }>("/admin/products", token, "POST", formData)
 }
 
 export async function updateAdminProductStatus(id: string, action: "approve" | "reject" | "activate" | "deactivate", token: string) {

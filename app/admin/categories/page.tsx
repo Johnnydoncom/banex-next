@@ -20,7 +20,7 @@ export default function AdminCategoriesPage() {
     if (session?.accessToken) {
       loadCategories()
     }
-  }, [session])
+  }, [session?.accessToken])
 
   const loadCategories = async () => {
     try {

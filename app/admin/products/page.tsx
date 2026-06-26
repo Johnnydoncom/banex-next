@@ -25,7 +25,7 @@ export default function AdminProductsPage() {
     if (session?.accessToken) {
       loadProducts()
     }
-  }, [session])
+  }, [session?.accessToken])
 
   const loadProducts = async () => {
     try {

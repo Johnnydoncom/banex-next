@@ -20,7 +20,7 @@ export default function AdminProductDetailPage({ params }: { params: Promise<{ i
     if (session?.accessToken) {
       loadProduct()
     }
-  }, [session])
+  }, [session?.accessToken])
 
   const loadProduct = async () => {
     try {
@@ -146,7 +146,10 @@ export default function AdminProductDetailPage({ params }: { params: Promise<{ i
           {product.description && (
             <div className="rounded-2xl border border-border bg-card p-6">
               <h2 className="font-display text-base font-semibold">Description</h2>
-              <p className="mt-3 text-sm leading-relaxed text-muted-foreground whitespace-pre-wrap">{product.description}</p>
+              <div 
+                className="mt-3 prose prose-sm dark:prose-invert max-w-none text-muted-foreground"
+                dangerouslySetInnerHTML={{ __html: product.description }} 
+              />
             </div>
           )}
 

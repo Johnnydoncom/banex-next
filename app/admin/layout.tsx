@@ -8,6 +8,8 @@ import {
   ShoppingCart,
   MessageCircle,
   Settings,
+  Store,
+  Shield,
 } from "lucide-react"
 import { AdminShell } from "@/components/AdminShell"
 import { useAuth } from "@/hooks/use-auth"
@@ -33,13 +35,19 @@ export default function AdminDashboardLayout({ children }: { children: React.Rea
         return isAdmin ? { ok: true, redirectTo: "" } : { ok: false, redirectTo: "/account" }
       }}
       nav={[
-        { to: "/admin", label: "Overview", icon: LayoutDashboard, exact: true },
-        { to: "/admin/users", label: "Users & Vendors", icon: Users },
-        { to: "/admin/products", label: "Products", icon: Package },
-        { to: "/admin/categories", label: "Categories", icon: FolderTree },
-        { to: "/admin/orders", label: "Orders", icon: ShoppingCart },
-        { to: "/admin/contacts", label: "WhatsApp Contacts", icon: MessageCircle },
-        { to: "/admin/settings", label: "Settings", icon: Settings },
+        { to: "/admin", label: "Overview", icon: LayoutDashboard, exact: true, group: "Main" },
+        
+        { to: "/admin/products", label: "Products", icon: Package, group: "Catalog" },
+        { to: "/admin/categories", label: "Categories", icon: FolderTree, group: "Catalog" },
+        
+        { to: "/admin/orders", label: "Orders", icon: ShoppingCart, group: "Sales" },
+
+        { to: "/admin/users/sellers", label: "Sellers & Vendors", icon: Store, group: "People" },
+        { to: "/admin/users/customers", label: "Customers", icon: Users, group: "People" },
+        { to: "/admin/users/admins", label: "Administrators", icon: Shield, group: "People" },
+        
+        { to: "/admin/contacts", label: "WhatsApp Contacts", icon: MessageCircle, group: "System" },
+        { to: "/admin/settings", label: "Settings", icon: Settings, group: "System" },
       ]}
     >
       {children}

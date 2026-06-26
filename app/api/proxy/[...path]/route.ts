@@ -36,8 +36,8 @@ async function handleProxy(req: NextRequest, { params }: { params: Promise<{ pat
 
     // Only attach body for methods that support it
     if (["POST", "PUT", "PATCH"].includes(req.method)) {
-      const body = await req.text()
-      if (body) {
+      const body = await req.arrayBuffer()
+      if (body.byteLength > 0) {
         fetchOptions.body = body
       }
     }
