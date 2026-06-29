@@ -4,22 +4,13 @@ import Link from "next/link"
 import { useEffect, useState } from "react"
 import { Package, Search } from "lucide-react"
 import { useAuth } from "@/hooks/use-auth"
+import { userFetchOrders, type OrderData } from "@/lib/user-api"
 
-type Order = {
-  id: string
-  order_number: string
-  status: string
-  payment_status: string
-  total: number
-  created_at: string
-  order_items: { id: string; product_name: string; product_image: string | null; quantity: number; unit_price: number }[]
-}
-
-const STATUSES = ["all", "pending", "confirmed", "shipped", "delivered", "cancelled"] as const
+const STATUSES = ["all", "pending", "processing", "shipped", "delivered", "cancelled"] as const
 
 export default function OrdersPage() {
-  const { user } = useAuth()
-  const [orders, setOrders] = useState<Order[]>([])
+  const { user, session } = useAuth()
+  const [orders, setOrders] = useState<OrderData[]>([])
   const [filter, setFilter] = useState<(typeof STATUSES)[number]>("all")
   const [q, setQ] = useState("")
   const [loading, setLoading] = useState(true)
@@ -29,19 +20,11 @@ export default function OrdersPage() {
     let cancelled = false
     setLoading(true)
 
-    // ----- ACTUAL FETCH IMPLEMENTATION (Commented out as requested) -----
-    /*
     async function fetchOrders() {
       try {
-        const token = (user as any).accessToken
-        const headers = { Authorization: `Bearer ${token}`, Accept: "application/json" }
-        const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000"
-        
-        const res = await fetch(`${apiUrl}/user/orders?include=items`, { headers })
-        const data = await res.json()
-        
+        const data = await userFetchOrders()
         if (cancelled) return
-        setOrders(data?.data || [])
+        setOrders(data)
       } catch (err) {
         console.error(err)
       } finally {
@@ -49,44 +32,13 @@ export default function OrdersPage() {
       }
     }
     fetchOrders()
-    */
-
-    // ----- MOCK DATA IMPLEMENTATION -----
-    setTimeout(() => {
-      if (cancelled) return
-      setOrders([
-        {
-          id: "1",
-          order_number: "ORD-123",
-          status: "delivered",
-          payment_status: "paid",
-          total: 15000,
-          created_at: new Date().toISOString(),
-          order_items: [
-            { id: "i1", product_name: "Samsung Galaxy S23", product_image: "/assets/phone-1.jpg", quantity: 1, unit_price: 15000 }
-          ]
-        },
-        {
-          id: "2",
-          order_number: "ORD-124",
-          status: "shipped",
-          payment_status: "paid",
-          total: 55000,
-          created_at: new Date(Date.now() - 86400000).toISOString(),
-          order_items: [
-            { id: "i2", product_name: "MacBook Air M2", product_image: "/assets/cat-laptop.jpg", quantity: 1, unit_price: 55000 }
-          ]
-        }
-      ])
-      setLoading(false)
-    }, 500)
 
     return () => { cancelled = true }
   }, [user])
 
   const filtered = orders.filter((o) => {
     if (filter !== "all" && o.status !== filter) return false
-    if (q && !o.order_number.toLowerCase().includes(q.toLowerCase())) return false
+    if (q && !o.reference.toLowerCase().includes(q.toLowerCase())) return false
     return true
   })
 
@@ -139,7 +91,7 @@ export default function OrdersPage() {
             <li key={o.id} className="overflow-hidden rounded-2xl border border-border bg-card">
               <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border bg-surface/40 px-5 py-3">
                 <div>
-                  <p className="font-display text-sm font-semibold">{o.order_number}</p>
+                  <p className="font-display text-sm font-semibold">{o.reference}</p>
                   <p className="text-[11px] text-muted-foreground">
                     Placed {new Date(o.created_at).toLocaleString()}
                   </p>
@@ -149,23 +101,23 @@ export default function OrdersPage() {
                   <span className={`rounded-full px-2.5 py-1 text-[10px] font-semibold uppercase ${
                     o.payment_status === "paid" ? "bg-emerald-500/15 text-emerald-700" : "bg-amber-500/15 text-amber-700"
                   }`}>{o.payment_status}</span>
-                  <p className="text-sm font-bold">₦{Number(o.total).toLocaleString()}</p>
+                  <p className="text-sm font-bold">₦{Number(o.total_amount).toLocaleString()}</p>
                 </div>
               </div>
               <ul className="divide-y divide-border">
-                {(o.order_items ?? []).slice(0, 3).map((it) => (
+                {(o.items ?? []).slice(0, 3).map((it) => (
                   <li key={it.id} className="flex items-center gap-3 px-5 py-3">
                     <div className="h-12 w-12 flex-none overflow-hidden rounded-lg bg-surface">
                       {it.product_image && <img src={it.product_image} alt="" className="h-full w-full object-cover" />}
                     </div>
                     <div className="min-w-0 flex-1">
                       <p className="truncate text-sm font-medium">{it.product_name}</p>
-                      <p className="text-[11px] text-muted-foreground">Qty {it.quantity} · ₦{Number(it.unit_price).toLocaleString()}</p>
+                      <p className="text-[11px] text-muted-foreground">Qty {it.quantity} · ₦{Number(it.price).toLocaleString()}</p>
                     </div>
                   </li>
                 ))}
-                {(o.order_items?.length ?? 0) > 3 && (
-                  <li className="px-5 py-2 text-[11px] text-muted-foreground">+{o.order_items.length - 3} more items</li>
+                {(o.items?.length ?? 0) > 3 && (
+                  <li className="px-5 py-2 text-[11px] text-muted-foreground">+{o.items.length - 3} more items</li>
                 )}
               </ul>
             </li>
@@ -180,7 +132,7 @@ function statusTone(s: string) {
   switch (s) {
     case "delivered": return "bg-emerald-500/15 text-emerald-700"
     case "shipped": return "bg-blue-500/15 text-blue-700"
-    case "confirmed": return "bg-brand-soft/40 text-brand-deep"
+    case "processing": return "bg-brand-soft/40 text-brand-deep"
     case "cancelled": return "bg-rose-500/15 text-rose-700"
     default: return "bg-amber-500/15 text-amber-700"
   }

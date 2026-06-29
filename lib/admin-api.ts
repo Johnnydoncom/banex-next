@@ -302,6 +302,35 @@ export async function fetchAdminWhatsAppContacts(token: string) {
   return proxyFetch<AdminWhatsAppContactsData>("/admin/whatsapp-contacts", token)
 }
 
+// ─── Admin Users ──────────────────────────────────────────────────────────────
+
+export type AdminUser = {
+  id: string
+  full_name: string | null
+  email: string
+  type: "admin" | "vendor" | "customer"
+  status: "active" | "suspended" | "pending"
+  phone: string | null
+  email_verified_at: string | null
+  created_at: { item: string }
+  updated_at: { item: string }
+  seller: { id: string; shop_name: string; slug: string; status: string } | null
+}
+
+type AdminUsersData = {
+  users: AdminUser[]
+  pagination: { current_page: number; per_page: number; total: number; last_page: number }
+}
+
+export async function fetchAdminUsers(token: string, type?: "admin" | "vendor" | "customer") {
+  const qs = type ? `?filter[type]=${type}` : ""
+  return proxyFetch<AdminUsersData>(`/admin/users${qs}`, token)
+}
+
+export async function fetchAdminUser(id: string, token: string) {
+  return proxyFetch<{ user: AdminUser }>(`/admin/users/${id}`, token)
+}
+
 // ─── Aggregated Dashboard Data ────────────────────────────────────────────────
 
 export type DashboardData = {

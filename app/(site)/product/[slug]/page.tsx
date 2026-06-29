@@ -1,8 +1,6 @@
 import Link from "next/link"
 import { notFound } from "next/navigation"
 import { Star, Truck, ShieldCheck, BadgeCheck, ChevronLeft } from "lucide-react"
-import { Header } from "@/components/Header"
-import { Footer } from "@/components/Footer"
 import { fetchGenericProduct } from "@/lib/generic-api"
 import { ProductImageGallery } from "./components/ProductImageGallery"
 import { ProductActionButtons } from "./components/ProductActionButtons"
@@ -64,9 +62,7 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
   }
 
   return (
-    <div className="min-h-screen">
-      <Header />
-
+    <div>
       <div className="mx-auto max-w-7xl px-4 pt-6 md:px-8">
         <Link href="/shop" className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-brand">
           <ChevronLeft className="h-4 w-4" /> Back to marketplace
@@ -158,7 +154,6 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
         </div>
       </section>
 
-      <Footer />
     </div>
   )
 }

@@ -1,7 +1,5 @@
 import Link from "next/link"
 import { Suspense } from "react"
-import { Header } from "@/components/Header"
-import { Footer } from "@/components/Footer"
 import { ApiProductCard } from "@/components/ApiProductCard"
 import { ShopHeaderFilters, ShopSidebarFilters } from "./components/ShopFilters"
 import { fetchGenericCategories, fetchGenericCategory, fetchGenericProducts, fetchGenericSeller, fetchGenericSellers, GenericCategory, GenericProduct, GenericSeller } from "@/lib/generic-api"
@@ -94,9 +92,7 @@ export default async function ShopPage({
   }
 
   return (
-    <div className="min-h-screen">
-      <Header />
-
+    <div>
       <section className="relative overflow-hidden bg-white pt-10 pb-16 md:pt-16 md:pb-24 border-b border-border">
         {/* Very subtle, elegant background elements */}
         <div className="absolute inset-0 z-0 bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-brand-soft/20 via-transparent to-transparent"></div>
@@ -186,7 +182,6 @@ export default async function ShopPage({
         </div>
       </section>
 
-      <Footer />
     </div>
   )
 }

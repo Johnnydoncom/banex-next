@@ -5,59 +5,31 @@ import { MapPin, Plus, Trash2, Star } from "lucide-react"
 import { useAuth } from "@/hooks/use-auth"
 import { toast } from "sonner"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog"
-
-type Address = {
-  id: string
-  label: string
-  recipient: string
-  phone: string
-  street: string
-  city: string
-  state: string
-  country: string
-  is_default: boolean
-}
+import { userFetchAddresses, userCreateAddress, userUpdateAddress, userDeleteAddress, type AddressData } from "@/lib/user-api"
 
 export default function AddressesPage() {
-  const { user } = useAuth()
-  const [items, setItems] = useState<Address[]>([])
+  const { user, session } = useAuth()
+  const [items, setItems] = useState<AddressData[]>([])
   const [open, setOpen] = useState(false)
+  const [saving, setSaving] = useState(false)
   const [form, setForm] = useState({
     label: "Home",
-    recipient: "",
+    full_name: "",
     phone: "",
-    street: "",
+    street_address: "",
     city: "",
     state: "",
-    country: "Nigeria",
     is_default: false,
   })
 
   const load = async () => {
     if (!user) return
-
-    // ----- ACTUAL FETCH IMPLEMENTATION (Commented out) -----
-    /*
     try {
-      const token = (user as any).accessToken
-      const headers = { Authorization: `Bearer ${token}`, Accept: "application/json" }
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000"
-      
-      const res = await fetch(`${apiUrl}/user/addresses`, { headers })
-      const data = await res.json()
-      setItems(data?.data || [])
+      const data = await userFetchAddresses()
+      setItems(data)
     } catch (err) {
       console.error(err)
     }
-    */
-
-    // ----- MOCK DATA IMPLEMENTATION -----
-    setItems([
-      {
-        id: "1", label: "Home", recipient: "Johnny Doncom", phone: "08012345678",
-        street: "123 Main St", city: "Lagos", state: "Lagos", country: "Nigeria", is_default: true
-      }
-    ])
   }
 
   useEffect(() => {
@@ -66,74 +38,46 @@ export default function AddressesPage() {
 
   const save = async () => {
     if (!user) return
-    if (!form.recipient || !form.phone || !form.street || !form.city || !form.state) {
+    if (!form.full_name || !form.phone || !form.street_address || !form.city || !form.state) {
       toast.error("Fill in all fields")
       return
     }
 
-    // ----- ACTUAL FETCH IMPLEMENTATION (Commented out) -----
-    /*
+    setSaving(true)
     try {
-      const token = (user as any).accessToken
-      const headers = { Authorization: `Bearer ${token}`, "Content-Type": "application/json", Accept: "application/json" }
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000"
-      
-      const res = await fetch(`${apiUrl}/user/addresses`, {
-        method: 'POST',
-        headers,
-        body: JSON.stringify(form)
-      })
-      if (!res.ok) throw new Error("Failed to add address")
+      await userCreateAddress(form)
+      toast.success("Address added")
+      setOpen(false)
+      setForm({ label: "Home", full_name: "", phone: "", street_address: "", city: "", state: "", is_default: false })
+      void load()
     } catch (err: any) {
-      toast.error(err.message)
-      return
+      toast.error(err.message || "Failed to add address")
+    } finally {
+      setSaving(false)
     }
-    */
-
-    // ----- MOCK UPDATE -----
-    setItems(prev => [
-      ...prev.map(i => form.is_default ? { ...i, is_default: false } : i),
-      { ...form, id: Math.random().toString() }
-    ])
-    
-    toast.success("Address added")
-    setOpen(false)
-    setForm({ label: "Home", recipient: "", phone: "", street: "", city: "", state: "", country: "Nigeria", is_default: false })
   }
 
   const remove = async (id: string) => {
-    // ----- ACTUAL FETCH IMPLEMENTATION -----
-    /*
     try {
-      const token = (user as any).accessToken
-      const headers = { Authorization: `Bearer ${token}`, Accept: "application/json" }
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000"
-      
-      await fetch(`${apiUrl}/user/addresses/${id}`, { method: 'DELETE', headers })
+      await userDeleteAddress(id)
+      setItems(prev => prev.filter(i => i.id !== id))
+      toast.success("Address removed")
     } catch (err) {
       console.error(err)
+      toast.error("Failed to remove address")
     }
-    */
-    setItems(prev => prev.filter(i => i.id !== id))
-    toast.success("Address removed")
   }
 
   const setDefault = async (id: string) => {
     if (!user) return
-    // ----- ACTUAL FETCH IMPLEMENTATION -----
-    /*
     try {
-      const token = (user as any).accessToken
-      const headers = { Authorization: `Bearer ${token}`, Accept: "application/json" }
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000"
-      
-      await fetch(`${apiUrl}/user/addresses/${id}/default`, { method: 'POST', headers })
+      await userUpdateAddress(id, { is_default: true })
+      setItems(prev => prev.map(i => ({ ...i, is_default: i.id === id })))
+      toast.success("Default address updated")
     } catch (err) {
       console.error(err)
+      toast.error("Failed to update address")
     }
-    */
-    setItems(prev => prev.map(i => ({ ...i, is_default: i.id === id })))
-    toast.success("Default address updated")
   }
 
   return (
@@ -156,12 +100,11 @@ export default function AddressesPage() {
             <div className="grid gap-3">
               {[
                 ["label", "Label (Home, Office...)"],
-                ["recipient", "Recipient full name"],
+                ["full_name", "Recipient full name"],
                 ["phone", "Phone"],
-                ["street", "Street address"],
+                ["street_address", "Street address"],
                 ["city", "City"],
                 ["state", "State"],
-                ["country", "Country"],
               ].map(([k, label]) => (
                 <label key={k} className="block">
                   <span className="text-[11px] font-medium text-muted-foreground">{label}</span>
@@ -182,8 +125,12 @@ export default function AddressesPage() {
               </label>
             </div>
             <DialogFooter>
-              <button onClick={save} className="rounded-full bg-gradient-brand px-4 py-2 text-xs font-semibold text-primary-foreground">
-                Save address
+              <button
+                onClick={save}
+                disabled={saving}
+                className="rounded-full bg-gradient-brand px-4 py-2 text-xs font-semibold text-primary-foreground disabled:opacity-60"
+              >
+                {saving ? "Saving..." : "Save address"}
               </button>
             </DialogFooter>
           </DialogContent>
@@ -206,10 +153,10 @@ export default function AddressesPage() {
                 </span>
               )}
               <p className="font-display text-sm font-semibold">{a.label}</p>
-              <p className="mt-1 text-sm">{a.recipient}</p>
+              <p className="mt-1 text-sm">{a.full_name}</p>
               <p className="text-xs text-muted-foreground">{a.phone}</p>
               <p className="mt-2 text-xs text-muted-foreground">
-                {a.street}, {a.city}, {a.state}, {a.country}
+                {a.street_address}, {a.city}, {a.state}
               </p>
               <div className="mt-4 flex gap-2">
                 {!a.is_default && (

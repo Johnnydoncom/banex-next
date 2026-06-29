@@ -1,33 +1,37 @@
 "use client"
 
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { DataTable, type Column } from "@/components/DataTable"
 import { StatusBadge } from "@/components/StatusBadge"
-import { Shield, ShieldAlert, Key } from "lucide-react"
-
-type AdminUser = {
-  id: string
-  name: string
-  email: string
-  role: "super_admin" | "manager" | "support"
-  status: "active" | "suspended"
-  lastLogin: string
-}
-
-const mockAdmins: AdminUser[] = [
-  { id: "a1", name: "Super Admin", email: "admin@banexmall.com", status: "active", role: "super_admin", lastLogin: "2026-06-25T14:30:00Z" },
-  { id: "a2", name: "John Manager", email: "john@banexmall.com", status: "active", role: "manager", lastLogin: "2026-06-24T09:15:00Z" },
-  { id: "a3", name: "Support Agent", email: "support@banexmall.com", status: "suspended", role: "support", lastLogin: "2026-05-10T11:00:00Z" },
-]
+import { Shield, ShieldAlert, Key, Loader2 } from "lucide-react"
+import { fetchAdminUsers, type AdminUser } from "@/lib/admin-api"
+import { useAuth } from "@/hooks/use-auth"
+import { toast } from "sonner"
+import Link from "next/link"
 
 export default function AdminStaffPage() {
-  const [admins, setAdmins] = useState(mockAdmins)
+  const { session, user } = useAuth()
+  const [admins, setAdmins] = useState<AdminUser[]>([])
+  const [loading, setLoading] = useState(true)
 
-  const toggleStatus = (id: string) => {
-    setAdmins(admins.map(a => 
-      a.id === id ? { ...a, status: a.status === "active" ? "suspended" : "active" } : a
-    ))
-  }
+  useEffect(() => {
+    const loadData = async () => {
+      const token = (session as any)?.accessToken
+      if (!token) return
+
+      try {
+        setLoading(true)
+        const res = await fetchAdminUsers(token, "admin")
+        setAdmins(res.data.users)
+      } catch (err: any) {
+        toast.error(err.message || "Failed to load admins")
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    loadData()
+  }, [session])
 
   const columns: Column<AdminUser>[] = [
     {
@@ -37,10 +41,13 @@ export default function AdminStaffPage() {
       render: (a) => (
         <div className="flex items-center gap-3">
           <div className="flex h-8 w-8 items-center justify-center rounded-full bg-rose-500/10 text-rose-500">
-            {a.role === "super_admin" ? <ShieldAlert className="h-4 w-4" /> : <Shield className="h-4 w-4" />}
+            {/* If we had specific admin roles, we could distinguish here. For now, use a generic shield */}
+             <Shield className="h-4 w-4" />
           </div>
           <div>
-            <div className="font-medium text-foreground">{a.name}</div>
+            <Link href={`/admin/users/${a.id}`} className="font-medium text-brand hover:underline">
+              {a.full_name || "Unknown"} {(user as any)?.id === a.id ? "(You)" : ""}
+            </Link>
             <div className="text-xs text-muted-foreground">{a.email}</div>
           </div>
         </div>
@@ -53,7 +60,7 @@ export default function AdminStaffPage() {
       render: (a) => (
         <span className="inline-flex items-center gap-1.5 rounded-full bg-surface px-2 py-0.5 text-xs font-medium capitalize">
           <Key className="h-3 w-3 text-muted-foreground" />
-          {a.role.replace("_", " ")}
+          {a.type}
         </span>
       ),
     },
@@ -64,10 +71,10 @@ export default function AdminStaffPage() {
       render: (a) => <StatusBadge status={a.status} />,
     },
     {
-      key: "lastLogin",
-      label: "Last Login",
+      key: "created_at",
+      label: "Joined",
       sortable: true,
-      render: (a) => <span className="text-xs text-muted-foreground">{new Date(a.lastLogin).toLocaleString()}</span>,
+      render: (a) => <span className="text-xs text-muted-foreground">{a.created_at ? new Date(a.created_at.item).toLocaleDateString() : "Unknown"}</span>,
     },
     {
       key: "actions",
@@ -75,14 +82,9 @@ export default function AdminStaffPage() {
       className: "text-right",
       render: (a) => (
         <div className="flex items-center justify-end gap-1">
-          {a.role !== "super_admin" && (
-            <button
-              onClick={() => toggleStatus(a.id)}
-              className="text-xs font-medium text-brand hover:underline"
-            >
-              {a.status === "active" ? "Suspend" : "Activate"}
-            </button>
-          )}
+           <Link href={`/admin/users/${a.id}`} className="text-xs font-medium text-brand hover:underline">
+             View
+           </Link>
         </div>
       ),
     },
@@ -90,21 +92,23 @@ export default function AdminStaffPage() {
 
   return (
     <div className="space-y-4">
-      {/* Alert Notice for Mock Data */}
-      <div className="rounded-xl border border-blue-500/20 bg-blue-500/10 p-4 text-sm text-blue-600 dark:text-blue-400">
-        <strong>Notice:</strong> This tab currently uses <strong>mock data</strong> while the backend endpoints for Admin accounts are in development.
-      </div>
-      
-      <DataTable
-        columns={columns}
-        data={admins}
-        rowKey={(a) => a.id}
-        searchPlaceholder="Search staff by name or email…"
-        searchFilter={(a, q) =>
-          a.name.toLowerCase().includes(q) || a.email.toLowerCase().includes(q)
-        }
-        pageSize={10}
-      />
+      {loading ? (
+        <div className="flex h-64 flex-col items-center justify-center gap-3 rounded-2xl border border-border bg-card">
+          <Loader2 className="h-6 w-6 animate-spin text-brand" />
+          <p className="text-sm font-medium text-muted-foreground">Loading administrators...</p>
+        </div>
+      ) : (
+        <DataTable
+          columns={columns}
+          data={admins}
+          rowKey={(a) => a.id}
+          searchPlaceholder="Search staff by name or email…"
+          searchFilter={(a, q) =>
+            (a.full_name || "").toLowerCase().includes(q) || (a.email || "").toLowerCase().includes(q)
+          }
+          pageSize={10}
+        />
+      )}
     </div>
   )
 }

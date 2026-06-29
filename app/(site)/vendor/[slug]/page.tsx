@@ -4,8 +4,6 @@ import {
   Star, Bike, MapPin, Clock, Phone, MessageCircle, ShieldCheck,
   Store, Navigation, Package, ChevronLeft, BadgeCheck,
 } from "lucide-react"
-import { Header } from "@/components/Header"
-import { Footer } from "@/components/Footer"
 import { ApiProductCard } from "@/components/ApiProductCard"
 import { fetchGenericSeller } from "@/lib/generic-api"
 import { VendorOrderAll, VendorQuickOrder } from "./components/VendorActions"
@@ -52,9 +50,7 @@ export default async function VendorPage({ params }: { params: Promise<{ slug: s
   }
 
   return (
-    <div className="min-h-screen">
-      <Header />
-
+    <div>
       <div className="mx-auto max-w-7xl px-4 pt-6 md:px-8">
         <Link href="/vendors" className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-brand">
           <ChevronLeft className="h-4 w-4" /> All vendors
@@ -180,7 +176,6 @@ export default async function VendorPage({ params }: { params: Promise<{ slug: s
         </div>
       </section>
 
-      <Footer />
     </div>
   )
 }

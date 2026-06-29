@@ -21,8 +21,6 @@ import {
   Briefcase,
   type LucideIcon,
 } from "lucide-react"
-import { Header } from "@/components/Header"
-import { Footer } from "@/components/Footer"
 import { MallVendorCard } from "@/components/MallVendorCard"
 import { ApiProductCard } from "@/components/ApiProductCard"
 import { fetchGenericHome, GenericCategory, GenericSeller } from "@/lib/generic-api"
@@ -122,9 +120,7 @@ export default async function Home() {
   const openVendors = mallVendors.filter((v: GenericSeller) => v.is_open).length
 
   return (
-    <div className="min-h-screen">
-      <Header />
-
+    <div>
       {/* Hero */}
       <section className="relative overflow-hidden">
         <div
@@ -366,7 +362,6 @@ export default async function Home() {
         </div>
       </section>
 
-      <Footer />
     </div>
   )
 }

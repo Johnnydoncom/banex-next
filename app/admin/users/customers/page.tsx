@@ -1,37 +1,41 @@
 "use client"
 
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { DataTable, type Column } from "@/components/DataTable"
 import { StatusBadge } from "@/components/StatusBadge"
-import { Users, Search, Ban, CheckCircle } from "lucide-react"
-
-type Customer = {
-  id: string
-  name: string
-  email: string
-  status: "active" | "suspended"
-  joinedAt: string
-  ordersCount: number
-}
-
-const mockCustomers: Customer[] = [
-  { id: "u3", name: "Ibrahim Musa", email: "ibrahim@example.com", status: "active", joinedAt: "2025-10-15", ordersCount: 12 },
-  { id: "u4", name: "Funke Adeyemi", email: "funke@example.com", status: "active", joinedAt: "2025-11-22", ordersCount: 8 },
-  { id: "u7", name: "Blessing Okafor", email: "blessing@example.com", status: "active", joinedAt: "2026-01-05", ordersCount: 22 },
-  { id: "u8", name: "Sunday Adekunle", email: "sunday@example.com", status: "suspended", joinedAt: "2025-12-10", ordersCount: 3 },
-  { id: "u10", name: "Aisha Mohammed", email: "aisha@example.com", status: "active", joinedAt: "2026-03-08", ordersCount: 7 },
-]
+import { Users, Search, Loader2 } from "lucide-react"
+import { fetchAdminUsers, type AdminUser } from "@/lib/admin-api"
+import { useAuth } from "@/hooks/use-auth"
+import { toast } from "sonner"
+import Link from "next/link"
 
 export default function AdminCustomersPage() {
-  const [customers, setCustomers] = useState(mockCustomers)
+  const { session } = useAuth()
+  const [customers, setCustomers] = useState<AdminUser[]>([])
+  const [loading, setLoading] = useState(true)
+  const [total, setTotal] = useState(0)
 
-  const toggleStatus = (id: string) => {
-    setCustomers(customers.map(c => 
-      c.id === id ? { ...c, status: c.status === "active" ? "suspended" : "active" } : c
-    ))
-  }
+  useEffect(() => {
+    const loadData = async () => {
+      const token = (session as any)?.accessToken
+      if (!token) return
 
-  const columns: Column<Customer>[] = [
+      try {
+        setLoading(true)
+        const res = await fetchAdminUsers(token, "customer")
+        setCustomers(res.data.users)
+        setTotal(res.data.pagination?.total ?? res.data.users.length)
+      } catch (err: any) {
+        toast.error(err.message || "Failed to load customers")
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    loadData()
+  }, [session])
+
+  const columns: Column<AdminUser>[] = [
     {
       key: "name",
       label: "Customer",
@@ -42,7 +46,9 @@ export default function AdminCustomersPage() {
             <Users className="h-4 w-4" />
           </div>
           <div>
-            <div className="font-medium text-foreground">{c.name}</div>
+            <Link href={`/admin/users/${c.id}`} className="font-medium text-brand hover:underline">
+              {c.full_name || "Unknown"}
+            </Link>
             <div className="text-xs text-muted-foreground">{c.email}</div>
           </div>
         </div>
@@ -55,16 +61,16 @@ export default function AdminCustomersPage() {
       render: (c) => <StatusBadge status={c.status} />,
     },
     {
-      key: "ordersCount",
-      label: "Orders",
+      key: "phone",
+      label: "Phone",
       sortable: true,
-      render: (c) => <span className="text-sm font-medium">{c.ordersCount}</span>,
+      render: (c) => <span className="text-sm">{c.phone || "N/A"}</span>,
     },
     {
-      key: "joinedAt",
+      key: "created_at",
       label: "Joined",
       sortable: true,
-      render: (c) => <span className="text-xs text-muted-foreground">{new Date(c.joinedAt).toLocaleDateString()}</span>,
+      render: (c) => <span className="text-xs text-muted-foreground">{c.created_at ? new Date(c.created_at.item).toLocaleDateString() : "Unknown"}</span>,
     },
     {
       key: "actions",
@@ -72,13 +78,9 @@ export default function AdminCustomersPage() {
       className: "text-right",
       render: (c) => (
         <div className="flex items-center justify-end gap-1">
-          <button
-            onClick={() => toggleStatus(c.id)}
-            className="rounded-lg p-1.5 text-muted-foreground hover:bg-surface hover:text-foreground"
-            title={c.status === "active" ? "Suspend Customer" : "Activate Customer"}
-          >
-            {c.status === "active" ? <Ban className="h-4 w-4" /> : <CheckCircle className="h-4 w-4" />}
-          </button>
+           <Link href={`/admin/users/${c.id}`} className="text-xs font-medium text-brand hover:underline">
+             View
+           </Link>
         </div>
       ),
     },
@@ -86,21 +88,23 @@ export default function AdminCustomersPage() {
 
   return (
     <div className="space-y-4">
-      {/* Alert Notice for Mock Data */}
-      <div className="rounded-xl border border-blue-500/20 bg-blue-500/10 p-4 text-sm text-blue-600 dark:text-blue-400">
-        <strong>Notice:</strong> This tab currently uses <strong>mock data</strong> while the backend endpoints for generic Customers are in development.
-      </div>
-      
-      <DataTable
-        columns={columns}
-        data={customers}
-        rowKey={(c) => c.id}
-        searchPlaceholder="Search customer by name or email…"
-        searchFilter={(c, q) =>
-          c.name.toLowerCase().includes(q) || c.email.toLowerCase().includes(q)
-        }
-        pageSize={10}
-      />
+      {loading ? (
+        <div className="flex h-64 flex-col items-center justify-center gap-3 rounded-2xl border border-border bg-card">
+          <Loader2 className="h-6 w-6 animate-spin text-brand" />
+          <p className="text-sm font-medium text-muted-foreground">Loading customers...</p>
+        </div>
+      ) : (
+        <DataTable
+          columns={columns}
+          data={customers}
+          rowKey={(c) => c.id}
+          searchPlaceholder="Search customer by name or email…"
+          searchFilter={(c, q) =>
+            (c.full_name || "").toLowerCase().includes(q) || (c.email || "").toLowerCase().includes(q)
+          }
+          pageSize={10}
+        />
+      )}
     </div>
   )
 }
