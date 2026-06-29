@@ -2,16 +2,15 @@
 
 import Link from "next/link"
 import { useEffect, useState } from "react"
-import { Store } from "lucide-react"
+import { Store, UserCircle } from "lucide-react"
 import { useAuth } from "@/hooks/use-auth"
 import { useRoles, requestVendorRole } from "@/hooks/use-roles"
 import { toast } from "sonner"
-import Image from "next/image"
 
 export default function ProfilePage() {
   const { user, session } = useAuth()
   const { isVendor } = useRoles()
-  const [profile, setProfile] = useState({ full_name: "", phone: "", avatar_url: "" })
+  const [profile, setProfile] = useState({ full_name: "", phone: "" })
   const [saving, setSaving] = useState(false)
 
   useEffect(() => {
@@ -29,7 +28,6 @@ export default function ProfilePage() {
           setProfile({
             full_name: data.data.user.full_name ?? "",
             phone: data.data.user.phone ?? "",
-            avatar_url: data.data.user.avatar_url ?? ""
           })
         }
       } catch (err) {
@@ -52,8 +50,12 @@ export default function ProfilePage() {
         headers,
         body: JSON.stringify(profile)
       })
-      if (!res.ok) throw new Error("Failed to update profile")
-      toast.success("Profile updated successfully")
+      
+      const data = await res.json().catch(() => null)
+      
+      if (!res.ok) throw new Error(data?.message || "Failed to update profile")
+      
+      toast.success(data?.message || "Profile updated successfully")
     } catch (err: any) {
       toast.error(err.message)
     } finally {
@@ -69,87 +71,103 @@ export default function ProfilePage() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 max-w-3xl">
       <div>
-        <h1 className="font-display text-2xl font-bold">Profile</h1>
-        <p className="text-sm text-muted-foreground">Manage your personal information.</p>
+        <h1 className="font-display text-2xl font-bold">Profile Settings</h1>
+        <p className="text-sm text-muted-foreground mt-1">Manage your personal information and contact details.</p>
       </div>
 
-      <section className="rounded-2xl border border-border bg-card p-5">
-        <div className="flex items-center gap-4">
-          <div className="relative flex h-16 w-16 items-center justify-center overflow-hidden rounded-full bg-gradient-brand text-xl font-bold text-primary-foreground">
-            {profile.avatar_url ? (
-              <Image src={profile.avatar_url} alt="" fill className="object-cover" />
-            ) : (
-              (profile.full_name || user?.email || "U")[0]?.toUpperCase()
-            )}
+      <section className="rounded-2xl border border-border bg-card p-6 shadow-sm">
+        <div className="flex items-center gap-5 pb-6 border-b border-border mb-6">
+          <div className="flex h-16 w-16 items-center justify-center overflow-hidden rounded-full bg-gradient-brand text-2xl font-bold text-primary-foreground shadow-sm">
+            {(profile.full_name || user?.email || "U")[0]?.toUpperCase()}
           </div>
           <div className="min-w-0">
-            <p className="truncate font-display text-base font-semibold">{profile.full_name || "Add your name"}</p>
-            <p className="truncate text-xs text-muted-foreground">{user?.email}</p>
+            <p className="truncate font-display text-lg font-bold">{profile.full_name || "Add your name"}</p>
+            <p className="truncate text-sm text-muted-foreground">{user?.email}</p>
           </div>
         </div>
 
-        <div className="mt-5 grid gap-3 md:grid-cols-2">
-          <label>
-            <span className="text-[11px] font-medium text-muted-foreground">Full name</span>
-            <input
-              value={profile.full_name}
-              onChange={(e) => setProfile({ ...profile, full_name: e.target.value })}
-              className="mt-1 h-10 w-full rounded-lg border border-border bg-background px-3 text-sm outline-none focus:border-brand"
-            />
+        <div className="grid gap-5 md:grid-cols-2">
+          <label className="space-y-1.5">
+            <span className="text-xs font-semibold text-foreground">Full Name</span>
+            <div className="relative">
+              <UserCircle className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <input
+                value={profile.full_name}
+                onChange={(e) => setProfile({ ...profile, full_name: e.target.value })}
+                className="h-11 w-full rounded-xl border border-border bg-background pl-10 pr-4 text-sm outline-none transition-colors focus:border-brand focus:ring-1 focus:ring-brand/30"
+                placeholder="Enter your full name"
+              />
+            </div>
           </label>
-          <label>
-            <span className="text-[11px] font-medium text-muted-foreground">Phone</span>
-            <input
-              value={profile.phone}
-              onChange={(e) => setProfile({ ...profile, phone: e.target.value })}
-              className="mt-1 h-10 w-full rounded-lg border border-border bg-background px-3 text-sm outline-none focus:border-brand"
-            />
+          
+          <label className="space-y-1.5">
+            <span className="text-xs font-semibold text-foreground">Phone Number</span>
+            <div className="relative">
+              <span className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground font-medium text-xs flex items-center justify-center">+</span>
+              <input
+                value={profile.phone}
+                onChange={(e) => setProfile({ ...profile, phone: e.target.value })}
+                className="h-11 w-full rounded-xl border border-border bg-background pl-10 pr-4 text-sm outline-none transition-colors focus:border-brand focus:ring-1 focus:ring-brand/30"
+                placeholder="e.g. 2348000000000"
+              />
+            </div>
           </label>
-          <label className="md:col-span-2">
-            <span className="text-[11px] font-medium text-muted-foreground">Avatar URL</span>
-            <input
-              value={profile.avatar_url}
-              onChange={(e) => setProfile({ ...profile, avatar_url: e.target.value })}
-              className="mt-1 h-10 w-full rounded-lg border border-border bg-background px-3 text-sm outline-none focus:border-brand"
+          
+          <label className="space-y-1.5 md:col-span-2">
+            <span className="text-xs font-semibold text-foreground">Email Address</span>
+            <input 
+              value={user?.email ?? ""} 
+              disabled 
+              className="h-11 w-full rounded-xl border border-border bg-surface px-4 text-sm text-muted-foreground cursor-not-allowed opacity-70" 
             />
-          </label>
-          <label>
-            <span className="text-[11px] font-medium text-muted-foreground">Email</span>
-            <input value={user?.email ?? ""} disabled className="mt-1 h-10 w-full rounded-lg border border-border bg-surface px-3 text-sm text-muted-foreground" />
+            <p className="text-[10px] text-muted-foreground mt-1">Email address cannot be changed.</p>
           </label>
         </div>
 
-        <button
-          onClick={save}
-          disabled={saving}
-          className="mt-5 rounded-full bg-gradient-brand px-5 py-2 text-xs font-semibold text-primary-foreground disabled:opacity-60"
-        >
-          {saving ? "Saving…" : "Save changes"}
-        </button>
+        <div className="mt-8 flex justify-end">
+          <button
+            onClick={save}
+            disabled={saving}
+            className="rounded-xl bg-gradient-brand px-6 py-2.5 text-sm font-semibold text-primary-foreground shadow-sm hover:shadow transition-all disabled:opacity-60 disabled:cursor-not-allowed"
+          >
+            {saving ? "Saving Changes..." : "Save Changes"}
+          </button>
+        </div>
       </section>
 
-      <section className="rounded-2xl border border-border bg-gradient-to-br from-emerald-500/10 via-card to-card p-5">
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <div className="flex items-center gap-3">
-            <span className="rounded-xl bg-emerald-500/15 p-2 text-emerald-600">
-              <Store className="h-5 w-5" />
+      {/* Vendor Section */}
+      <section className="rounded-2xl border border-emerald-500/20 bg-gradient-to-br from-emerald-500/5 via-card to-card p-6 shadow-sm">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+          <div className="flex items-start gap-4">
+            <span className="rounded-2xl bg-emerald-500/15 p-3 text-emerald-600 flex-shrink-0 mt-1 sm:mt-0">
+              <Store className="h-6 w-6" />
             </span>
             <div>
-              <p className="font-display text-sm font-semibold">{isVendor ? "You're a vendor" : "Sell on Banex Mall"}</p>
-              <p className="text-xs text-muted-foreground">
-                {isVendor ? "Manage your store, products and orders." : "Get a free store inside the mall and reach thousands of shoppers."}
+              <p className="font-display text-base font-bold text-foreground">
+                {isVendor ? "You are a Verified Vendor" : "Start Selling on Banex Mall"}
+              </p>
+              <p className="mt-1 text-sm text-muted-foreground max-w-md">
+                {isVendor 
+                  ? "Manage your store, view orders, and track your business performance from your vendor dashboard." 
+                  : "Join thousands of sellers. Open your store today and start reaching more customers."}
               </p>
             </div>
           </div>
           {isVendor ? (
-            <Link href="/vendor-dashboard" className="rounded-full bg-emerald-600 px-4 py-2 text-xs font-semibold text-primary-foreground">
-              Open vendor dashboard
+            <Link 
+              href="/vendor-dashboard" 
+              className="flex-shrink-0 rounded-xl bg-emerald-600 px-5 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-emerald-700 transition-colors"
+            >
+              Go to Dashboard
             </Link>
           ) : (
-            <button onClick={becomeVendor} className="rounded-full bg-emerald-600 px-4 py-2 text-xs font-semibold text-primary-foreground">
-              Become a vendor
+            <button 
+              onClick={becomeVendor} 
+              className="flex-shrink-0 rounded-xl bg-emerald-600 px-5 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-emerald-700 transition-colors"
+            >
+              Become a Vendor
             </button>
           )}
         </div>
