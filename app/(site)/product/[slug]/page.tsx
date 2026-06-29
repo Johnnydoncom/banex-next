@@ -7,6 +7,7 @@ import { fetchGenericProduct } from "@/lib/generic-api"
 import { ProductImageGallery } from "./components/ProductImageGallery"
 import { ProductActionButtons } from "./components/ProductActionButtons"
 import { ProductSellerCard } from "./components/ProductSellerCard"
+import { ProductDescription } from "./components/ProductDescription"
 import type { Metadata } from "next"
 
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
@@ -86,8 +87,6 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
             <span>· {(product.reviews_count || 0).toLocaleString()} reviews</span>
           </div>
 
-          <p className="mt-5 text-sm leading-relaxed text-muted-foreground">{product.description}</p>
-
           <div className="mt-6 flex items-end gap-3">
             <div>
               <p className="text-[10px] uppercase tracking-widest text-muted-foreground">Lowest price</p>
@@ -126,6 +125,13 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
           </div>
         </div>
       </section>
+
+      {/* Product Description */}
+      <section className="mx-auto max-w-7xl px-4 pb-12 md:px-8">
+        <h2 className="mb-6 font-display text-xl font-bold md:text-2xl">Product Overview</h2>
+        <ProductDescription html={product.description || null} />
+      </section>
+
 
       {/* Seller comparison + contact */}
       <section className="mx-auto max-w-7xl px-4 pb-20 md:px-8">

@@ -18,7 +18,7 @@ export async function generateMetadata({ params }: { params: Promise<{ slug?: st
     if (category) {
       return { title: `${category.name} | Banex Mall`, description: `Shop ${category.name} on Banex Mall` }
     }
-  } catch (e) {}
+  } catch (e) { }
   return { title: "Marketplace | Banex Mall" }
 }
 
@@ -46,7 +46,7 @@ export default async function ShopPage({
   let categoriesData: any = {}
   let productsData: any = {}
   let sellersData: any = {}
-  
+
   try {
     const [cData, sData] = await Promise.all([
       fetchGenericCategories(),
@@ -72,7 +72,7 @@ export default async function ShopPage({
   const categories: GenericCategory[] = categoriesData.categories || []
   const sellers = sellersData.sellers || []
   const totalListingsCount = categoriesData.total_listings_count || 0
-  
+
   // Actually, fetchGenericCategory doesn't need to be fetched if we just find it in categories array,
   // but if it has deeper details like subcategories, we might need it.
   const activeCategory = categorySlug !== "all" ? categories.find((c: GenericCategory) => c.slug === categorySlug) : undefined
@@ -90,46 +90,52 @@ export default async function ShopPage({
     try {
       const v = await fetchGenericSeller(vendorParam)
       activeVendor = v.seller
-    } catch(e) {}
+    } catch (e) { }
   }
 
   return (
     <div className="min-h-screen">
       <Header />
 
-      <section className="relative border-b border-border bg-card">
+      <section className="relative overflow-hidden bg-white pt-10 pb-16 md:pt-16 md:pb-24 border-b border-border">
+        {/* Very subtle, elegant background elements */}
+        <div className="absolute inset-0 z-0 bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-brand-soft/20 via-transparent to-transparent"></div>
+        <div className="absolute -top-[20%] -left-[10%] z-0 h-[500px] w-[500px] rounded-full bg-brand/5 blur-[100px] pointer-events-none"></div>
+
         {activeCategory?.image_url && (
-          <div className="absolute inset-0 z-0 overflow-hidden opacity-20">
-            <img src={activeCategory.image_url} alt="" className="h-full w-full object-cover" />
-            <div className="absolute inset-0 bg-gradient-to-b from-transparent to-card" />
+          <div className="absolute right-0 top-0 z-0 hidden h-full w-1/3 md:block">
+            <div className="absolute inset-0 bg-gradient-to-r from-white via-white/80 to-transparent z-10"></div>
+            <img src={activeCategory.image_url} alt="" className="h-full w-full object-cover object-center opacity-40 mix-blend-multiply" />
           </div>
         )}
-        <div className="relative z-10 mx-auto max-w-7xl px-4 py-10 md:px-8">
-          <nav className="flex items-center gap-2 text-xs text-muted-foreground">
-            <Link href="/" className="hover:text-brand">Home</Link>
-            <span>›</span>
-            <Link href="/shop" className="hover:text-brand">Marketplace</Link>
+
+        <div className="relative z-10 mx-auto container">
+          <nav className="mb-6 flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+            <Link href="/" className="hover:text-brand transition-colors">Home</Link>
+            <span className="text-border">•</span>
+            <Link href="/shop" className="hover:text-brand transition-colors">Marketplace</Link>
             {activeCategory && (
               <>
-                <span>›</span>
-                <span className="text-foreground">{activeCategory.name}</span>
+                <span className="text-border">•</span>
+                <span className="text-brand font-bold">{activeCategory.name}</span>
               </>
             )}
           </nav>
 
-          <p className="mt-4 text-xs font-semibold uppercase tracking-widest text-brand-deep">Marketplace</p>
-          <div className="mt-1 flex items-center gap-4">
-            <h1 className="font-display text-3xl font-bold md:text-5xl">
-              {activeCategory ? activeCategory.name : "All listings"}
+          <div className="max-w-4xl">
+            <h1 className="font-display text-5xl font-extrabold tracking-tight text-foreground md:text-6xl lg:text-7xl">
+              {activeCategory ? activeCategory.name : "Marketplace"}
             </h1>
-          </div>
-          <p className="mt-2 max-w-xl text-sm text-muted-foreground">
-            {productsData.pagination?.total || filteredProducts.length} listings · verified seller offers · across Nigeria
-          </p>
+            <p className="mt-5 text-lg font-medium text-muted-foreground md:text-xl max-w-2xl">
+              Discover <span className="font-bold text-foreground">{productsData.pagination?.total || filteredProducts.length}</span> verified listings across Nigeria. The best deals, curated for you.
+            </p>
 
-          <Suspense fallback={<div className="h-12 w-full animate-pulse rounded-full bg-surface" />}>
-            <ShopHeaderFilters />
-          </Suspense>
+            <div className="mt-10">
+              <Suspense fallback={<div className="h-16 w-full max-w-4xl animate-pulse rounded-full bg-surface" />}>
+                <ShopHeaderFilters />
+              </Suspense>
+            </div>
+          </div>
         </div>
       </section>
 
@@ -151,7 +157,7 @@ export default async function ShopPage({
         )}
         <div className="grid gap-8 lg:grid-cols-[280px_1fr]">
           <Suspense fallback={<div className="h-96 animate-pulse rounded-xl bg-surface" />}>
-            <ShopSidebarFilters 
+            <ShopSidebarFilters
               categories={categories}
               sellers={sellers}
               categorySlug={categorySlug}

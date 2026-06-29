@@ -2,10 +2,11 @@
 
 import { useState, useEffect } from "react"
 import Link from "next/link"
-import { Eye, Check, X, Ban, Store } from "lucide-react"
+import { Eye, Check, X, Ban, Store, Plus, Edit } from "lucide-react"
 import { DataTable, type Column } from "@/components/DataTable"
 import { StatusBadge } from "@/components/StatusBadge"
 import { ConfirmDialog } from "@/components/ConfirmDialog"
+import { RejectSellerModal } from "@/components/RejectSellerModal"
 import { toast } from "sonner"
 import { useSession } from "next-auth/react"
 import { fetchAdminSellers, updateAdminSellerStatus, AdminSeller } from "@/lib/admin-api"
@@ -45,12 +46,12 @@ export default function AdminSellersPage() {
     return true
   })
 
-  const handleAction = async () => {
+  const handleAction = async (reason?: string) => {
     if (!confirmAction || !session?.accessToken) return
     setActionLoading(true)
 
     try {
-      await updateAdminSellerStatus(confirmAction.seller.slug, confirmAction.action, session.accessToken as string)
+      await updateAdminSellerStatus(confirmAction.seller.id, confirmAction.action, session.accessToken as string, reason)
       toast.success(`Seller ${confirmAction.action}d successfully.`)
       // Refresh the list
       await loadSellers()
@@ -108,11 +109,11 @@ export default function AdminSellersPage() {
       render: (s) => (
         <div className="flex items-center justify-end gap-1">
           <Link
-            href={`/admin/users/sellers/${s.slug}`}
+            href={`/admin/users/sellers/${s.id}`}
             className="rounded-lg p-1.5 text-muted-foreground hover:bg-surface hover:text-foreground"
-            title="View Profile"
+            title="Edit Seller"
           >
-            <Eye className="h-3.5 w-3.5" />
+            <Edit className="h-3.5 w-3.5" />
           </Link>
           {s.status === "pending" && (
             <>
@@ -148,9 +149,11 @@ export default function AdminSellersPage() {
 
   return (
     <div className="space-y-6">
-      {/* Tabs */}
-      <div className="flex gap-1 rounded-xl bg-surface/60 p-1">
-        {tabs.map((t) => (
+      {/* Header & Tabs */}
+      <div className="flex items-center justify-between">
+        <div className="flex gap-1 rounded-xl bg-surface/60 p-1 w-full max-w-lg">
+          {tabs.map((t) => (
+
           <button
             key={t.key}
             onClick={() => setTab(t.key)}
@@ -168,6 +171,14 @@ export default function AdminSellersPage() {
             )}
           </button>
         ))}
+        </div>
+        <Link
+          href="/admin/users/sellers/new"
+          className="inline-flex items-center gap-2 rounded-xl bg-brand px-4 py-2 text-sm font-bold text-white transition-colors hover:bg-brand-deep"
+        >
+          <Plus className="h-4 w-4" />
+          Add Seller
+        </Link>
       </div>
 
       {loading ? (
@@ -189,32 +200,36 @@ export default function AdminSellersPage() {
         />
       )}
 
-      {/* Confirm Dialog */}
-      <ConfirmDialog
-        open={!!confirmAction}
-        onOpenChange={(open) => !open && setConfirmAction(null)}
-        title={
-          confirmAction?.action === "approve"
-            ? `Approve ${confirmAction.seller.shop_name}?`
-            : confirmAction?.action === "reject"
-              ? `Reject ${confirmAction.seller.shop_name}?`
+      {/* Modals */}
+      {confirmAction?.action === "reject" ? (
+        <RejectSellerModal
+          isOpen={true}
+          onClose={() => setConfirmAction(null)}
+          onConfirm={(reason) => handleAction(reason)}
+          shopName={confirmAction.seller.shop_name}
+        />
+      ) : (
+        <ConfirmDialog
+          open={!!confirmAction}
+          onOpenChange={(open) => !open && setConfirmAction(null)}
+          title={
+            confirmAction?.action === "approve"
+              ? `Approve ${confirmAction.seller.shop_name}?`
               : `Suspend ${confirmAction?.seller.shop_name}?`
-        }
-        description={
-          confirmAction?.action === "approve"
-            ? "This vendor will be activated and their products will be visible."
-            : confirmAction?.action === "reject"
-              ? "This vendor application will be rejected."
+          }
+          description={
+            confirmAction?.action === "approve"
+              ? "This vendor will be activated and their products will be visible."
               : "This seller will be suspended and their listings hidden."
-        }
-        confirmLabel={
-          confirmAction?.action === "approve" ? "Approve" : 
-          confirmAction?.action === "reject" ? "Reject" : "Suspend"
-        }
-        destructive={confirmAction?.action !== "approve"}
-        onConfirm={handleAction}
-        loading={actionLoading}
-      />
+          }
+          confirmLabel={
+            confirmAction?.action === "approve" ? "Approve" : "Suspend"
+          }
+          destructive={confirmAction?.action !== "approve"}
+          onConfirm={() => handleAction()}
+          loading={actionLoading}
+        />
+      )}
     </div>
   )
 }

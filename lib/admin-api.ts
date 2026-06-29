@@ -23,21 +23,22 @@ type ApiEnvelope<T> = {
  * Helper to fetch from the Next.js API proxy to avoid CORS.
  * All paths must start with a slash (e.g., /admin/categories).
  */
-async function proxyFetch<T>(path: string, token: string, method = "GET", body?: any): Promise<ApiEnvelope<T>> {
+async function proxyFetch<T>(path: string, token: string, method = "GET", body?: any, customHeaders?: Record<string, string>): Promise<ApiEnvelope<T>> {
   const url = `/api/proxy${path}`
   const headers: Record<string, string> = {
     Accept: "application/json",
     Authorization: `Bearer ${token}`,
+    ...customHeaders,
   }
   
-  if (body) {
+  if (body && !customHeaders?.["Content-Type"]) {
     headers["Content-Type"] = "application/json"
   }
 
   const res = await fetch(url, {
     method,
     headers,
-    body: body ? JSON.stringify(body) : undefined,
+    body: body ? (typeof body === 'string' ? body : JSON.stringify(body)) : undefined,
   })
 
   const textData = await res.text()
@@ -143,6 +144,7 @@ export type AdminSeller = {
   shop_no: string | null
   store_location: string | null
   whatsapp_contact_id: string | null
+  is_kyc_verified: boolean | number
   delivery_estimate_minutes: number | null
   delivery_fee: number | null
   delivery_currency: string
@@ -164,8 +166,34 @@ export async function fetchAdminSellers(token: string) {
   return proxyFetch<AdminSellersData>("/admin/sellers", token)
 }
 
-export async function updateAdminSellerStatus(slug: string, action: "approve" | "reject" | "suspend", token: string) {
-  return proxyFetch<{ seller: AdminSeller }>(`/admin/sellers/${slug}/${action}`, token, "POST")
+export async function fetchAdminSeller(id: string, token: string) {
+  return proxyFetch<{ seller: AdminSeller }>(`/admin/sellers/${id}`, token)
+}
+
+export async function storeAdminSeller(data: FormData, token: string) {
+  return proxyFetchFormData<{ seller: AdminSeller }>("/admin/sellers", token, "POST", data)
+}
+
+export async function updateAdminSeller(id: string, data: FormData, token: string) {
+  return proxyFetchFormData<{ seller: AdminSeller }>(`/admin/sellers/${id}`, token, "POST", data)
+}
+
+export async function updateAdminSellerStatus(
+  id: string, 
+  action: "approve" | "reject" | "suspend", 
+  token: string, 
+  reason?: string
+) {
+  const body = reason ? new URLSearchParams({ reason }).toString() : undefined
+  const headers = reason ? { "Content-Type": "application/x-www-form-urlencoded" } : undefined
+  
+  return proxyFetch<{ seller: AdminSeller }>(
+    `/admin/sellers/${id}/${action}`, 
+    token, 
+    "POST", 
+    body, 
+    headers
+  )
 }
 
 // ─── Admin Products ───────────────────────────────────────────────────────────
@@ -182,8 +210,14 @@ export type AdminProduct = {
   currency: string
   location: string | null
   status: "draft" | "pending" | "active" | "inactive" | "rejected"
+  rejection_reason: string | null
   is_featured: boolean
   is_escrow_enabled: boolean
+  is_nationwide_delivery: boolean
+  is_authentic_only: boolean
+  in_stock: boolean
+  delivery_estimate: string | null
+  specifications: string[]
   rating_average: number | null
   reviews_count: number
   created_at: { item: string }
@@ -194,13 +228,15 @@ export type AdminProduct = {
   category: { id: string; name: string; slug: string; image_url: string | null } | null
 }
 
+
 type AdminProductsData = {
   products: AdminProduct[]
   pagination: { current_page: number; per_page: number; total: number; last_page: number }
 }
 
-export async function fetchAdminProducts(token: string) {
-  return proxyFetch<AdminProductsData>("/admin/products?trashed=with", token)
+export async function fetchAdminProducts(token: string, status?: string) {
+  const qs = status ? `?filter[status]=${status}` : ""
+  return proxyFetch<AdminProductsData>(`/admin/products${qs}`, token)
 }
 
 export async function fetchAdminProduct(id: string, token: string) {
@@ -211,8 +247,39 @@ export async function createAdminProduct(formData: FormData, token: string) {
   return proxyFetchFormData<{ product: AdminProduct }>("/admin/products", token, "POST", formData)
 }
 
+export async function updateAdminProduct(id: string, formData: FormData, token: string) {
+  // Laravel expects _method=PUT when submitting form data for a PUT/PATCH request
+  formData.append("_method", "PUT")
+  return proxyFetchFormData<{ product: AdminProduct }>(`/admin/products/${id}`, token, "POST", formData)
+}
+
+/**
+ * Product status transitions:
+ *  - approved  → POST /admin/products/{id}/approved   (pending → active)
+ *  - reject    → POST /admin/products/{id}/reject     (pending → rejected), body: { reason }
+ *  - activate  → POST /admin/products/{id}/activate   (inactive/rejected → active)
+ *  - deactivate→ POST /admin/products/{id}/deactivate (active → inactive)
+ */
+export async function approveAdminProduct(id: string, token: string) {
+  return proxyFetch<{ product: AdminProduct }>(`/admin/products/${id}/approved`, token, "POST")
+}
+
+export async function rejectAdminProduct(id: string, token: string, reason?: string) {
+  return proxyFetch<{ product: AdminProduct }>(`/admin/products/${id}/reject`, token, "POST", reason ? { reason } : undefined)
+}
+
+export async function activateAdminProduct(id: string, token: string) {
+  return proxyFetch<{ product: AdminProduct }>(`/admin/products/${id}/activate`, token, "POST")
+}
+
+export async function deactivateAdminProduct(id: string, token: string) {
+  return proxyFetch<{ product: AdminProduct }>(`/admin/products/${id}/deactivate`, token, "POST")
+}
+
+/** @deprecated Use the individual action functions above instead */
 export async function updateAdminProductStatus(id: string, action: "approve" | "reject" | "activate" | "deactivate", token: string) {
-  return proxyFetch<{ product: AdminProduct }>(`/admin/products/${id}/${action}`, token, "POST")
+  const actionMap: Record<string, string> = { approve: "approved", reject: "reject", activate: "activate", deactivate: "deactivate" }
+  return proxyFetch<{ product: AdminProduct }>(`/admin/products/${id}/${actionMap[action]}`, token, "POST")
 }
 
 // ─── Admin WhatsApp Contacts ──────────────────────────────────────────────────

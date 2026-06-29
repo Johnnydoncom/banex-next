@@ -3,7 +3,7 @@ import Link from "next/link"
 export function Footer() {
   return (
     <footer className="mt-24 border-t border-border bg-surface/60">
-      <div className="mx-auto max-w-7xl px-4 py-16 md:px-8">
+      <div className="mx-auto container py-16">
         <div className="grid gap-12 md:grid-cols-4">
           <div className="md:col-span-1">
             <img src="/assets/banex-mall-logo.png" alt="Banex Mall" className="h-14 w-auto" width={220} height={110} />

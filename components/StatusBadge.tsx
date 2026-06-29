@@ -17,6 +17,7 @@ const tones: Record<string, string> = {
   // Info
   shipped: "bg-blue-500/15 text-blue-700",
   confirmed: "bg-brand-soft/40 text-brand-deep",
+  draft: "bg-blue-500/15 text-blue-700",
 
   // Negative
   rejected: "bg-rose-500/15 text-rose-700",
@@ -25,6 +26,7 @@ const tones: Record<string, string> = {
   inactive: "bg-zinc-500/15 text-zinc-600",
   deactivated: "bg-zinc-500/15 text-zinc-600",
 }
+
 
 export function StatusBadge({ status, className = "" }: { status: string; className?: string }) {
   const normalized = status.toLowerCase()

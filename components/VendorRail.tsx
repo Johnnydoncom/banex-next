@@ -16,7 +16,7 @@ export function VendorRail({
 }) {
   const list = vendors.slice(0, limit)
   return (
-    <section className="mx-auto max-w-7xl px-4 py-12 md:px-8">
+    <section className="mx-auto container py-12">
       <div className="flex items-end justify-between">
         <div>
           <p className="text-xs font-semibold uppercase tracking-widest text-brand-deep">{eyebrow}</p>

@@ -38,7 +38,7 @@ export function HeaderClient({ categories }: { categories: GenericCategory[] }) 
     <header className="sticky top-0 z-40 border-b border-border bg-background/85 backdrop-blur-xl">
       {/* Top utility bar */}
       <div className="hidden border-b border-border/60 bg-surface/60 md:block">
-        <div className="mx-auto flex h-9 max-w-7xl items-center justify-between px-4 text-xs text-muted-foreground md:px-8">
+        <div className="mx-auto flex h-9 container items-center justify-between text-xs text-muted-foreground">
           <div className="flex items-center gap-1.5">
             <MapPin className="h-3.5 w-3.5 text-brand" />
             Delivering across Nigeria
@@ -54,7 +54,7 @@ export function HeaderClient({ categories }: { categories: GenericCategory[] }) 
       </div>
 
       {/* Main bar */}
-      <div className="mx-auto flex h-20 max-w-7xl items-center gap-3 px-4 md:gap-6 md:px-8">
+      <div className="mx-auto flex h-20 container items-center gap-3 md:gap-6">
         <MobileNav categories={categories} />
         <Link href="/" className="flex items-center" aria-label="Banex Mall home">
           <img
@@ -201,7 +201,7 @@ export function HeaderClient({ categories }: { categories: GenericCategory[] }) 
 
       {/* Category nav */}
       <nav className="border-t border-border/60 bg-card/60">
-        <div className="mx-auto flex max-w-7xl items-center gap-1 overflow-x-auto px-4 py-2 text-sm md:px-8">
+        <div className="mx-auto flex container items-center gap-1 overflow-x-auto py-2 text-sm">
           <Link
             href="/vendors"
             className="whitespace-nowrap rounded-full bg-brand-soft/30 px-3.5 py-1.5 font-semibold text-brand-deep transition-colors hover:bg-brand-soft/50"
