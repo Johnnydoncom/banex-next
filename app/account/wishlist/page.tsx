@@ -18,7 +18,7 @@ type Item = {
 }
 
 export default function WishlistPage() {
-  const { user } = useAuth()
+  const { user, session } = useAuth()
   const cart = useCart()
   const [items, setItems] = useState<Item[]>([])
   const [loading, setLoading] = useState(true)
@@ -27,64 +27,48 @@ export default function WishlistPage() {
     if (!user) return
     setLoading(true)
 
-    // ----- ACTUAL FETCH IMPLEMENTATION (Commented out as requested) -----
-    /*
     try {
-      const token = (user as any).accessToken
+      const token = (session as any)?.accessToken
+      if (!token) return
       const headers = { Authorization: `Bearer ${token}`, Accept: "application/json" }
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000"
       
-      const res = await fetch(`${apiUrl}/user/wishlists`, { headers })
+      const res = await fetch(`/api/proxy/user/wishlists`, { headers })
       const data = await res.json()
-      setItems(data?.data || [])
+      
+      // The API usually returns the array either directly in data.data or data.data.wishlists
+      const wishlists = data?.data?.wishlists || data?.data || []
+      
+      // Ensure we map to the expected structure if the backend returns a different format
+      const formattedItems = Array.isArray(wishlists) ? wishlists.map((w: any) => ({
+        id: w.id,
+        product_slug: w.product?.slug || w.product_slug,
+        product_name: w.product?.name || w.product_name,
+        product_image: w.product?.images?.[0]?.url || w.product?.image_url || w.product_image,
+        product_price: w.product?.price || w.product_price,
+        vendor_slug: w.product?.seller?.slug || w.vendor_slug || null
+      })) : []
+      
+      setItems(formattedItems)
     } catch (err) {
       console.error(err)
     } finally {
       setLoading(false)
     }
-    */
-
-    // ----- MOCK DATA IMPLEMENTATION -----
-    setTimeout(() => {
-      setItems([
-        {
-          id: "1",
-          product_slug: "macbook-air-m2",
-          product_name: "MacBook Air M2",
-          product_image: "/assets/cat-laptop.jpg",
-          product_price: 55000,
-          vendor_slug: "apple-store"
-        },
-        {
-          id: "2",
-          product_slug: "samsung-s23",
-          product_name: "Samsung Galaxy S23",
-          product_image: "/assets/phone-1.jpg",
-          product_price: 15000,
-          vendor_slug: "samsung-hub"
-        }
-      ])
-      setLoading(false)
-    }, 500)
   }
 
   useEffect(() => {
     void load()
-  }, [user])
+  }, [user, session])
 
   const remove = async (id: string) => {
-    // ----- ACTUAL FETCH IMPLEMENTATION -----
-    /*
     try {
-      const token = (user as any).accessToken
+      const token = (session as any)?.accessToken
       const headers = { Authorization: `Bearer ${token}`, Accept: "application/json" }
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000"
       
-      await fetch(`${apiUrl}/user/wishlists/${id}`, { method: 'DELETE', headers })
+      await fetch(`/api/proxy/user/wishlists/${id}`, { method: 'DELETE', headers })
     } catch (err) {
       console.error(err)
     }
-    */
 
     setItems((prev) => prev.filter((i) => i.id !== id))
     toast.success("Removed from wishlist")

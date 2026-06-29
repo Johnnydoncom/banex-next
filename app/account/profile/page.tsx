@@ -9,7 +9,7 @@ import { toast } from "sonner"
 import Image from "next/image"
 
 export default function ProfilePage() {
-  const { user } = useAuth()
+  const { user, session } = useAuth()
   const { isVendor } = useRoles()
   const [profile, setProfile] = useState({ full_name: "", phone: "", avatar_url: "" })
   const [saving, setSaving] = useState(false)
@@ -17,21 +17,19 @@ export default function ProfilePage() {
   useEffect(() => {
     if (!user) return
 
-    // ----- ACTUAL FETCH IMPLEMENTATION (Commented out) -----
-    /*
     async function fetchProfile() {
       try {
-        const token = (user as any).accessToken
+        const token = (session as any)?.accessToken
+        if (!token) return
         const headers = { Authorization: `Bearer ${token}`, Accept: "application/json" }
-        const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000"
         
-        const res = await fetch(`${apiUrl}/user/profile`, { headers })
+        const res = await fetch(`/api/proxy/user/profile`, { headers })
         const data = await res.json()
-        if (data?.data) {
+        if (data?.data?.user) {
           setProfile({
-            full_name: data.data.full_name ?? "",
-            phone: data.data.phone ?? "",
-            avatar_url: data.data.avatar_url ?? ""
+            full_name: data.data.user.full_name ?? "",
+            phone: data.data.user.phone ?? "",
+            avatar_url: data.data.user.avatar_url ?? ""
           })
         }
       } catch (err) {
@@ -39,46 +37,28 @@ export default function ProfilePage() {
       }
     }
     fetchProfile()
-    */
-
-    // ----- MOCK DATA IMPLEMENTATION -----
-    setProfile({
-      full_name: (user as any).name || "",
-      phone: "08012345678",
-      avatar_url: ""
-    })
-  }, [user])
+  }, [user, session])
 
   const save = async () => {
     if (!user) return
     setSaving(true)
 
-    // ----- ACTUAL FETCH IMPLEMENTATION (Commented out) -----
-    /*
     try {
-      const token = (user as any).accessToken
+      const token = (session as any)?.accessToken
       const headers = { Authorization: `Bearer ${token}`, "Content-Type": "application/json", Accept: "application/json" }
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000"
       
-      const res = await fetch(`${apiUrl}/user/profile`, {
+      const res = await fetch(`/api/proxy/user/profile`, {
         method: 'PUT',
         headers,
         body: JSON.stringify(profile)
       })
       if (!res.ok) throw new Error("Failed to update profile")
-      toast.success("Profile updated")
+      toast.success("Profile updated successfully")
     } catch (err: any) {
       toast.error(err.message)
     } finally {
       setSaving(false)
     }
-    */
-
-    // ----- MOCK SAVE -----
-    setTimeout(() => {
-      toast.success("Profile updated")
-      setSaving(false)
-    }, 800)
   }
 
   const becomeVendor = async () => {

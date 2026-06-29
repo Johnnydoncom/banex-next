@@ -3,8 +3,10 @@
 import { useState } from "react"
 import { Save } from "lucide-react"
 import { toast } from "sonner"
+import { useAuth } from "@/hooks/use-auth"
 
 export default function AccountSettingsPage() {
+  const { session } = useAuth()
   const [form, setForm] = useState({
     currentPassword: "",
     newPassword: "",
@@ -20,28 +22,33 @@ export default function AccountSettingsPage() {
     }
 
     setSaving(true)
-    
-    // ----- ACTUAL FETCH IMPLEMENTATION -----
-    /*
+
     try {
-      const token = ... // from session
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000"
-      await fetch(`${apiUrl}/user/password`, {
+      const token = (session as any)?.accessToken
+      if (!token) throw new Error("Not authenticated")
+
+      const res = await fetch(`/api/proxy/user/password`, {
         method: "PUT",
         headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json", Accept: "application/json" },
         body: JSON.stringify({
           current_password: form.currentPassword,
-          new_password: form.newPassword,
-          new_password_confirmation: form.confirmPassword
+          password: form.newPassword,
+          password_confirmation: form.confirmPassword
         })
       })
-    } catch (err) {}
-    */
 
-    await new Promise((r) => setTimeout(r, 800))
-    toast.success("Password updated successfully.")
-    setForm({ currentPassword: "", newPassword: "", confirmPassword: "" })
-    setSaving(false)
+      const data = await res.json()
+      if (!res.ok || !data?.success) {
+        throw new Error(data?.message || "Failed to update password")
+      }
+
+      toast.success("Password updated successfully.")
+      setForm({ currentPassword: "", newPassword: "", confirmPassword: "" })
+    } catch (err: any) {
+      toast.error(err.message || "An error occurred.")
+    } finally {
+      setSaving(false)
+    }
   }
 
   return (
@@ -56,15 +63,15 @@ export default function AccountSettingsPage() {
         <form onSubmit={handlePasswordChange} className="space-y-4">
           <div>
             <label className="mb-1.5 block text-xs font-medium text-muted-foreground">Current Password</label>
-            <input type="password" value={form.currentPassword} onChange={(e) => setForm(f => ({...f, currentPassword: e.target.value}))} required className="w-full rounded-xl border border-border bg-background px-4 py-2.5 text-sm" />
+            <input type="password" value={form.currentPassword} onChange={(e) => setForm(f => ({ ...f, currentPassword: e.target.value }))} required className="w-full rounded-xl border border-border bg-background px-4 py-2.5 text-sm" />
           </div>
           <div>
             <label className="mb-1.5 block text-xs font-medium text-muted-foreground">New Password</label>
-            <input type="password" value={form.newPassword} onChange={(e) => setForm(f => ({...f, newPassword: e.target.value}))} required className="w-full rounded-xl border border-border bg-background px-4 py-2.5 text-sm" />
+            <input type="password" value={form.newPassword} onChange={(e) => setForm(f => ({ ...f, newPassword: e.target.value }))} required className="w-full rounded-xl border border-border bg-background px-4 py-2.5 text-sm" />
           </div>
           <div>
             <label className="mb-1.5 block text-xs font-medium text-muted-foreground">Confirm New Password</label>
-            <input type="password" value={form.confirmPassword} onChange={(e) => setForm(f => ({...f, confirmPassword: e.target.value}))} required className="w-full rounded-xl border border-border bg-background px-4 py-2.5 text-sm" />
+            <input type="password" value={form.confirmPassword} onChange={(e) => setForm(f => ({ ...f, confirmPassword: e.target.value }))} required className="w-full rounded-xl border border-border bg-background px-4 py-2.5 text-sm" />
           </div>
 
           <div className="pt-2">
@@ -74,7 +81,7 @@ export default function AccountSettingsPage() {
           </div>
         </form>
       </div>
-      
+
       <div className="rounded-2xl border border-rose-200 bg-rose-50/50 p-6">
         <h2 className="font-display text-lg font-semibold text-rose-600 mb-2">Danger Zone</h2>
         <p className="text-sm text-muted-foreground mb-4">Once you delete your account, there is no going back. Please be certain.</p>
