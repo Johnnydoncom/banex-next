@@ -18,7 +18,7 @@ export default function AdminSellersPage() {
   const [tab, setTab] = useState<Tab>("all")
   const [sellers, setSellers] = useState<AdminSeller[]>([])
   const [loading, setLoading] = useState(true)
-  
+
   const [confirmAction, setConfirmAction] = useState<{ seller: AdminSeller; action: "approve" | "reject" | "suspend" } | null>(null)
   const [actionLoading, setActionLoading] = useState(false)
 
@@ -154,31 +154,30 @@ export default function AdminSellersPage() {
         <div className="flex gap-1 rounded-xl bg-surface/60 p-1 w-full max-w-lg">
           {tabs.map((t) => (
 
-          <button
-            key={t.key}
-            onClick={() => setTab(t.key)}
-            className={`flex-1 rounded-lg px-3 py-2 text-xs font-semibold transition-colors ${
-              tab === t.key
-                ? "bg-card text-foreground shadow-sm"
-                : "text-muted-foreground hover:text-foreground"
-            }`}
-          >
-            {t.label}
-            {t.count > 0 && (
-              <span className="ml-1.5 rounded-full bg-brand/15 px-1.5 py-0.5 text-[10px] font-bold text-brand">
-                {t.count}
-              </span>
-            )}
-          </button>
-        ))}
+            <button
+              key={t.key}
+              onClick={() => setTab(t.key)}
+              className={`flex-1 rounded-lg px-3 py-2 text-xs font-semibold transition-colors ${tab === t.key
+                  ? "bg-card text-foreground shadow-sm"
+                  : "text-muted-foreground hover:text-foreground"
+                }`}
+            >
+              {t.label}
+              {t.count > 0 && (
+                <span className="ml-1.5 rounded-full bg-brand/15 px-1.5 py-0.5 text-[10px] font-bold text-brand">
+                  {t.count}
+                </span>
+              )}
+            </button>
+          ))}
         </div>
-        <Link
+        {/* <Link
           href="/admin/users/sellers/new"
           className="inline-flex items-center gap-2 rounded-xl bg-brand px-4 py-2 text-sm font-bold text-white transition-colors hover:bg-brand-deep"
         >
           <Plus className="h-4 w-4" />
           Add Seller
-        </Link>
+        </Link> */}
       </div>
 
       {loading ? (
@@ -192,7 +191,7 @@ export default function AdminSellersPage() {
           rowKey={(s) => s.id}
           searchPlaceholder="Search shop or owner name…"
           searchFilter={(s, q) =>
-            s.shop_name.toLowerCase().includes(q) || 
+            s.shop_name.toLowerCase().includes(q) ||
             !!(s.user?.full_name && s.user.full_name.toLowerCase().includes(q)) ||
             !!(s.user?.email && s.user.email.toLowerCase().includes(q))
           }

@@ -98,7 +98,7 @@ export default function AdminNewSellerPage() {
     formData.append("tier", form.tier)
     formData.append("is_kyc_verified", form.is_kyc_verified ? "1" : "0")
     if (form.whatsapp_contact_id) formData.append("whatsapp_contact_id", form.whatsapp_contact_id)
-    
+
     if (coverImage?.file) {
       formData.append("cover_image", coverImage.file)
     }
@@ -123,7 +123,7 @@ export default function AdminNewSellerPage() {
   }
 
   return (
-    <div className="mx-auto max-w-4xl space-y-6 pb-20">
+    <div className="space-y-6 pb-20">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
           <Link

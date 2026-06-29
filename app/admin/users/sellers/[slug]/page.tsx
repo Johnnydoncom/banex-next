@@ -188,7 +188,7 @@ export default function AdminEditSellerPage() {
   if (!seller) return null
 
   return (
-    <div className="mx-auto max-w-5xl space-y-6 pb-20">
+    <div className="space-y-6 pb-20">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-center gap-3">
           <Link

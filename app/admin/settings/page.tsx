@@ -22,7 +22,7 @@ export default function AdminSettingsPage() {
   }
 
   return (
-    <div className="space-y-6 max-w-4xl">
+    <div className="space-y-6 container">
       <div>
         <h1 className="font-display text-2xl font-bold">Settings</h1>
         <p className="mt-1 text-sm text-muted-foreground">Configure global marketplace preferences.</p>
@@ -35,11 +35,11 @@ export default function AdminSettingsPage() {
           <div className="grid gap-4 sm:grid-cols-2">
             <div>
               <label className="mb-1.5 block text-xs font-medium text-muted-foreground">Site Name</label>
-              <input type="text" value={form.siteName} onChange={(e) => setForm(f => ({...f, siteName: e.target.value}))} className="w-full rounded-xl border border-border bg-background px-4 py-2.5 text-sm" />
+              <input type="text" value={form.siteName} onChange={(e) => setForm(f => ({ ...f, siteName: e.target.value }))} className="w-full rounded-xl border border-border bg-background px-4 py-2.5 text-sm" />
             </div>
             <div>
               <label className="mb-1.5 block text-xs font-medium text-muted-foreground">Support Email</label>
-              <input type="email" value={form.supportEmail} onChange={(e) => setForm(f => ({...f, supportEmail: e.target.value}))} className="w-full rounded-xl border border-border bg-background px-4 py-2.5 text-sm" />
+              <input type="email" value={form.supportEmail} onChange={(e) => setForm(f => ({ ...f, supportEmail: e.target.value }))} className="w-full rounded-xl border border-border bg-background px-4 py-2.5 text-sm" />
             </div>
           </div>
         </section>
@@ -50,12 +50,12 @@ export default function AdminSettingsPage() {
           <div className="grid gap-4 sm:grid-cols-2">
             <div>
               <label className="mb-1.5 block text-xs font-medium text-muted-foreground">Vendor Commission Rate (%)</label>
-              <input type="number" value={form.vendorCommission} onChange={(e) => setForm(f => ({...f, vendorCommission: e.target.value}))} className="w-full rounded-xl border border-border bg-background px-4 py-2.5 text-sm" />
+              <input type="number" value={form.vendorCommission} onChange={(e) => setForm(f => ({ ...f, vendorCommission: e.target.value }))} className="w-full rounded-xl border border-border bg-background px-4 py-2.5 text-sm" />
               <p className="mt-1 text-[11px] text-muted-foreground">Percentage taken from each vendor sale.</p>
             </div>
             <div>
               <label className="mb-1.5 block text-xs font-medium text-muted-foreground">Base Delivery Fee (₦)</label>
-              <input type="number" value={form.baseDeliveryFee} onChange={(e) => setForm(f => ({...f, baseDeliveryFee: e.target.value}))} className="w-full rounded-xl border border-border bg-background px-4 py-2.5 text-sm" />
+              <input type="number" value={form.baseDeliveryFee} onChange={(e) => setForm(f => ({ ...f, baseDeliveryFee: e.target.value }))} className="w-full rounded-xl border border-border bg-background px-4 py-2.5 text-sm" />
             </div>
           </div>
         </section>
@@ -64,7 +64,7 @@ export default function AdminSettingsPage() {
         <section>
           <h2 className="font-display text-lg font-semibold border-b border-border pb-2 mb-4">Features</h2>
           <label className="flex items-center gap-3 cursor-pointer">
-            <input type="checkbox" checked={form.allowNewVendors} onChange={(e) => setForm(f => ({...f, allowNewVendors: e.target.checked}))} className="h-5 w-5 rounded border-border text-brand focus:ring-brand" />
+            <input type="checkbox" checked={form.allowNewVendors} onChange={(e) => setForm(f => ({ ...f, allowNewVendors: e.target.checked }))} className="h-5 w-5 rounded border-border text-brand focus:ring-brand" />
             <div>
               <span className="text-sm font-medium block">Allow New Vendor Applications</span>
               <span className="text-xs text-muted-foreground">If disabled, the "Become a Vendor" form will be hidden.</span>
