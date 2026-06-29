@@ -12,7 +12,7 @@ function GlobalFetchInterceptor({ children }: { children: ReactNode }) {
     const originalFetch = window.fetch
     window.fetch = async (...args) => {
       const response = await originalFetch(...args)
-      
+
       let url = ""
       if (typeof args[0] === "string") {
         url = args[0]
@@ -27,15 +27,15 @@ function GlobalFetchInterceptor({ children }: { children: ReactNode }) {
         toast.error("Session expired. Please log in again.")
         signOut({ callbackUrl: "/login" })
       }
-      
+
       return response
     }
-    
+
     return () => {
       window.fetch = originalFetch
     }
   }, [])
-  
+
   return <>{children}</>
 }
 
