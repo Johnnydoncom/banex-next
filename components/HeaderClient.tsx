@@ -113,7 +113,7 @@ export function HeaderClient({ categories }: { categories: GenericCategory[] }) 
                 <p className="font-display text-sm font-semibold">Saved items</p>
                 <p className="text-[11px] text-muted-foreground">Wishlist your favourite finds</p>
               </div>
-              
+
               {wishlist.count === 0 ? (
                 <div className="flex flex-col items-center gap-2 px-4 py-6 text-center">
                   <div className="flex h-12 w-12 items-center justify-center rounded-full bg-brand-soft/30">
@@ -185,7 +185,7 @@ export function HeaderClient({ categories }: { categories: GenericCategory[] }) 
                   </DropdownMenuLabel>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem asChild>
-                    <Link href="/" className="flex items-center gap-2"><UserCircle className="h-4 w-4 text-brand" /> My account</Link>
+                    <Link href="/account" className="flex items-center gap-2"><UserCircle className="h-4 w-4 text-brand" /> My account</Link>
                   </DropdownMenuItem>
                   <DropdownMenuItem asChild>
                     <Link href="/track-order" className="flex items-center gap-2"><Package className="h-4 w-4 text-brand" /> Track order</Link>

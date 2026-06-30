@@ -1,7 +1,7 @@
 "use client"
 
 import Link from "next/link"
-import { useRouter } from "next/navigation"
+import { useRouter, useSearchParams } from "next/navigation"
 import { useState, type FormEvent } from "react"
 import { Eye, EyeOff, Loader2 } from "lucide-react"
 import { toast } from "sonner"
@@ -16,6 +16,9 @@ const schema = z.object({
 
 export default function LoginPage() {
   const router = useRouter()
+  const searchParams = useSearchParams()
+  const callbackUrl = searchParams.get("callbackUrl")
+
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
   const [show, setShow] = useState(false)
@@ -49,19 +52,23 @@ export default function LoginPage() {
     const session = await getSession()
     const userRole = (session?.user as any)?.role
 
-    if (userRole === "vendor") {
-      router.push("/vendor-dashboard")
-    } else if (userRole === "admin") {
-      router.push("/admin")
+    if (callbackUrl) {
+      router.push(callbackUrl)
     } else {
-      router.push("/account")
+      if (userRole === "vendor") {
+        router.push("/vendor-dashboard")
+      } else if (userRole === "admin") {
+        router.push("/admin")
+      } else {
+        router.push("/account")
+      }
     }
     router.refresh()
   }
 
   const handleGoogle = async () => {
     setOauthLoading(true)
-    await signIn("google", { callbackUrl: "/dashboard-redirect" })
+    await signIn("google", { callbackUrl: callbackUrl || "/dashboard-redirect" })
     setOauthLoading(false)
   }
 
