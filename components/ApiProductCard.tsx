@@ -1,6 +1,7 @@
 import Link from "next/link"
 import { MapPin, Star } from "lucide-react"
 import { GenericProduct } from "@/lib/generic-api"
+import { WishlistButton } from "./WishlistButton"
 
 function formatNaira(amount: number) {
   return new Intl.NumberFormat("en-NG", { style: "currency", currency: "NGN", maximumFractionDigits: 0 }).format(amount)
@@ -33,10 +34,11 @@ export function ApiProductCard({ product }: { product: GenericProduct }) {
           </span>
         )}
         {product.is_authentic_only && (
-          <span className="absolute right-3 top-3 rounded-full bg-emerald-500/90 px-2 py-0.5 text-[10px] font-semibold text-white backdrop-blur">
+          <span className="absolute left-3 top-9 rounded-full bg-emerald-500/90 px-2 py-0.5 text-[10px] font-semibold text-white backdrop-blur">
             Authentic
           </span>
         )}
+        <WishlistButton product={product} />
       </div>
 
       <div className="p-4">

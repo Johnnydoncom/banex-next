@@ -17,30 +17,36 @@ type ApiEnvelope<T> = {
 // ─── Models ───────────────────────────────────────────────────────────────────
 
 export type CartItemData = {
-  id: string // Server ID
+  id: string            // Server cart-item ID
   product_id: string
   product: {
     id: string
     name: string
-    slug: string
     price: number
     currency: string
-    images: { url: string; is_primary: boolean }[]
+    primary_image_url: string | null  // Real API field (not images[])
+    category?: { id: string; name: string; slug: string } | null
   }
   seller: {
     id: string
     shop_name: string
     slug: string
-  }
+  } | null
   quantity: number
-  price: number
-  subtotal: number
+  unit_price: number    // Real API field (not "price")
+  line_total: number    // Real API field (not "subtotal")
 }
 
 export type CartData = {
+  id: string
+  user_id?: string
   items: CartItemData[]
-  subtotal: number
-  total: number
+  summary: {
+    items_count: number
+    subtotal: number
+    currency: string
+    seller_count?: number
+  }
 }
 
 export type AddressData = {
@@ -88,7 +94,27 @@ export type OrderData = {
   }[]
 }
 
+export type PaymentMethodData = {
+  id: string
+  name: string
+  slug: string
+  image: string | null
+  status: string
+}
+
+export type WalletData = {
+  balance: number
+  currency: string
+}
+
 // ─── CART ─────────────────────────────────────────────────────────────────────
+// Endpoint reference (confirmed via Postman):
+//   GET    /user/cart                       → fetch cart
+//   POST   /user/cart/items                 → add item  { product_id, quantity }
+//   PUT    /user/cart/items/:productId       → update qty { quantity }  (uses productId, NOT cart-item id)
+//   DELETE /user/cart/items/:productId       → remove item (uses productId, NOT cart-item id)
+//   DELETE /user/cart/                      → clear entire cart
+//   POST   /user/cart/sync                  → sync local items
 
 export async function userFetchCart() {
   const res = await apiGet<ApiEnvelope<{ cart: CartData }>>(`${PROXY_BASE}/user/cart`)
@@ -96,28 +122,32 @@ export async function userFetchCart() {
 }
 
 export async function userAddToCart(productId: string, quantity: number) {
-  const res = await apiPost<ApiEnvelope<{ cart: CartData }>>(`${PROXY_BASE}/user/cart`, {
+  // Correct endpoint: POST /user/cart/items  (NOT /user/cart)
+  const res = await apiPost<ApiEnvelope<{ cart: CartData }>>(`${PROXY_BASE}/user/cart/items`, {
     product_id: productId,
     quantity,
   })
   return res.data?.cart
 }
 
-export async function userUpdateCartQty(cartItemId: string, quantity: number) {
-  const res = await apiPut<ApiEnvelope<{ cart: CartData }>>(`${PROXY_BASE}/user/cart/${cartItemId}`, {
+export async function userUpdateCartQty(productId: string, quantity: number) {
+  // Correct: uses productId in path (NOT the cart-item uuid)
+  const res = await apiPut<ApiEnvelope<{ cart: CartData }>>(`${PROXY_BASE}/user/cart/items/${productId}`, {
     quantity,
   })
   return res.data?.cart
 }
 
-export async function userRemoveFromCart(cartItemId: string) {
-  const res = await apiDelete<ApiEnvelope<{ cart: CartData }>>(`${PROXY_BASE}/user/cart/${cartItemId}`)
+export async function userRemoveFromCart(productId: string) {
+  // Correct: uses productId in path (NOT the cart-item uuid)
+  const res = await apiDelete<ApiEnvelope<{ cart: CartData }>>(`${PROXY_BASE}/user/cart/items/${productId}`)
   return res.data?.cart
 }
 
 export async function userClearCart() {
-  const res = await apiDelete<ApiEnvelope<null>>(`${PROXY_BASE}/user/cart`)
-  return res.data
+  // Trailing slash required as per Postman: DELETE /user/cart/
+  const res = await apiDelete<ApiEnvelope<{ cart: CartData }>>(`${PROXY_BASE}/user/cart/`)
+  return res.data?.cart
 }
 
 export async function userSyncCart(items: { product_id: string; quantity: number }[]) {
@@ -184,3 +214,67 @@ export async function userFetchOrder(id: string) {
   const res = await apiGet<ApiEnvelope<{ order: OrderData }>>(`${PROXY_BASE}/user/orders/${id}`)
   return res.data?.order
 }
+
+// ─── PAYMENT & WALLET ─────────────────────────────────────────────────────────
+
+export async function userFetchPaymentMethods() {
+  const res = await apiGet<ApiEnvelope<{ payment_methods: PaymentMethodData[] }>>(`${PROXY_BASE}/generic/payment-methods`)
+  return res.data?.payment_methods || []
+}
+
+export async function userFetchWallet() {
+  const res = await apiGet<ApiEnvelope<{ wallet: WalletData }>>(`${PROXY_BASE}/user/wallet`)
+  return res.data?.wallet
+}
+
+// ─── WISHLIST ─────────────────────────────────────────────────────────────────
+// Based on Postman collection:
+//   GET    /user/wishlist         → data.wishlist: [{id, product_id, created_at}]
+//   POST   /user/wishlist         → data.item: {id, product_id, created_at}
+//   DELETE /user/wishlist/{id}    → (uses wishlist item id, not product_id)
+//   POST   /user/wishlist/sync    → body: product_ids[], response: data.wishlist
+
+export type WishlistItemData = {
+  id: string          // server wishlist item ID (used for DELETE)
+  product_id: string  // the product ID
+  created_at?: { item: string }
+  // Note: the API does NOT embed a full product object in wishlist responses.
+  // Product details must come from the local GenericProduct data when toggling.
+  product?: {
+    id: string
+    name: string
+    slug: string
+    price: number
+    currency?: string
+    images?: { url: string; is_primary: boolean }[]
+    seller?: {
+      id: string
+      shop_name: string
+      slug: string
+    } | null
+  } | null
+}
+
+export async function userFetchWishlist() {
+  const res = await apiGet<ApiEnvelope<{ wishlist: WishlistItemData[] }>>(`${PROXY_BASE}/user/wishlist`)
+  return res.data?.wishlist || []
+}
+
+export async function userAddWishlist(productId: string) {
+  const res = await apiPost<ApiEnvelope<{ item: WishlistItemData }>>(`${PROXY_BASE}/user/wishlist`, { product_id: productId })
+  return res.data?.item || null
+}
+
+export async function userRemoveWishlist(wishlistItemId: string) {
+  // wishlistItemId is the server-side wishlist item id (NOT the product id)
+  const res = await apiDelete<ApiEnvelope<null>>(`${PROXY_BASE}/user/wishlist/${wishlistItemId}`)
+  return res.data
+}
+
+export async function userSyncWishlist(productIds: string[]) {
+  // The API accepts product_ids[] in form-urlencoded but we send JSON.
+  // When sending JSON, use product_ids as an array: { product_ids: [...] }
+  const res = await apiPost<ApiEnvelope<{ wishlist: WishlistItemData[] }>>(`${PROXY_BASE}/user/wishlist/sync`, { product_ids: productIds })
+  return res.data?.wishlist || []
+}
+

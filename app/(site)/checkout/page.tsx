@@ -2,20 +2,23 @@
 
 import Link from "next/link"
 import { useRouter } from "next/navigation"
-import { useEffect, useState, useMemo } from "react"
+import { useEffect, useState, useMemo, useRef } from "react"
 import { useCart } from "@/components/CartContext"
 import { formatNaira } from "@/lib/products"
 import {
   ShieldCheck,
   Lock,
   Truck,
-  CreditCard,
   Building2,
-  Smartphone,
   CheckCircle2,
   ChevronLeft,
   MapPin,
-  Plus
+  Plus,
+  ImageOff,
+  Wallet as WalletIcon,
+  CreditCard as CreditCardIcon,
+  Smartphone as SmartphoneIcon,
+  Landmark as LandmarkIcon,
 } from "lucide-react"
 import { toast } from "sonner"
 import { useAuth } from "@/hooks/use-auth"
@@ -24,11 +27,14 @@ import {
   userCheckoutPlaceOrder, 
   userFetchAddresses, 
   userCreateAddress,
+  userFetchPaymentMethods,
+  userFetchWallet,
   type AddressData,
-  type CheckoutBreakdown
+  type CheckoutBreakdown,
+  type PaymentMethodData,
+  type WalletData
 } from "@/lib/user-api"
 
-type Method = "card" | "transfer" | "ussd"
 type Fulfilment = "delivery" | "pickup"
 
 export default function CheckoutPage() {
@@ -36,14 +42,22 @@ export default function CheckoutPage() {
   const { status } = useAuth()
   const router = useRouter()
   
-  const [method, setMethod] = useState<Method>("card")
+  const [method, setMethod] = useState<string>("card")
   const [fulfilment, setFulfilment] = useState<Fulfilment>("delivery")
   const [addresses, setAddresses] = useState<AddressData[]>([])
+  const [paymentMethods, setPaymentMethods] = useState<PaymentMethodData[]>([])
+  const [wallet, setWallet] = useState<WalletData | null>(null)
+  
   const [selectedAddressId, setSelectedAddressId] = useState<string>("")
   const [showNewAddress, setShowNewAddress] = useState(false)
   const [breakdown, setBreakdown] = useState<CheckoutBreakdown | null>(null)
   const [submitting, setSubmitting] = useState(false)
   const [done, setDone] = useState<string | null>(null)
+
+  // Ref to hold the AbortController for the in-flight breakdown request
+  const breakdownAbortRef = useRef<AbortController | null>(null)
+  // Ref to hold the debounce timer for breakdown fetches
+  const breakdownTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   
   // New address form
   const [newAddress, setNewAddress] = useState({
@@ -62,38 +76,70 @@ export default function CheckoutPage() {
     }
   }, [status, router])
 
-  // Fetch addresses
+  // Fetch addresses, payment methods and wallet
   useEffect(() => {
     if (status === "authenticated") {
-      userFetchAddresses().then(data => {
-        setAddresses(data)
-        const def = data.find(a => a.is_default) || data[0]
+      Promise.all([
+        userFetchAddresses(),
+        userFetchPaymentMethods(),
+        userFetchWallet().catch(() => null)
+      ]).then(([addrData, methodsData, walletData]) => {
+        setAddresses(addrData)
+        const def = addrData.find(a => a.is_default) || addrData[0]
         if (def) setSelectedAddressId(def.id)
         else setShowNewAddress(true)
-      }).catch(() => toast.error("Failed to load addresses"))
+
+        setPaymentMethods(methodsData)
+        if (walletData) setWallet(walletData)
+        
+        // Select first active method by default if current method isn't in list
+        if (methodsData.length > 0 && !methodsData.find(m => m.slug === "card" || m.slug === method)) {
+           setMethod(methodsData.find(m => m.status === "active")?.slug || "")
+        }
+      }).catch((err) => {
+        console.error(err)
+        toast.error("Failed to load checkout dependencies")
+      })
     }
   }, [status])
 
-  // Fetch breakdown when fulfillment or address changes
+  // Fetch breakdown when fulfilment or address changes — debounced + abortable
+  // to prevent a flood of concurrent API calls when multiple deps change at once
+  // (e.g. isSyncing, items.length, and selectedAddressId all settling on mount).
   useEffect(() => {
     if (status !== "authenticated" || items.length === 0 || isSyncing) return
+    if (fulfilment === "delivery" && !selectedAddressId) return
 
-    const loadBreakdown = async () => {
+    // Cancel any pending debounce timer
+    if (breakdownTimerRef.current) clearTimeout(breakdownTimerRef.current)
+    // Abort any in-flight request
+    if (breakdownAbortRef.current) breakdownAbortRef.current.abort()
+
+    const controller = new AbortController()
+    breakdownAbortRef.current = controller
+
+    breakdownTimerRef.current = setTimeout(async () => {
+      if (controller.signal.aborted) return
       try {
-        const bd = await userCheckoutBreakdown(fulfilment, fulfilment === "delivery" ? selectedAddressId : undefined)
-        if (bd) setBreakdown(bd)
+        const bd = await userCheckoutBreakdown(
+          fulfilment,
+          fulfilment === "delivery" ? selectedAddressId : undefined
+        )
+        if (!controller.signal.aborted && bd) setBreakdown(bd)
       } catch (err: any) {
-        toast.error(err.message || "Failed to calculate order total")
+        if (!controller.signal.aborted) {
+          toast.error(err.message || "Failed to calculate order total")
+        }
       }
-    }
+    }, 350)
 
-    if (fulfilment === "pickup" || selectedAddressId) {
-      loadBreakdown()
+    return () => {
+      if (breakdownTimerRef.current) clearTimeout(breakdownTimerRef.current)
+      controller.abort()
     }
   }, [fulfilment, selectedAddressId, items.length, status, isSyncing])
 
-  const handleCreateAddress = async (e: React.FormEvent) => {
-    e.preventDefault()
+  const handleCreateAddress = async () => {
     setSubmitting(true)
     try {
       const addr = await userCreateAddress(newAddress)
@@ -281,11 +327,32 @@ export default function CheckoutPage() {
 
             <fieldset className="rounded-2xl border border-border bg-card p-6">
               <legend className="px-1 font-display text-base font-semibold">Payment method</legend>
-              <div className="mt-3 grid gap-2 sm:grid-cols-3">
-                <PayOption active={method === "card"} onClick={() => setMethod("card")} icon={CreditCard} label="Card" sub="Visa / Mastercard / Verve" />
-                <PayOption active={method === "transfer"} onClick={() => setMethod("transfer")} icon={Building2} label="Bank transfer" sub="Pay via your bank app" />
-                <PayOption active={method === "ussd"} onClick={() => setMethod("ussd")} icon={Smartphone} label="USSD" sub="*737#, *894# etc." />
-              </div>
+              {paymentMethods.length === 0 ? (
+                <div className="mt-3 text-sm text-muted-foreground animate-pulse">Loading payment methods...</div>
+              ) : (
+                <div className="mt-3 grid gap-2 sm:grid-cols-3">
+                  {paymentMethods.map(pm => {
+                    if (pm.status !== "active") return null
+                    
+                    const isWallet = pm.slug === "wallet"
+                    const walletInsufficient = isWallet && breakdown && wallet && wallet.balance < breakdown.total
+                    const disabled = !!walletInsufficient
+                    const icon = isWallet ? WalletIcon : (pm.slug.includes("card") ? CreditCardIcon : (pm.slug.includes("transfer") ? LandmarkIcon : SmartphoneIcon))
+                    
+                    return (
+                      <PayOption 
+                        key={pm.id}
+                        active={method === pm.slug} 
+                        onClick={() => { if (!disabled) setMethod(pm.slug) }} 
+                        icon={icon} 
+                        label={pm.name} 
+                        sub={isWallet && wallet ? `Bal: ${formatNaira(wallet.balance)}` : undefined} 
+                        disabled={disabled}
+                      />
+                    )
+                  })}
+                </div>
+              )}
             </fieldset>
 
             <div className="rounded-2xl border border-brand/30 bg-brand-soft/15 p-5 text-sm">
@@ -307,7 +374,13 @@ export default function CheckoutPage() {
               <ul className="mt-4 divide-y divide-border/60">
                 {items.map((it) => (
                   <li key={it.id} className="flex gap-3 py-3">
-                    <img src={it.productImage} alt={it.productName} className="h-14 w-14 rounded-lg object-cover" />
+                    {it.productImage ? (
+                      <img src={it.productImage} alt={it.productName} className="h-14 w-14 flex-shrink-0 rounded-lg object-cover" />
+                    ) : (
+                      <div className="flex h-14 w-14 flex-shrink-0 items-center justify-center rounded-lg bg-muted">
+                        <ImageOff className="h-4 w-4 text-muted-foreground" />
+                      </div>
+                    )}
                     <div className="flex-1">
                       <p className="line-clamp-1 text-sm font-medium">{it.productName}</p>
                       <p className="text-[11px] text-muted-foreground">
@@ -385,24 +458,32 @@ function PayOption({
   icon: Icon,
   label,
   sub,
+  disabled
 }: {
   active: boolean
   onClick: () => void
   icon: React.ComponentType<{ className?: string }>
   label: string
-  sub: string
+  sub?: string
+  disabled?: boolean
 }) {
   return (
     <button
       type="button"
       onClick={onClick}
+      disabled={disabled}
       className={`flex flex-col items-start rounded-xl border p-3 text-left transition-colors ${
-        active ? "border-brand bg-brand-soft/15" : "border-border bg-background hover:border-brand/60"
+        active 
+          ? "border-brand bg-brand-soft/15" 
+          : disabled 
+            ? "border-border bg-background/50 opacity-50 cursor-not-allowed" 
+            : "border-border bg-background hover:border-brand/60"
       }`}
     >
       <Icon className={`h-4 w-4 ${active ? "text-brand-deep" : "text-muted-foreground"}`} />
       <span className="mt-2 text-sm font-semibold">{label}</span>
-      <span className="text-[11px] text-muted-foreground">{sub}</span>
+      {sub && <span className="text-[11px] text-muted-foreground whitespace-nowrap overflow-hidden text-ellipsis w-full">{sub}</span>}
+      {disabled && <span className="text-[10px] text-rose-500 font-medium">Insufficient funds</span>}
     </button>
   )
 }

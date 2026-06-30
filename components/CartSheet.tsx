@@ -4,7 +4,7 @@ import Link from "next/link"
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet"
 import { useCart } from "@/components/CartContext"
 import { formatNaira } from "@/lib/products"
-import { Minus, Plus, ShieldCheck, ShoppingBag, Trash2 } from "lucide-react"
+import { ImageOff, Minus, Plus, ShieldCheck, ShoppingBag, Trash2 } from "lucide-react"
 
 export function CartSheet() {
   const { isOpen, setOpen, items, setQty, remove, subtotal, count, close } = useCart()
@@ -46,7 +46,13 @@ export function CartSheet() {
             <ul className="space-y-4">
               {items.map((it) => (
                 <li key={it.id} className="flex gap-3 rounded-xl border border-border bg-card p-3">
-                  <img src={it.productImage} alt={it.productName} className="h-20 w-20 rounded-lg object-cover" />
+                  {it.productImage ? (
+                    <img src={it.productImage} alt={it.productName} className="h-20 w-20 flex-shrink-0 rounded-lg object-cover" />
+                  ) : (
+                    <div className="flex h-20 w-20 flex-shrink-0 items-center justify-center rounded-lg bg-muted">
+                      <ImageOff className="h-6 w-6 text-muted-foreground" />
+                    </div>
+                  )}
                   <div className="flex flex-1 flex-col">
                     <p className="line-clamp-1 text-sm font-semibold">{it.productName}</p>
                     <p className="text-[11px] text-muted-foreground">Sold by {it.sellerName}</p>

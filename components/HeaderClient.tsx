@@ -7,6 +7,7 @@ import {
   Package, Settings, LifeBuoy, Store, HeartOff, LogOut, UserCircle,
 } from "lucide-react"
 import { useCart } from "@/components/CartContext"
+import { useWishlist } from "@/components/WishlistContext"
 import { MobileNav } from "@/components/MobileNav"
 import { useAuth, signOut } from "@/hooks/use-auth"
 import { toast } from "sonner"
@@ -23,6 +24,7 @@ import { GenericCategory } from "@/lib/generic-api"
 
 export function HeaderClient({ categories }: { categories: GenericCategory[] }) {
   const { count, open } = useCart()
+  const wishlist = useWishlist()
   const { user } = useAuth()
   const displayName =
     (user?.name as string | undefined) ||
@@ -96,9 +98,14 @@ export function HeaderClient({ categories }: { categories: GenericCategory[] }) 
             <PopoverTrigger asChild>
               <button
                 aria-label="Saved items"
-                className="hidden rounded-full border border-border bg-card p-2.5 text-muted-foreground transition-colors hover:border-brand hover:text-brand sm:inline-flex"
+                className="relative hidden rounded-full border border-border bg-card p-2.5 text-muted-foreground transition-colors hover:border-brand hover:text-brand sm:inline-flex"
               >
                 <Heart className="h-4 w-4" />
+                {wishlist.count > 0 && (
+                  <span className="absolute -right-1 -top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-brand px-1 text-[10px] font-bold text-white">
+                    {wishlist.count}
+                  </span>
+                )}
               </button>
             </PopoverTrigger>
             <PopoverContent align="end" className="w-72 p-0">
@@ -106,21 +113,57 @@ export function HeaderClient({ categories }: { categories: GenericCategory[] }) 
                 <p className="font-display text-sm font-semibold">Saved items</p>
                 <p className="text-[11px] text-muted-foreground">Wishlist your favourite finds</p>
               </div>
-              <div className="flex flex-col items-center gap-2 px-4 py-6 text-center">
-                <div className="flex h-12 w-12 items-center justify-center rounded-full bg-brand-soft/30">
-                  <HeartOff className="h-5 w-5 text-brand-deep" />
+              
+              {wishlist.count === 0 ? (
+                <div className="flex flex-col items-center gap-2 px-4 py-6 text-center">
+                  <div className="flex h-12 w-12 items-center justify-center rounded-full bg-brand-soft/30">
+                    <HeartOff className="h-5 w-5 text-brand-deep" />
+                  </div>
+                  <p className="text-sm font-medium">No saved items yet</p>
+                  <p className="text-xs text-muted-foreground">
+                    Tap the heart on any product to keep it here.
+                  </p>
+                  <Link
+                    href="/shop"
+                    className="mt-2 rounded-full bg-gradient-brand px-4 py-2 text-xs font-semibold text-primary-foreground"
+                  >
+                    Browse the mall
+                  </Link>
                 </div>
-                <p className="text-sm font-medium">No saved items yet</p>
-                <p className="text-xs text-muted-foreground">
-                  Tap the heart on any product to keep it here.
-                </p>
-                <Link
-                  href="/shop"
-                  className="mt-2 rounded-full bg-gradient-brand px-4 py-2 text-xs font-semibold text-primary-foreground"
-                >
-                  Browse the mall
-                </Link>
-              </div>
+              ) : (
+                <div className="flex flex-col">
+                  <div className="max-h-60 overflow-y-auto px-2 py-2">
+                    {wishlist.items.slice(0, 3).map((item) => (
+                      <Link key={item.productId} href={`/product/${item.productSlug}`} className="flex items-center gap-3 rounded-md p-2 transition-colors hover:bg-surface">
+                        <div className="h-10 w-10 shrink-0 overflow-hidden rounded-md bg-surface border border-border">
+                          {item.productImage ? (
+                            <img src={item.productImage} alt={item.productName} className="h-full w-full object-cover" />
+                          ) : (
+                            <div className="h-full w-full bg-brand-soft/20" />
+                          )}
+                        </div>
+                        <div className="flex-1 overflow-hidden">
+                          <p className="truncate text-xs font-medium text-foreground">{item.productName}</p>
+                          <p className="text-[11px] font-bold text-brand-deep">₦{item.price.toLocaleString()}</p>
+                        </div>
+                      </Link>
+                    ))}
+                    {wishlist.count > 3 && (
+                      <p className="px-2 py-1 text-center text-[10px] text-muted-foreground">
+                        + {wishlist.count - 3} more items
+                      </p>
+                    )}
+                  </div>
+                  <div className="border-t border-border p-3">
+                    <Link
+                      href="/account/wishlist"
+                      className="flex w-full items-center justify-center rounded-full bg-gradient-brand px-4 py-2 text-xs font-semibold text-primary-foreground"
+                    >
+                      View full wishlist
+                    </Link>
+                  </div>
+                </div>
+              )}
             </PopoverContent>
           </Popover>
 

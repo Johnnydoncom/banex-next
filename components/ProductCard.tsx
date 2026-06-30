@@ -4,8 +4,11 @@ import Link from "next/link"
 import { Star, MapPin, Heart } from "lucide-react"
 import { motion } from "framer-motion"
 import { GenericProduct } from "@/lib/generic-api"
+import { useWishlist } from "@/components/WishlistContext"
 
 export function ProductCard({ product, index = 0 }: { product: GenericProduct; index?: number }) {
+  const { isInWishlist, toggle } = useWishlist()
+  
   const lowest = product.price
   const categoryName = product.category?.name || "Uncategorized"
   const primaryImg = product.images?.find((img) => img.is_primary)?.url || product.images?.[0]?.url || ""
@@ -47,10 +50,13 @@ export function ProductCard({ product, index = 0 }: { product: GenericProduct; i
           </span>
           <button
             aria-label="Save"
-            onClick={(e) => e.preventDefault()}
+            onClick={(e) => {
+              e.preventDefault()
+              void toggle(product)
+            }}
             className="absolute right-3 top-3 flex h-8 w-8 items-center justify-center rounded-full bg-card/90 text-muted-foreground backdrop-blur transition-colors hover:text-brand"
           >
-            <Heart className="h-4 w-4" />
+            <Heart className={`h-4 w-4 ${isInWishlist(product.id) ? "fill-brand text-brand" : ""}`} />
           </button>
         </div>
         <div className="p-4">

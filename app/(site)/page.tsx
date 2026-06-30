@@ -33,6 +33,11 @@ export const metadata = {
     "Order from 100+ vendors inside Banex Mall — phones, fashion, groceries, beauty, electronics — delivered same-hour by our riders across the city.",
 }
 
+// ISR: Regenerate the page every 60 seconds in the background.
+// The first build generates an empty page (if API is down), 
+// subsequent requests get a fresh cached version.
+export const revalidate = 60
+
 // ─── Icon map (API icon slug → Lucide component) ──────────────────────────────
 
 const ICON_MAP: Record<string, LucideIcon> = {
@@ -110,7 +115,7 @@ export default async function Home() {
   try {
     data = await fetchGenericHome()
   } catch(e) {
-    console.error("[homepage] Failed to fetch /generic/home")
+    console.error("[homepage] Failed to fetch /generic/home:", e)
   }
 
   const categories = data?.categories ?? []

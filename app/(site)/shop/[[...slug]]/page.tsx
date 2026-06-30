@@ -5,6 +5,8 @@ import { ShopHeaderFilters, ShopSidebarFilters } from "./components/ShopFilters"
 import { fetchGenericCategories, fetchGenericCategory, fetchGenericProducts, fetchGenericSeller, fetchGenericSellers, GenericCategory, GenericProduct, GenericSeller } from "@/lib/generic-api"
 import type { Metadata } from "next"
 
+export const dynamic = 'force-dynamic'
+
 export async function generateMetadata({ params }: { params: Promise<{ slug?: string[] }> }): Promise<Metadata> {
   const resolvedParams = await params
   const categorySlug = resolvedParams.slug?.[0]

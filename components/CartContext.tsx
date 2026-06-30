@@ -18,7 +18,7 @@ export type CartItem = {
   productId: string
   productSlug: string
   productName: string
-  productImage: string
+  productImage: string | null // null when the product has no images
   sellerId: string
   sellerName: string
   price: number
@@ -45,14 +45,15 @@ const STORAGE_KEY = "banex.cart"
 
 function mapServerCart(serverItems: CartItemData[]): CartItem[] {
   return serverItems.map(item => ({
-    id: item.id, // backend cart item id
+    id: item.id,            // cart-item id (used as React key)
     productId: item.product_id,
-    productSlug: item.product.slug,
+    productSlug: "",        // not returned by cart API
     productName: item.product.name,
-    productImage: item.product.images?.find(img => img.is_primary)?.url || item.product.images?.[0]?.url || "",
-    sellerId: item.seller.id,
-    sellerName: item.seller.shop_name,
-    price: Number(item.price),
+    // Real API uses primary_image_url (not images[])
+    productImage: item.product.primary_image_url || null,
+    sellerId: item.seller?.id ?? "",
+    sellerName: item.seller?.shop_name ?? "Unknown Seller",
+    price: Number(item.unit_price),  // real field is unit_price
     qty: item.quantity
   }))
 }
@@ -147,30 +148,44 @@ export function CartProvider({ children }: { children: ReactNode }) {
 
   const remove = useCallback(async (id: string) => {
     if (status === "authenticated") {
+      // Find the item to get its productId (API requires productId, not cart-item id)
+      const item = items.find(i => i.id === id)
+      if (!item) return
+      // Optimistic update
+      setItems(prev => prev.filter(i => i.id !== id))
       try {
-        const serverCart = await userRemoveFromCart(id)
+        const serverCart = await userRemoveFromCart(item.productId)
         if (serverCart) setItems(mapServerCart(serverCart.items))
       } catch (e: any) {
+        // Revert on failure
+        setItems(prev => [...prev, item])
         toast.error("Failed to remove item")
       }
     } else {
       setItems((prev) => prev.filter((i) => i.id !== id))
     }
-  }, [status])
+  }, [status, items])
 
   const setQty = useCallback(async (id: string, qty: number) => {
     if (qty <= 0) return remove(id)
     if (status === "authenticated") {
+      // Find the item to get its productId (API requires productId, not cart-item id)
+      const item = items.find(i => i.id === id)
+      if (!item) return
+      // Optimistic update
+      setItems(prev => prev.map(i => i.id === id ? { ...i, qty } : i))
       try {
-        const serverCart = await userUpdateCartQty(id, qty)
+        const serverCart = await userUpdateCartQty(item.productId, qty)
         if (serverCart) setItems(mapServerCart(serverCart.items))
       } catch (e: any) {
+        // Revert on failure
+        setItems(prev => prev.map(i => i.id === id ? { ...i, qty: item.qty } : i))
         toast.error("Failed to update quantity")
       }
     } else {
       setItems((prev) => prev.map((i) => (i.id === id ? { ...i, qty } : i)))
     }
-  }, [status, remove])
+  }, [status, items, remove])
 
   const clear = useCallback(async () => {
     if (status === "authenticated") {

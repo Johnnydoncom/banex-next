@@ -25,11 +25,23 @@ type FetchOptions = {
   headers?: Record<string, string>
   params?: Record<string, string | number | boolean | undefined>
   signal?: AbortSignal
+  cache?: RequestCache
+  next?: NextFetchRequestConfig
 }
 
 function buildUrl(path: string, params?: FetchOptions["params"]) {
-  // Fix URL construction to properly append paths to the base URL
-  const baseUrl = API_URL.endsWith("/") ? API_URL.slice(0, -1) : API_URL
+  const isProxy = path.startsWith("/api/proxy")
+  
+  let baseUrl: string
+  if (isProxy) {
+    // Use local origin for proxy requests
+    baseUrl = typeof window !== "undefined" 
+      ? window.location.origin 
+      : (process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000")
+  } else {
+    baseUrl = API_URL.endsWith("/") ? API_URL.slice(0, -1) : API_URL
+  }
+
   const endpointPath = path.startsWith("/") ? path : `/${path}`
   const url = new URL(`${baseUrl}${endpointPath}`)
   
@@ -38,6 +50,13 @@ function buildUrl(path: string, params?: FetchOptions["params"]) {
       if (value !== undefined) url.searchParams.set(key, String(value))
     })
   }
+  
+  // Return relative path for browser proxy requests to avoid CORS/origin issues, 
+  // otherwise return absolute URL.
+  if (isProxy && typeof window !== "undefined") {
+    return url.pathname + url.search
+  }
+  
   return url.toString()
 }
 
@@ -73,6 +92,8 @@ export async function apiGet<T = any>(
     method: "GET",
     headers: buildHeaders(opts.token, opts.headers),
     signal: opts.signal,
+    ...(opts.cache !== undefined && { cache: opts.cache }),
+    ...(opts.next !== undefined && { next: opts.next }),
   })
   return handleResponse<T>(res)
 }

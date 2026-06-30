@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server"
+import { getToken } from "next-auth/jwt"
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "https://api-marketplace.banexmall.com/api"
 
@@ -18,7 +19,12 @@ async function handleProxy(req: NextRequest, { params }: { params: Promise<{ pat
 
   const headers = new Headers()
   headers.set("Accept", "application/json")
-  if (authHeader) {
+  
+  // Extract NextAuth token from HttpOnly cookies securely
+  const token = await getToken({ req, secret: process.env.NEXTAUTH_SECRET })
+  if (token?.accessToken) {
+    headers.set("Authorization", `Bearer ${token.accessToken}`)
+  } else if (authHeader) {
     headers.set("Authorization", authHeader)
   }
   

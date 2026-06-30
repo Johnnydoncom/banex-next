@@ -79,11 +79,7 @@ export async function fetchGenericHome() {
     mall_vendors: GenericSeller[]
     featured_listings: GenericProduct[]
     popular_listings: GenericProduct[]
-  }>>("/generic/home", {
-    // Next.js fetch options for caching
-    // We can use Next.js unstable_cache or fetch cache: "no-store" depending on freshness needs.
-    // Let's use revalidate: 60s for generic home to keep it fresh but fast.
-  })
+  }>>("/generic/home")
   return res.data
 }
 

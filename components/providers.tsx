@@ -2,6 +2,7 @@
 
 import { SessionProvider, signOut } from "next-auth/react"
 import { CartProvider } from "@/components/CartContext"
+import { WishlistProvider } from "@/components/WishlistContext"
 import { CartSheet } from "@/components/CartSheet"
 import { Toaster } from "@/components/ui/sonner"
 import { useEffect, type ReactNode } from "react"
@@ -44,9 +45,11 @@ export function Providers({ children }: { children: ReactNode }) {
     <SessionProvider>
       <GlobalFetchInterceptor>
         <CartProvider>
-          {children}
-          <CartSheet />
-          <Toaster position="top-right" richColors />
+          <WishlistProvider>
+            {children}
+            <CartSheet />
+            <Toaster position="top-right" richColors />
+          </WishlistProvider>
         </CartProvider>
       </GlobalFetchInterceptor>
     </SessionProvider>

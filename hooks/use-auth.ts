@@ -7,7 +7,7 @@ export function useAuth() {
   const user = session?.user ?? null
   const loading = status === "loading"
 
-  return { user, loading, session }
+  return { user, loading, session, status }
 }
 
 export async function signOut() {
