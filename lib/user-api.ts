@@ -52,12 +52,16 @@ export type CartData = {
 export type AddressData = {
   id: string
   label?: string
-  full_name: string
+  first_name: string
+  last_name: string
   phone: string
   email?: string
-  street_address: string
+  street: string
+  street_line_2?: string | null
   city: string
   state: string
+  country: string
+  post_code?: string
   is_default: boolean
 }
 
@@ -179,27 +183,50 @@ export async function userDeleteAddress(id: string) {
 
 // ─── CHECKOUT ─────────────────────────────────────────────────────────────────
 
-export async function userCheckoutValidateShipping(type: "delivery" | "pickup") {
-  const res = await apiPost<ApiEnvelope<any>>(`${PROXY_BASE}/user/checkout/validate-shipping`, { type })
-  return res.data
+export type ShippingRate = {
+  id: string
+  code: string
+  name: string
+  fee: number
+  currency: string
+  delivery_window: string
 }
 
-export async function userCheckoutBreakdown(shippingType: "delivery" | "pickup", addressId?: string) {
-  const body: any = { shipping_type: shippingType }
+export type ShippingValidation = {
+  fulfillment_type: string
+  shipping?: {
+    weight_kg: number
+    currency: string
+    rates: ShippingRate[]
+    suggested_rate_id: string
+  }
+}
+
+export async function userCheckoutValidateShipping(fulfillmentType: "delivery" | "mall_pickup", addressId?: string) {
+  const body: any = { fulfillment_type: fulfillmentType }
   if (addressId) body.address_id = addressId
+  const res = await apiPost<ApiEnvelope<{ shipping_validation: ShippingValidation }>>(`${PROXY_BASE}/user/checkout/validate-shipping`, body)
+  return res.data?.shipping_validation
+}
+
+export async function userCheckoutBreakdown(fulfillmentType: "delivery" | "mall_pickup", addressId?: string, rateId?: string) {
+  const body: any = { fulfillment_type: fulfillmentType }
+  if (addressId) body.address_id = addressId
+  if (rateId) body.rate_id = rateId
   const res = await apiPost<ApiEnvelope<{ breakdown: CheckoutBreakdown }>>(`${PROXY_BASE}/user/checkout/breakdown`, body)
   return res.data?.breakdown
 }
 
-export async function userCheckoutPlaceOrder(shippingType: "delivery" | "pickup", paymentMethod: string, addressId?: string) {
-  const body: any = { shipping_type: shippingType, payment_method: paymentMethod }
+export async function userCheckoutPlaceOrder(fulfillmentType: "delivery" | "mall_pickup", paymentMethodId: string, addressId?: string, rateId?: string) {
+  const body: any = { fulfillment_type: fulfillmentType, payment_method_id: paymentMethodId }
   if (addressId) body.address_id = addressId
-  const res = await apiPost<ApiEnvelope<{ order: OrderData; payment_reference?: string; authorization_url?: string }>>(`${PROXY_BASE}/user/checkout/place-order`, body)
+  if (rateId) body.rate_id = rateId
+  const res = await apiPost<ApiEnvelope<{ order: OrderData; payment_reference?: string; authorization_url?: string }>>(`${PROXY_BASE}/user/orders`, body)
   return res.data
 }
 
-export async function userCheckoutVerifyPayment(reference: string) {
-  const res = await apiPost<ApiEnvelope<{ order: OrderData }>>(`${PROXY_BASE}/user/checkout/verify-payment`, { reference })
+export async function userCheckoutVerifyPayment(orderId: string) {
+  const res = await apiPost<ApiEnvelope<{ order: OrderData }>>(`${PROXY_BASE}/user/orders/${orderId}/payment/verify`, {})
   return res.data?.order
 }
 

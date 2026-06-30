@@ -14,11 +14,13 @@ export default function AddressesPage() {
   const [saving, setSaving] = useState(false)
   const [form, setForm] = useState({
     label: "Home",
-    full_name: "",
+    first_name: "",
+    last_name: "",
     phone: "",
-    street_address: "",
+    street: "",
     city: "",
     state: "",
+    country: "NG",
     is_default: false,
   })
 
@@ -38,7 +40,7 @@ export default function AddressesPage() {
 
   const save = async () => {
     if (!user) return
-    if (!form.full_name || !form.phone || !form.street_address || !form.city || !form.state) {
+    if (!form.first_name || !form.last_name || !form.phone || !form.street || !form.city || !form.state) {
       toast.error("Fill in all fields")
       return
     }
@@ -48,7 +50,7 @@ export default function AddressesPage() {
       await userCreateAddress(form)
       toast.success("Address added")
       setOpen(false)
-      setForm({ label: "Home", full_name: "", phone: "", street_address: "", city: "", state: "", is_default: false })
+      setForm({ label: "Home", first_name: "", last_name: "", phone: "", street: "", city: "", state: "", country: "NG", is_default: false })
       void load()
     } catch (err: any) {
       toast.error(err.message || "Failed to add address")
@@ -100,9 +102,10 @@ export default function AddressesPage() {
             <div className="grid gap-3">
               {[
                 ["label", "Label (Home, Office...)"],
-                ["full_name", "Recipient full name"],
+                ["first_name", "Recipient first name"],
+                ["last_name", "Recipient last name"],
                 ["phone", "Phone"],
-                ["street_address", "Street address"],
+                ["street", "Street address"],
                 ["city", "City"],
                 ["state", "State"],
               ].map(([k, label]) => (
@@ -153,10 +156,10 @@ export default function AddressesPage() {
                 </span>
               )}
               <p className="font-display text-sm font-semibold">{a.label}</p>
-              <p className="mt-1 text-sm">{a.full_name}</p>
+              <p className="mt-1 text-sm">{a.first_name} {a.last_name}</p>
               <p className="text-xs text-muted-foreground">{a.phone}</p>
               <p className="mt-2 text-xs text-muted-foreground">
-                {a.street_address}, {a.city}, {a.state}
+                {a.street}, {a.city}, {a.state}
               </p>
               <div className="mt-4 flex gap-2">
                 {!a.is_default && (

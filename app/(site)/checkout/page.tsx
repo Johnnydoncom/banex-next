@@ -29,6 +29,8 @@ import {
   userCreateAddress,
   userFetchPaymentMethods,
   userFetchWallet,
+  userCheckoutValidateShipping,
+  type ShippingRate,
   type AddressData,
   type CheckoutBreakdown,
   type PaymentMethodData,
@@ -50,6 +52,9 @@ export default function CheckoutPage() {
   
   const [selectedAddressId, setSelectedAddressId] = useState<string>("")
   const [showNewAddress, setShowNewAddress] = useState(false)
+  const [shippingRates, setShippingRates] = useState<ShippingRate[]>([])
+  const [selectedRateId, setSelectedRateId] = useState<string>("")
+  
   const [breakdown, setBreakdown] = useState<CheckoutBreakdown | null>(null)
   const [submitting, setSubmitting] = useState(false)
   const [done, setDone] = useState<string | null>(null)
@@ -61,11 +66,13 @@ export default function CheckoutPage() {
   
   // New address form
   const [newAddress, setNewAddress] = useState({
-    full_name: "",
+    first_name: "",
+    last_name: "",
     phone: "",
-    street_address: "",
+    street: "",
     city: "",
-    state: ""
+    state: "",
+    country: "NG"
   })
 
   // Ensure user is logged in
@@ -103,16 +110,12 @@ export default function CheckoutPage() {
     }
   }, [status])
 
-  // Fetch breakdown when fulfilment or address changes — debounced + abortable
-  // to prevent a flood of concurrent API calls when multiple deps change at once
-  // (e.g. isSyncing, items.length, and selectedAddressId all settling on mount).
+  // Fetch breakdown when fulfilment, address or selected rate changes — debounced + abortable
   useEffect(() => {
     if (status !== "authenticated" || items.length === 0 || isSyncing) return
     if (fulfilment === "delivery" && !selectedAddressId) return
 
-    // Cancel any pending debounce timer
     if (breakdownTimerRef.current) clearTimeout(breakdownTimerRef.current)
-    // Abort any in-flight request
     if (breakdownAbortRef.current) breakdownAbortRef.current.abort()
 
     const controller = new AbortController()
@@ -121,9 +124,32 @@ export default function CheckoutPage() {
     breakdownTimerRef.current = setTimeout(async () => {
       if (controller.signal.aborted) return
       try {
+        const fType = fulfilment === "pickup" ? "mall_pickup" : "delivery"
+        let currentRateId = selectedRateId
+
+        // 1. Fetch shipping validation & rates (always needed for delivery to get latest rates)
+        const validateRes = await userCheckoutValidateShipping(
+          fType,
+          fType === "delivery" ? selectedAddressId : undefined
+        )
+
+        if (controller.signal.aborted) return
+
+        if (validateRes) {
+          const rates = validateRes.shipping?.rates || []
+          setShippingRates(rates)
+          // If current rate is invalid or empty, update it
+          if (fType === "delivery" && (!currentRateId || !rates.find(r => r.id === currentRateId))) {
+            currentRateId = validateRes.shipping?.suggested_rate_id || (rates.length > 0 ? rates[0].id : "")
+            setSelectedRateId(currentRateId)
+          }
+        }
+
+        // 2. Fetch final breakdown
         const bd = await userCheckoutBreakdown(
-          fulfilment,
-          fulfilment === "delivery" ? selectedAddressId : undefined
+          fType,
+          fType === "delivery" ? selectedAddressId : undefined,
+          fType === "delivery" ? currentRateId : undefined
         )
         if (!controller.signal.aborted && bd) setBreakdown(bd)
       } catch (err: any) {
@@ -137,7 +163,7 @@ export default function CheckoutPage() {
       if (breakdownTimerRef.current) clearTimeout(breakdownTimerRef.current)
       controller.abort()
     }
-  }, [fulfilment, selectedAddressId, items.length, status, isSyncing])
+  }, [fulfilment, selectedAddressId, selectedRateId, items.length, status, isSyncing])
 
   const handleCreateAddress = async () => {
     setSubmitting(true)
@@ -166,10 +192,12 @@ export default function CheckoutPage() {
 
     setSubmitting(true)
     try {
+      const fType = fulfilment === "pickup" ? "mall_pickup" : "delivery"
       const res = await userCheckoutPlaceOrder(
-        fulfilment,
+        fType,
         method,
-        fulfilment === "delivery" ? selectedAddressId : undefined
+        fType === "delivery" ? selectedAddressId : undefined,
+        fType === "delivery" ? selectedRateId : undefined
       )
       
       if (res?.order) {
@@ -281,8 +309,8 @@ export default function CheckoutPage() {
                             selectedAddressId === addr.id ? "border-brand bg-brand-soft/15" : "border-border bg-background hover:border-brand/60"
                           }`}
                         >
-                          <span className="font-semibold text-sm">{addr.full_name}</span>
-                          <span className="mt-1 text-xs text-muted-foreground line-clamp-1">{addr.street_address}</span>
+                          <span className="font-semibold text-sm">{addr.first_name} {addr.last_name}</span>
+                          <span className="mt-1 text-xs text-muted-foreground line-clamp-1">{addr.street}</span>
                           <span className="text-xs text-muted-foreground">{addr.city}, {addr.state}</span>
                           <span className="mt-2 text-[11px] font-medium text-foreground">{addr.phone}</span>
                         </button>
@@ -298,9 +326,10 @@ export default function CheckoutPage() {
                     </div>
                   ) : (
                     <div className="grid gap-3 sm:grid-cols-2">
-                      <Field label="Full name" required value={newAddress.full_name} onChange={e => setNewAddress({...newAddress, full_name: e.target.value})} />
+                      <Field label="First name" required value={newAddress.first_name} onChange={e => setNewAddress({...newAddress, first_name: e.target.value})} />
+                      <Field label="Last name" required value={newAddress.last_name} onChange={e => setNewAddress({...newAddress, last_name: e.target.value})} />
                       <Field label="Phone" type="tel" required value={newAddress.phone} onChange={e => setNewAddress({...newAddress, phone: e.target.value})} />
-                      <Field label="Street address" className="sm:col-span-2" required value={newAddress.street_address} onChange={e => setNewAddress({...newAddress, street_address: e.target.value})} />
+                      <Field label="Street address" className="sm:col-span-2" required value={newAddress.street} onChange={e => setNewAddress({...newAddress, street: e.target.value})} />
                       <Field label="City" required value={newAddress.city} onChange={e => setNewAddress({...newAddress, city: e.target.value})} />
                       <Field label="State" required value={newAddress.state} onChange={e => setNewAddress({...newAddress, state: e.target.value})} />
                       
@@ -324,6 +353,29 @@ export default function CheckoutPage() {
                 </div>
               )}
             </fieldset>
+
+            {/* Shipping Rates */}
+            {fulfilment === "delivery" && shippingRates.length > 0 && !showNewAddress && (
+              <fieldset className="rounded-2xl border border-border bg-card p-6">
+                <legend className="px-1 font-display text-base font-semibold">Shipping Method</legend>
+                <div className="mt-3 grid gap-3 sm:grid-cols-2">
+                  {shippingRates.map((rate) => (
+                    <button
+                      key={rate.id}
+                      type="button"
+                      onClick={() => setSelectedRateId(rate.id)}
+                      className={`flex flex-col items-start rounded-xl border p-4 text-left transition-all ${
+                        selectedRateId === rate.id ? "border-brand bg-brand-soft/15" : "border-border bg-background hover:border-brand/60"
+                      }`}
+                    >
+                      <span className="font-semibold text-sm">{rate.name}</span>
+                      <span className="mt-1 text-xs text-muted-foreground">{rate.delivery_window}</span>
+                      <span className="mt-2 text-sm font-semibold text-brand">{formatNaira(rate.fee)}</span>
+                    </button>
+                  ))}
+                </div>
+              </fieldset>
+            )}
 
             <fieldset className="rounded-2xl border border-border bg-card p-6">
               <legend className="px-1 font-display text-base font-semibold">Payment method</legend>
