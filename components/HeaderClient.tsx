@@ -98,7 +98,7 @@ export function HeaderClient({ categories }: { categories: GenericCategory[] }) 
             <PopoverTrigger asChild>
               <button
                 aria-label="Saved items"
-                className="relative hidden rounded-full border border-border bg-card p-2.5 text-muted-foreground transition-colors hover:border-brand hover:text-brand sm:inline-flex"
+                className="relative rounded-full border border-border bg-card p-2.5 text-muted-foreground transition-colors hover:border-brand hover:text-brand inline-flex"
               >
                 <Heart className="h-4 w-4" />
                 {wishlist.count > 0 && (
