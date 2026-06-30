@@ -66,13 +66,20 @@ export type AddressData = {
 }
 
 export type CheckoutBreakdown = {
-  subtotal: number
-  shipping_fee: number
-  escrow_fee: number
-  total: number
-  currency: string
-  shipping_type: "delivery" | "pickup"
-  estimated_delivery?: string
+  fulfillment_type: string
+  cart: CartData
+  summary: {
+    subtotal: number
+    delivery_fee?: number
+    escrow_fee?: number
+    total: number
+    currency: string
+  }
+  shipping?: {
+    weight_kg: number
+    currency: string
+    selected_rate?: ShippingRate
+  }
 }
 
 export type OrderData = {

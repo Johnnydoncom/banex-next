@@ -387,7 +387,7 @@ export default function CheckoutPage() {
                     if (pm.status !== "active") return null
                     
                     const isWallet = pm.slug === "wallet"
-                    const walletInsufficient = isWallet && breakdown && wallet && wallet.balance < breakdown.total
+                    const walletInsufficient = isWallet && breakdown?.summary && wallet && wallet.balance < breakdown.summary.total
                     const disabled = !!walletInsufficient
                     const icon = isWallet ? WalletIcon : (pm.slug.includes("card") ? CreditCardIcon : (pm.slug.includes("transfer") ? LandmarkIcon : SmartphoneIcon))
                     
@@ -445,27 +445,29 @@ export default function CheckoutPage() {
               </ul>
 
               <dl className="mt-4 space-y-1.5 border-t border-border pt-4 text-sm">
-                <Row label="Subtotal" value={breakdown ? formatNaira(breakdown.subtotal) : "..."} />
-                <Row
-                  label={
-                    <span className="inline-flex items-center gap-1">
-                      Escrow fee <span className="text-[10px] text-muted-foreground">(1.5%)</span>
-                    </span>
-                  }
-                  value={breakdown ? formatNaira(breakdown.escrow_fee) : "..."}
-                />
+                <Row label="Subtotal" value={breakdown?.summary ? formatNaira(breakdown.summary.subtotal) : "..."} />
+                {breakdown?.summary?.escrow_fee !== undefined && (
+                  <Row
+                    label={
+                      <span className="inline-flex items-center gap-1">
+                        Escrow fee <span className="text-[10px] text-muted-foreground">(1.5%)</span>
+                      </span>
+                    }
+                    value={formatNaira(breakdown.summary.escrow_fee)}
+                  />
+                )}
                 <Row
                   label={
                     <span className="inline-flex items-center gap-1">
                       <Truck className="h-3 w-3" /> {fulfilment === "pickup" ? "In-mall pickup" : "Rider delivery"}
                     </span>
                   }
-                  value={breakdown ? (breakdown.shipping_fee === 0 ? "Free" : formatNaira(breakdown.shipping_fee)) : "..."}
+                  value={breakdown?.summary ? (breakdown.summary.delivery_fee === 0 || !breakdown.summary.delivery_fee ? "Free" : formatNaira(breakdown.summary.delivery_fee)) : "..."}
                 />
                 <div className="my-2 h-px bg-border" />
                 <div className="flex items-center justify-between">
                   <dt className="font-display text-base font-semibold">Total</dt>
-                  <dd className="font-display text-xl font-bold">{breakdown ? formatNaira(breakdown.total) : "..."}</dd>
+                  <dd className="font-display text-xl font-bold">{breakdown?.summary ? formatNaira(breakdown.summary.total) : "..."}</dd>
                 </div>
               </dl>
 
@@ -475,7 +477,7 @@ export default function CheckoutPage() {
                 className="mt-5 inline-flex w-full items-center justify-center gap-2 rounded-full bg-gradient-brand py-3.5 text-sm font-semibold text-primary-foreground disabled:opacity-70 disabled:cursor-not-allowed"
               >
                 <Lock className="h-4 w-4" />
-                {submitting ? "Processing…" : `Pay ${breakdown ? formatNaira(breakdown.total) : "..."} to escrow`}
+                {submitting ? "Processing…" : `Pay ${breakdown?.summary ? formatNaira(breakdown.summary.total) : "..."} to escrow`}
               </button>
               <p className="mt-2 text-center text-[11px] text-muted-foreground">
                 By paying, you agree to Banex Mall's escrow terms.
