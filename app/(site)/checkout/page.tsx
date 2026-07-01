@@ -22,10 +22,10 @@ import {
 } from "lucide-react"
 import { toast } from "sonner"
 import { useAuth } from "@/hooks/use-auth"
-import { 
-  userCheckoutBreakdown, 
-  userCheckoutPlaceOrder, 
-  userFetchAddresses, 
+import {
+  userCheckoutBreakdown,
+  userCheckoutPlaceOrder,
+  userFetchAddresses,
   userCreateAddress,
   userFetchPaymentMethods,
   userFetchWallet,
@@ -43,18 +43,19 @@ export default function CheckoutPage() {
   const { items, clear, isSyncing } = useCart()
   const { status } = useAuth()
   const router = useRouter()
-  
+
   const [method, setMethod] = useState<string>("card")
   const [fulfilment, setFulfilment] = useState<Fulfilment>("delivery")
   const [addresses, setAddresses] = useState<AddressData[]>([])
   const [paymentMethods, setPaymentMethods] = useState<PaymentMethodData[]>([])
   const [wallet, setWallet] = useState<WalletData | null>(null)
-  
+
   const [selectedAddressId, setSelectedAddressId] = useState<string>("")
   const [showNewAddress, setShowNewAddress] = useState(false)
   const [shippingRates, setShippingRates] = useState<ShippingRate[]>([])
   const [selectedRateId, setSelectedRateId] = useState<string>("")
-  
+  const validateCacheRef = useRef<{ fType: string; addressId: string; itemsLen: number } | null>(null)
+
   const [breakdown, setBreakdown] = useState<CheckoutBreakdown | null>(null)
   const [submitting, setSubmitting] = useState(false)
   const [done, setDone] = useState<string | null>(null)
@@ -63,7 +64,7 @@ export default function CheckoutPage() {
   const breakdownAbortRef = useRef<AbortController | null>(null)
   // Ref to hold the debounce timer for breakdown fetches
   const breakdownTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
-  
+
   // New address form
   const [newAddress, setNewAddress] = useState({
     first_name: "",
@@ -98,10 +99,10 @@ export default function CheckoutPage() {
 
         setPaymentMethods(methodsData)
         if (walletData) setWallet(walletData)
-        
+
         // Select first active method by default if current method isn't in list
         if (methodsData.length > 0 && !methodsData.find(m => m.slug === "card" || m.slug === method)) {
-           setMethod(methodsData.find(m => m.status === "active")?.slug || "")
+          setMethod(methodsData.find(m => m.status === "active")?.slug || "")
         }
       }).catch((err) => {
         console.error(err)
@@ -127,21 +128,35 @@ export default function CheckoutPage() {
         const fType = fulfilment === "pickup" ? "mall_pickup" : "delivery"
         let currentRateId = selectedRateId
 
-        // 1. Fetch shipping validation & rates (always needed for delivery to get latest rates)
-        const validateRes = await userCheckoutValidateShipping(
-          fType,
-          fType === "delivery" ? selectedAddressId : undefined
-        )
+        // 1. Fetch shipping validation & rates (only if address/fulfilment/items changed)
+        const needsValidation =
+          !validateCacheRef.current ||
+          validateCacheRef.current.fType !== fType ||
+          validateCacheRef.current.addressId !== (selectedAddressId || "") ||
+          validateCacheRef.current.itemsLen !== items.length
 
-        if (controller.signal.aborted) return
+        if (needsValidation) {
+          const validateRes = await userCheckoutValidateShipping(
+            fType,
+            fType === "delivery" ? selectedAddressId : undefined
+          )
 
-        if (validateRes) {
-          const rates = validateRes.shipping?.rates || []
-          setShippingRates(rates)
-          // If current rate is invalid or empty, update it
-          if (fType === "delivery" && (!currentRateId || !rates.find(r => r.id === currentRateId))) {
-            currentRateId = validateRes.shipping?.suggested_rate_id || (rates.length > 0 ? rates[0].id : "")
-            setSelectedRateId(currentRateId)
+          if (controller.signal.aborted) return
+
+          if (validateRes) {
+            const rates = validateRes.shipping?.rates || []
+            setShippingRates(rates)
+            // If current rate is invalid or empty, update it
+            if (fType === "delivery" && (!currentRateId || !rates.find(r => r.id === currentRateId))) {
+              currentRateId = validateRes.shipping?.suggested_rate_id || (rates.length > 0 ? rates[0].id : "")
+              setSelectedRateId(currentRateId)
+            }
+          }
+
+          validateCacheRef.current = {
+            fType,
+            addressId: selectedAddressId || "",
+            itemsLen: items.length,
           }
         }
 
@@ -189,6 +204,10 @@ export default function CheckoutPage() {
       toast.error("Please select a delivery address")
       return
     }
+    if (!method) {
+      toast.error("Please select a payment method")
+      return
+    }
 
     setSubmitting(true)
     try {
@@ -199,12 +218,26 @@ export default function CheckoutPage() {
         fType === "delivery" ? selectedAddressId : undefined,
         fType === "delivery" ? selectedRateId : undefined
       )
-      
-      if (res?.order) {
-        setDone(res.order.reference)
-        clear()
-        toast.success("Order placed successfully")
+
+      if (!res?.order) {
+        toast.error("Unexpected response from server. Please try again.")
+        return
       }
+
+      clear()
+
+      // If the API returns a Paystack authorization_url, redirect the user there to complete payment
+      if (res.payment_intent?.authorization_url) {
+        toast.success("Redirecting to payment gateway…")
+        // Small delay so the toast is visible before navigation
+        await new Promise(r => setTimeout(r, 800))
+        window.location.href = res.payment_intent.authorization_url
+        return
+      }
+
+      // For wallet or other non-redirect payments, show the confirmation screen directly
+      setDone(res.order.reference)
+      toast.success("Order placed successfully")
     } catch (err: any) {
       toast.error(err.message || "Failed to place order")
     } finally {
@@ -291,7 +324,7 @@ export default function CheckoutPage() {
               <legend className="px-1 font-display text-base font-semibold">
                 {fulfilment === "pickup" ? "Pickup Instructions" : "Delivery Address"}
               </legend>
-              
+
               {fulfilment === "pickup" ? (
                 <p className="mt-3 rounded-xl bg-surface/60 p-4 text-sm text-muted-foreground">
                   Collect at <strong>Banex Mall · Concierge desk, Ground floor</strong>. We'll text when your order is ready.
@@ -305,9 +338,8 @@ export default function CheckoutPage() {
                           key={addr.id}
                           type="button"
                           onClick={() => setSelectedAddressId(addr.id)}
-                          className={`flex flex-col items-start rounded-xl border p-4 text-left transition-colors ${
-                            selectedAddressId === addr.id ? "border-brand bg-brand-soft/15" : "border-border bg-background hover:border-brand/60"
-                          }`}
+                          className={`flex flex-col items-start rounded-xl border p-4 text-left transition-colors ${selectedAddressId === addr.id ? "border-brand bg-brand-soft/15" : "border-border bg-background hover:border-brand/60"
+                            }`}
                         >
                           <span className="font-semibold text-sm">{addr.first_name} {addr.last_name}</span>
                           <span className="mt-1 text-xs text-muted-foreground line-clamp-1">{addr.street}</span>
@@ -326,13 +358,13 @@ export default function CheckoutPage() {
                     </div>
                   ) : (
                     <div className="grid gap-3 sm:grid-cols-2">
-                      <Field label="First name" required value={newAddress.first_name} onChange={e => setNewAddress({...newAddress, first_name: e.target.value})} />
-                      <Field label="Last name" required value={newAddress.last_name} onChange={e => setNewAddress({...newAddress, last_name: e.target.value})} />
-                      <Field label="Phone" type="tel" required value={newAddress.phone} onChange={e => setNewAddress({...newAddress, phone: e.target.value})} />
-                      <Field label="Street address" className="sm:col-span-2" required value={newAddress.street} onChange={e => setNewAddress({...newAddress, street: e.target.value})} />
-                      <Field label="City" required value={newAddress.city} onChange={e => setNewAddress({...newAddress, city: e.target.value})} />
-                      <Field label="State" required value={newAddress.state} onChange={e => setNewAddress({...newAddress, state: e.target.value})} />
-                      
+                      <Field label="First name" required value={newAddress.first_name} onChange={e => setNewAddress({ ...newAddress, first_name: e.target.value })} />
+                      <Field label="Last name" required value={newAddress.last_name} onChange={e => setNewAddress({ ...newAddress, last_name: e.target.value })} />
+                      <Field label="Phone" type="tel" required value={newAddress.phone} onChange={e => setNewAddress({ ...newAddress, phone: e.target.value })} />
+                      <Field label="Street address" className="sm:col-span-2" required value={newAddress.street} onChange={e => setNewAddress({ ...newAddress, street: e.target.value })} />
+                      <Field label="City" required value={newAddress.city} onChange={e => setNewAddress({ ...newAddress, city: e.target.value })} />
+                      <Field label="State" required value={newAddress.state} onChange={e => setNewAddress({ ...newAddress, state: e.target.value })} />
+
                       <div className="sm:col-span-2 flex items-center justify-between mt-2">
                         {addresses.length > 0 && (
                           <button type="button" onClick={() => setShowNewAddress(false)} className="text-sm font-medium text-muted-foreground hover:text-foreground">
@@ -364,9 +396,8 @@ export default function CheckoutPage() {
                       key={rate.id}
                       type="button"
                       onClick={() => setSelectedRateId(rate.id)}
-                      className={`flex flex-col items-start rounded-xl border p-4 text-left transition-all ${
-                        selectedRateId === rate.id ? "border-brand bg-brand-soft/15" : "border-border bg-background hover:border-brand/60"
-                      }`}
+                      className={`flex flex-col items-start rounded-xl border p-4 text-left transition-all ${selectedRateId === rate.id ? "border-brand bg-brand-soft/15" : "border-border bg-background hover:border-brand/60"
+                        }`}
                     >
                       <span className="font-semibold text-sm">{rate.name}</span>
                       <span className="mt-1 text-xs text-muted-foreground">{rate.delivery_window}</span>
@@ -385,20 +416,20 @@ export default function CheckoutPage() {
                 <div className="mt-3 grid gap-2 sm:grid-cols-3">
                   {paymentMethods.map(pm => {
                     if (pm.status !== "active") return null
-                    
+
                     const isWallet = pm.slug === "wallet"
                     const walletInsufficient = isWallet && breakdown?.summary && wallet && wallet.balance < breakdown.summary.total
                     const disabled = !!walletInsufficient
                     const icon = isWallet ? WalletIcon : (pm.slug.includes("card") ? CreditCardIcon : (pm.slug.includes("transfer") ? LandmarkIcon : SmartphoneIcon))
-                    
+
                     return (
-                      <PayOption 
+                      <PayOption
                         key={pm.id}
-                        active={method === pm.slug} 
-                        onClick={() => { if (!disabled) setMethod(pm.slug) }} 
-                        icon={icon} 
-                        label={pm.name} 
-                        sub={isWallet && wallet ? `Bal: ${formatNaira(wallet.balance)}` : undefined} 
+                        active={method === pm.id}
+                        onClick={() => { if (!disabled) setMethod(pm.id) }}
+                        icon={icon}
+                        label={pm.name}
+                        sub={isWallet && wallet ? `Bal: ${formatNaira(wallet.balance)}` : undefined}
                         disabled={disabled}
                       />
                     )
@@ -526,13 +557,12 @@ function PayOption({
       type="button"
       onClick={onClick}
       disabled={disabled}
-      className={`flex flex-col items-start rounded-xl border p-3 text-left transition-colors ${
-        active 
-          ? "border-brand bg-brand-soft/15" 
-          : disabled 
-            ? "border-border bg-background/50 opacity-50 cursor-not-allowed" 
-            : "border-border bg-background hover:border-brand/60"
-      }`}
+      className={`flex flex-col items-start rounded-xl border p-3 text-left transition-colors ${active
+        ? "border-brand bg-brand-soft/15"
+        : disabled
+          ? "border-border bg-background/50 opacity-50 cursor-not-allowed"
+          : "border-border bg-background hover:border-brand/60"
+        }`}
     >
       <Icon className={`h-4 w-4 ${active ? "text-brand-deep" : "text-muted-foreground"}`} />
       <span className="mt-2 text-sm font-semibold">{label}</span>

@@ -85,23 +85,39 @@ export type CheckoutBreakdown = {
 export type OrderData = {
   id: string
   reference: string
-  status: "pending" | "processing" | "shipped" | "delivered" | "cancelled"
-  total_amount: number
-  shipping_fee: number
-  escrow_fee: number
-  currency: string
-  shipping_type: "delivery" | "pickup"
-  shipping_address?: AddressData
-  payment_status: "pending" | "paid" | "failed"
-  created_at: string
+  status: string
+  fulfillment_type: "delivery" | "mall_pickup"
+  currency?: string
+  created_at: string | { item: string }  // API returns { item: "ISO string" }
+  delivery_address?: AddressData
+  shipping?: {
+    weight_kg: number
+    currency: string
+    selected_rate?: ShippingRate
+  }
+  summary?: {        // present on single order / place-order response
+    subtotal: number
+    delivery_fee?: number
+    total: number
+    currency: string
+  }
+  lines_summary?: {  // present on list response
+    subtotal: number
+    currency: string
+    item_count: number
+  }
   items: {
     id: string
+    product_id?: string
+    seller_id?: string
     product_name: string
-    product_image?: string
-    seller_name: string
+    primary_image_url?: string | null  // API field (not product_image)
+    seller_shop_name?: string          // API field (not seller_name)
+    unit_price: number                 // API field (not price)
     quantity: number
-    price: number
-    subtotal: number
+    line_total: number                 // API field (not subtotal)
+    status?: string
+    currency?: string
   }[]
 }
 
@@ -228,7 +244,15 @@ export async function userCheckoutPlaceOrder(fulfillmentType: "delivery" | "mall
   const body: any = { fulfillment_type: fulfillmentType, payment_method_id: paymentMethodId }
   if (addressId) body.address_id = addressId
   if (rateId) body.rate_id = rateId
-  const res = await apiPost<ApiEnvelope<{ order: OrderData; payment_reference?: string; authorization_url?: string }>>(`${PROXY_BASE}/user/orders`, body)
+  const res = await apiPost<ApiEnvelope<{
+    order: OrderData
+    payment_intent?: {
+      authorization_url: string
+      access_code: string
+      reference: string
+    }
+    total_amount?: number
+  }>>(`${PROXY_BASE}/user/orders`, body)
   return res.data
 }
 
@@ -239,9 +263,21 @@ export async function userCheckoutVerifyPayment(orderId: string) {
 
 // ─── ORDERS ───────────────────────────────────────────────────────────────────
 
-export async function userFetchOrders() {
-  const res = await apiGet<ApiEnvelope<{ orders: OrderData[] }>>(`${PROXY_BASE}/user/orders`)
-  return res.data?.orders || []
+export type OrderPagination = {
+  current_page: number
+  per_page: number
+  total: number
+  last_page: number
+}
+
+export async function userFetchOrders(page = 1, perPage = 15) {
+  const res = await apiGet<ApiEnvelope<{ orders: OrderData[]; pagination: OrderPagination }>>(
+    `${PROXY_BASE}/user/orders?per_page=${perPage}&page=${page}`
+  )
+  return {
+    orders: res.data?.orders || [],
+    pagination: res.data?.pagination,
+  }
 }
 
 export async function userFetchOrder(id: string) {
