@@ -46,7 +46,7 @@ export default function VendorSettingsPage() {
       payout_account: "0123456789",
       payout_bank: "GTBank",
     })
-  }, [user])
+  }, [user?.id])
 
   const save = async () => {
     if (!user) return
@@ -145,3 +145,4 @@ export default function VendorSettingsPage() {
     </div>
   )
 }
+

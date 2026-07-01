@@ -35,7 +35,7 @@ export default function ProfilePage() {
       }
     }
     fetchProfile()
-  }, [user, session])
+  }, [user?.id, session?.user?.email])
 
   const save = async () => {
     if (!user) return
@@ -175,3 +175,4 @@ export default function ProfilePage() {
     </div>
   )
 }
+

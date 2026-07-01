@@ -50,7 +50,7 @@ export default function VendorStorePage() {
       logo_url: "",
       banner_url: "",
     })
-  }, [user])
+  }, [user?.id])
 
   const save = async () => {
     if (!user) return
@@ -153,3 +153,4 @@ export default function VendorStorePage() {
     </div>
   )
 }
+

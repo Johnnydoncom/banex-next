@@ -69,7 +69,7 @@ export default function AccountOverview() {
     }, 500)
 
     return () => { cancelled = true }
-  }, [user])
+  }, [user?.id])
 
   const name =
     ((user as any)?.name as string | undefined) ||
@@ -181,3 +181,4 @@ function statusTone(s: string) {
     default: return "bg-amber-500/15 text-amber-700"
   }
 }
+

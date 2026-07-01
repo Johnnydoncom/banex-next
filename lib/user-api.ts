@@ -119,6 +119,11 @@ export type OrderData = {
     status?: string
     currency?: string
   }[]
+  payment_intent?: {
+    authorization_url: string
+    access_code: string
+    reference: string
+  }
 }
 
 export type PaymentMethodData = {
@@ -240,10 +245,17 @@ export async function userCheckoutBreakdown(fulfillmentType: "delivery" | "mall_
   return res.data?.breakdown
 }
 
-export async function userCheckoutPlaceOrder(fulfillmentType: "delivery" | "mall_pickup", paymentMethodId: string, addressId?: string, rateId?: string) {
+export async function userCheckoutPlaceOrder(
+  fulfillmentType: "delivery" | "mall_pickup",
+  paymentMethodId: string,
+  addressId?: string,
+  rateId?: string,
+  callbackUrl?: string
+) {
   const body: any = { fulfillment_type: fulfillmentType, payment_method_id: paymentMethodId }
   if (addressId) body.address_id = addressId
   if (rateId) body.rate_id = rateId
+  if (callbackUrl) body.callback_url = callbackUrl
   const res = await apiPost<ApiEnvelope<{
     order: OrderData
     payment_intent?: {
@@ -283,6 +295,24 @@ export async function userFetchOrders(page = 1, perPage = 15) {
 export async function userFetchOrder(id: string) {
   const res = await apiGet<ApiEnvelope<{ order: OrderData }>>(`${PROXY_BASE}/user/orders/${id}`)
   return res.data?.order
+}
+
+// Re-initialize payment for an existing pending order
+// Calls POST /user/orders/:orderId/payment/initialize → returns a fresh Paystack authorization_url
+// callbackUrl: the absolute URL Paystack should redirect to after payment
+export async function userInitializeOrderPayment(orderId: string, paymentMethodId: string, callbackUrl: string) {
+  const res = await apiPost<ApiEnvelope<{
+    payment_intent: {
+      authorization_url: string
+      access_code: string
+      reference: string
+    }
+    total_amount?: number
+  }>>(`${PROXY_BASE}/user/orders/${orderId}/payment/initialize`, {
+    payment_method_id: paymentMethodId,
+    callback_url: callbackUrl,
+  })
+  return res.data
 }
 
 // ─── PAYMENT & WALLET ─────────────────────────────────────────────────────────

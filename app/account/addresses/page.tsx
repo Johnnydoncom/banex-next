@@ -36,7 +36,7 @@ export default function AddressesPage() {
 
   useEffect(() => {
     void load()
-  }, [user])
+  }, [user?.id])
 
   const save = async () => {
     if (!user) return
@@ -178,3 +178,4 @@ export default function AddressesPage() {
     </div>
   )
 }
+

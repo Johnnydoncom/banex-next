@@ -66,7 +66,7 @@ export default function VendorOverview() {
     }, 500)
 
     return () => { cancelled = true }
-  }, [user])
+  }, [user?.id])
 
   if (!stats) {
     return <div className="p-10 text-center text-sm text-muted-foreground">Loading dashboard…</div>
@@ -140,3 +140,4 @@ export default function VendorOverview() {
     </div>
   )
 }
+

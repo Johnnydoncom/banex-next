@@ -212,11 +212,14 @@ export default function CheckoutPage() {
     setSubmitting(true)
     try {
       const fType = fulfilment === "pickup" ? "mall_pickup" : "delivery"
+      // Build callback URL for Paystack to redirect back to after payment
+      const callbackUrl = `${window.location.origin}/checkout/verify`
       const res = await userCheckoutPlaceOrder(
         fType,
         method,
         fType === "delivery" ? selectedAddressId : undefined,
-        fType === "delivery" ? selectedRateId : undefined
+        fType === "delivery" ? selectedRateId : undefined,
+        callbackUrl
       )
 
       if (!res?.order) {
@@ -229,6 +232,8 @@ export default function CheckoutPage() {
       // If the API returns a Paystack authorization_url, redirect the user there to complete payment
       if (res.payment_intent?.authorization_url) {
         toast.success("Redirecting to payment gateway…")
+        // Store orderId so the verify page can use it as fallback
+        sessionStorage.setItem("pending_order_id", res.order.id)
         // Small delay so the toast is visible before navigation
         await new Promise(r => setTimeout(r, 800))
         window.location.href = res.payment_intent.authorization_url
@@ -427,9 +432,11 @@ export default function CheckoutPage() {
                         key={pm.id}
                         active={method === pm.id}
                         onClick={() => { if (!disabled) setMethod(pm.id) }}
+                        slug={pm.slug}
                         icon={icon}
+                        imageUrl={pm.image || undefined}
                         label={pm.name}
-                        sub={isWallet && wallet ? `Bal: ${formatNaira(wallet.balance)}` : undefined}
+                        sub={isWallet && wallet ? `Balance: ${formatNaira(wallet.balance)}` : undefined}
                         disabled={disabled}
                       />
                     )
@@ -537,37 +544,108 @@ function Field({
   )
 }
 
+function PaystackLogo({ className }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 512 512" fill="none" xmlns="http://www.w3.org/2000/svg" className={className}>
+      <path d="M141.8 196.3h228.4v119.4H141.8z" fill="#0ba4db" />
+      <path d="M141.8 77.2h228.4v107.5H141.8zM141.8 327.2h228.4v107.6H141.8z" fill="#0a2a4b" />
+    </svg>
+  )
+}
+
 function PayOption({
   active,
   onClick,
+  slug,
   icon: Icon,
+  imageUrl,
   label,
   sub,
   disabled
 }: {
   active: boolean
   onClick: () => void
+  slug?: string
   icon: React.ComponentType<{ className?: string }>
+  imageUrl?: string
   label: string
   sub?: string
   disabled?: boolean
 }) {
+  const isPaystack = slug === "paystack"
+  const isWallet = slug === "wallet"
+
   return (
     <button
       type="button"
       onClick={onClick}
       disabled={disabled}
-      className={`flex flex-col items-start rounded-xl border p-3 text-left transition-colors ${active
-        ? "border-brand bg-brand-soft/15"
-        : disabled
-          ? "border-border bg-background/50 opacity-50 cursor-not-allowed"
-          : "border-border bg-background hover:border-brand/60"
-        }`}
+      className={`group relative flex flex-col justify-between overflow-hidden rounded-2xl border p-4 text-left transition-all duration-300 ${
+        active
+          ? isWallet 
+            ? "border-brand bg-gradient-to-br from-brand-deep to-brand text-white shadow-lg shadow-brand/20 scale-[1.02]"
+            : "border-[#0ba4db] bg-gradient-to-br from-white to-[#0ba4db]/5 shadow-lg shadow-[#0ba4db]/10 scale-[1.02]"
+          : disabled
+            ? "border-border bg-surface/50 opacity-60 cursor-not-allowed"
+            : "border-border bg-card hover:border-brand/50 hover:shadow-md"
+      }`}
     >
-      <Icon className={`h-4 w-4 ${active ? "text-brand-deep" : "text-muted-foreground"}`} />
-      <span className="mt-2 text-sm font-semibold">{label}</span>
-      {sub && <span className="text-[11px] text-muted-foreground whitespace-nowrap overflow-hidden text-ellipsis w-full">{sub}</span>}
-      {disabled && <span className="text-[10px] text-rose-500 font-medium">Insufficient funds</span>}
+      {/* Dynamic Background Accents */}
+      {active && isPaystack && (
+        <div className="absolute -right-6 -top-6 h-24 w-24 rounded-full bg-[#0ba4db]/10 blur-xl transition-all" />
+      )}
+      {active && isWallet && (
+        <div className="absolute -right-4 -top-4 h-20 w-20 rounded-full bg-white/10 blur-lg transition-all" />
+      )}
+
+      {/* Icon or Image */}
+      <div className={`relative mb-6 flex h-10 w-10 items-center justify-center rounded-xl transition-colors ${
+        active
+          ? isWallet ? "bg-white/20 text-white" : "bg-[#0ba4db]/10 text-[#0ba4db]"
+          : "bg-surface text-muted-foreground group-hover:bg-brand-soft/50 group-hover:text-brand"
+      }`}>
+        {isPaystack ? (
+          <PaystackLogo className="h-6 w-auto drop-shadow-sm" />
+        ) : imageUrl ? (
+          <img src={imageUrl} alt={label} className="h-6 w-auto object-contain" />
+        ) : (
+          <Icon className="h-5 w-5" />
+        )}
+      </div>
+
+      {/* Label and Sub */}
+      <div className="relative z-10 w-full">
+        <span className={`block font-display text-[15px] font-bold ${
+          active ? (isWallet ? "text-white" : "text-foreground") : "text-foreground"
+        }`}>
+          {label}
+        </span>
+        {sub && (
+          <span className={`mt-1 block truncate text-[11px] font-medium tracking-wide ${
+            active ? (isWallet ? "text-white/80" : "text-muted-foreground") : "text-muted-foreground"
+          }`}>
+            {sub}
+          </span>
+        )}
+        {disabled && (
+          <span className="mt-1 block text-[11px] font-bold text-rose-500">
+            Insufficient funds
+          </span>
+        )}
+      </div>
+
+      {/* Active Checkmark */}
+      <div className={`absolute right-4 top-4 transition-all duration-300 ${
+        active ? "scale-100 opacity-100" : "scale-50 opacity-0"
+      }`}>
+        <div className={`flex h-5 w-5 items-center justify-center rounded-full ${
+          isWallet ? "bg-white text-brand" : "bg-[#0ba4db] text-white"
+        }`}>
+          <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+          </svg>
+        </div>
+      </div>
     </button>
   )
 }

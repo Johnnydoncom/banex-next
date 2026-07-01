@@ -56,7 +56,7 @@ export default function VendorProductsPage() {
     }, 500)
 
     return () => { cancelled = true }
-  }, [user])
+  }, [user?.id])
 
   const removeProduct = async (id: string) => {
     // ----- ACTUAL FETCH IMPLEMENTATION -----
@@ -160,3 +160,4 @@ export default function VendorProductsPage() {
     </div>
   )
 }
+

@@ -58,7 +58,7 @@ export default function VendorOrdersPage() {
     }, 500)
 
     return () => { cancelled = true }
-  }, [user])
+  }, [user?.id])
 
   const updateStatus = async (id: string, status: string) => {
     // ----- ACTUAL FETCH IMPLEMENTATION -----
@@ -178,3 +178,4 @@ export default function VendorOrdersPage() {
     </div>
   )
 }
+

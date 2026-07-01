@@ -41,7 +41,7 @@ export default function OrdersPage() {
       .finally(() => { if (!cancelled) setLoading(false) })
 
     return () => { cancelled = true }
-  }, [user, page])
+  }, [user?.id, page])
 
   const filtered = orders.filter((o) => {
     if (filter !== "all" && o.status !== filter) return false
@@ -113,18 +113,26 @@ export default function OrdersPage() {
                       {dateStr ? new Date(dateStr).toLocaleString() : "—"}
                     </p>
                   </div>
-                  <div className="flex flex-wrap items-center gap-2">
-                    <span className={`rounded-full px-2.5 py-1 text-[10px] font-semibold uppercase ${statusTone(o.status)}`}>
-                      {o.status}
-                    </span>
-                    <span className={`rounded-full px-2.5 py-1 text-[10px] font-semibold uppercase ${
-                      o.fulfillment_type === "mall_pickup" ? "bg-blue-500/15 text-blue-700" : "bg-brand-soft/20 text-brand-deep"
-                    }`}>
-                      {o.fulfillment_type === "mall_pickup" ? "Pickup" : "Delivery"}
-                    </span>
+                  <div className="flex flex-wrap items-center gap-3">
+                    <div className="flex items-center gap-2">
+                      <span className={`rounded-full px-2.5 py-1 text-[10px] font-semibold uppercase ${statusTone(o.status)}`}>
+                        {o.status}
+                      </span>
+                      <span className={`rounded-full px-2.5 py-1 text-[10px] font-semibold uppercase ${
+                        o.fulfillment_type === "mall_pickup" ? "bg-blue-500/15 text-blue-700" : "bg-brand-soft/20 text-brand-deep"
+                      }`}>
+                        {o.fulfillment_type === "mall_pickup" ? "Pickup" : "Delivery"}
+                      </span>
+                    </div>
                     {total !== undefined && (
                       <p className="text-sm font-bold">{formatNaira(total)}</p>
                     )}
+                    <Link
+                      href={`/account/orders/${o.id}`}
+                      className="rounded-full border border-border bg-card px-3 py-1.5 text-xs font-semibold hover:border-brand hover:text-brand"
+                    >
+                      View details
+                    </Link>
                   </div>
                 </div>
 
