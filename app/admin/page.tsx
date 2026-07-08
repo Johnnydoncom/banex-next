@@ -18,7 +18,8 @@ import {
 } from "lucide-react"
 import { AdminStatCard } from "@/components/AdminShell"
 import { StatusBadge } from "@/components/StatusBadge"
-import { fetchDashboardData, type DashboardData } from "@/lib/admin-api"
+import { type DashboardData } from "@/lib/admin-api"
+import { useAdminDashboard } from "@/hooks/use-swr-data"
 
 /* ------------------------------------------------------------------ */
 /*  Helpers                                                            */
@@ -50,29 +51,7 @@ function timeAgo(dateString: string): string {
 export default function AdminOverview() {
   const { data: session } = useSession()
   const token = (session as any)?.accessToken as string | undefined
-  const [data, setData] = useState<DashboardData | null>(null)
-  const [error, setError] = useState<string | null>(null)
-  const [loading, setLoading] = useState(true)
-
-  const loadData = useCallback(async () => {
-    if (!token) return
-    setLoading(true)
-    setError(null)
-
-    try {
-      const result = await fetchDashboardData(token)
-      setData(result)
-    } catch (err: any) {
-      console.error("[AdminOverview] Failed to load dashboard data:", err)
-      setError(err?.message || "Failed to load dashboard data. Please try again.")
-    } finally {
-      setLoading(false)
-    }
-  }, [token])
-
-  useEffect(() => {
-    loadData()
-  }, [loadData])
+  const { data, loading, error, mutate } = useAdminDashboard(token)
 
   /* ── Loading state ────────────────────────────────────────────── */
   if (loading || !data) {
@@ -103,7 +82,7 @@ export default function AdminOverview() {
         <AlertCircle className="h-10 w-10 text-rose-500" />
         <p className="text-sm text-muted-foreground">{error}</p>
         <button
-          onClick={loadData}
+          onClick={() => mutate()}
           className="inline-flex items-center gap-2 rounded-full bg-gradient-brand px-5 py-2.5 text-xs font-semibold text-primary-foreground"
         >
           <RefreshCcw className="h-3.5 w-3.5" /> Retry
@@ -153,7 +132,7 @@ export default function AdminOverview() {
             </Link>
           )}
           <button
-            onClick={loadData}
+            onClick={() => mutate()}
             className="inline-flex items-center gap-2 rounded-full border border-border px-4 py-2 text-xs font-semibold text-muted-foreground hover:bg-surface hover:text-foreground"
           >
             <RefreshCcw className="h-3.5 w-3.5" /> Refresh

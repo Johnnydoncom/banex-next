@@ -1,16 +1,15 @@
 "use client"
 
 import Link from "next/link"
-import { useEffect, useState } from "react"
 import {
   DollarSign, Package, TrendingUp, Star, ArrowRight,
   Store, Plus, CheckCircle2, XCircle, Clock, ShoppingBag
 } from "lucide-react"
 import { useAuth } from "@/hooks/use-auth"
 import { StatCard } from "@/components/DashboardLayout"
-import { sellerFetchApplication, sellerFetchOrders, type SellerProfile, type SellerOrder } from "@/lib/seller-api"
-import { userFetchWallet } from "@/lib/user-api"
+import { type SellerProfile, type SellerOrder } from "@/lib/seller-api"
 import { formatNaira } from "@/lib/products"
+import { useSellerApplication, useSellerOrders, useWallet } from "@/hooks/use-swr-data"
 
 function statusConfig(status: string) {
   switch (status) {
@@ -32,35 +31,11 @@ export default function VendorOverview() {
   const { user, session } = useAuth()
   const token = (session as any)?.accessToken as string | undefined
 
-  const [profile, setProfile] = useState<SellerProfile | null>(null)
-  const [orders, setOrders] = useState<SellerOrder[]>([])
-  const [walletBalance, setWalletBalance] = useState<number | null>(null)
-  const [loading, setLoading] = useState(true)
+  const { profile } = useSellerApplication(token)
+  const { orders, loading } = useSellerOrders(token)
+  const { wallet } = useWallet(token)
 
-  useEffect(() => {
-    if (!token) return
-    let cancelled = false
-
-    async function load() {
-      try {
-        const [prof, ordersRes, walletRes] = await Promise.all([
-          sellerFetchApplication(token!),
-          sellerFetchOrders(token!),
-          userFetchWallet().catch(() => null),
-        ])
-        if (cancelled) return
-        setProfile(prof)
-        setOrders(ordersRes.orders || [])
-        setWalletBalance(walletRes?.wallet?.balance ?? null)
-      } catch (e) {
-        console.error(e)
-      } finally {
-        if (!cancelled) setLoading(false)
-      }
-    }
-    load()
-    return () => { cancelled = true }
-  }, [token])
+  const walletBalance = wallet?.balance ?? null
 
   // Derived stats from real data
   const totalRevenue = orders.reduce((sum, o) => sum + (o.lines_summary?.subtotal ?? 0), 0)

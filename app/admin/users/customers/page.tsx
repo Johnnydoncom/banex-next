@@ -4,36 +4,18 @@ import { useEffect, useState } from "react"
 import { DataTable, type Column } from "@/components/DataTable"
 import { StatusBadge } from "@/components/StatusBadge"
 import { Users, Search, Loader2 } from "lucide-react"
-import { fetchAdminUsers, type AdminUser } from "@/lib/admin-api"
+import { type AdminUser } from "@/lib/admin-api"
+import { useAdminUsers } from "@/hooks/use-swr-data"
 import { useAuth } from "@/hooks/use-auth"
 import { toast } from "sonner"
 import Link from "next/link"
 
 export default function AdminCustomersPage() {
   const { session } = useAuth()
-  const [customers, setCustomers] = useState<AdminUser[]>([])
-  const [loading, setLoading] = useState(true)
-  const [total, setTotal] = useState(0)
-
-  useEffect(() => {
-    const loadData = async () => {
-      const token = (session as any)?.accessToken
-      if (!token) return
-
-      try {
-        setLoading(true)
-        const res = await fetchAdminUsers(token, "customer")
-        setCustomers(res.data.users)
-        setTotal(res.data.pagination?.total ?? res.data.users.length)
-      } catch (err: any) {
-        toast.error(err.message || "Failed to load customers")
-      } finally {
-        setLoading(false)
-      }
-    }
-
-    loadData()
-  }, [session])
+  const token = (session as any)?.accessToken
+  
+  const { users: customers, loading, mutate } = useAdminUsers(token, "customer")
+  const total = customers.length
 
   const columns: Column<AdminUser>[] = [
     {

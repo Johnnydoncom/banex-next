@@ -4,8 +4,8 @@ import { useEffect, useRef, useState } from "react"
 import { useAuth } from "@/hooks/use-auth"
 import { toast } from "sonner"
 import { Upload, Store, Star, Package2, Clock, CheckCircle2, XCircle, MapPin } from "lucide-react"
-import { sellerFetchApplication, sellerUpdateProfile, type SellerProfile } from "@/lib/seller-api"
-import { fetchGenericCategories, type GenericCategory } from "@/lib/generic-api"
+import { sellerUpdateProfile, type SellerProfile } from "@/lib/seller-api"
+import { useSellerApplication, useCategories } from "@/hooks/use-swr-data"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
@@ -41,8 +41,10 @@ export default function VendorStorePage() {
   const { user, session } = useAuth()
   const token = (session as any)?.accessToken as string | undefined
 
+  const { profile: swrProfile, loading: profileLoading, mutate: mutateProfile } = useSellerApplication(token)
+  const { categories } = useCategories()
+
   const [profile, setProfile] = useState<SellerProfile | null>(null)
-  const [categories, setCategories] = useState<GenericCategory[]>([])
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
 
@@ -64,31 +66,29 @@ export default function VendorStorePage() {
   const [removeCover, setRemoveCover] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
+  // Sync SWR profile into local state
   useEffect(() => {
-    if (!token) return
-    Promise.all([sellerFetchApplication(token), fetchGenericCategories()])
-      .then(([prof, cats]) => {
-        setCategories(cats?.categories ?? [])
-        if (prof) {
-          setProfile(prof)
-          setForm({
-            shop_name: prof.shop_name ?? "",
-            phone: prof.phone ?? "",
-            description: prof.description ?? "",
-            location: prof.location ?? "",
-            floor: prof.floor ?? "",
-            shop_no: prof.shop_no ?? "",
-            operating_hours: prof.operating_hours ?? "",
-            delivery_estimate_minutes: String(prof.delivery_estimate_minutes ?? ""),
-            delivery_fee: String(prof.delivery_fee ?? ""),
-            category_id: prof.category_id ?? "",
-          })
-          setCoverPreview(prof.cover_image_url ?? null)
-        }
-      })
-      .catch((e) => toast.error(e.message || "Failed to load profile"))
-      .finally(() => setLoading(false))
-  }, [token])
+    if (swrProfile !== undefined) {
+      setProfile((swrProfile as SellerProfile | null) ?? null)
+      setLoading(false)
+      if (swrProfile) {
+        const p = swrProfile as SellerProfile
+        setForm({
+          shop_name: p.shop_name ?? "",
+          phone: p.phone ?? "",
+          description: p.description ?? "",
+          location: p.location ?? "",
+          floor: p.floor ?? "",
+          shop_no: p.shop_no ?? "",
+          operating_hours: p.operating_hours ?? "",
+          delivery_estimate_minutes: String(p.delivery_estimate_minutes ?? ""),
+          delivery_fee: String(p.delivery_fee ?? ""),
+          category_id: p.category_id ?? "",
+        })
+        setCoverPreview(p.cover_image_url ?? null)
+      }
+    }
+  }, [swrProfile])
 
   function handleCoverChange(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0]

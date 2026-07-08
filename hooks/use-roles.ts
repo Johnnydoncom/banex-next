@@ -1,93 +1,55 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useSellerApplication } from "@/hooks/use-swr-data"
 import { useAuth } from "./use-auth"
-import { sellerFetchApplication } from "@/lib/seller-api"
 
 export type AppRole = "admin" | "vendor" | "customer"
 
 export function useRoles() {
   const { user, session, loading: authLoading } = useAuth()
-  const [roles, setRoles] = useState<AppRole[]>([])
-  const [loading, setLoading] = useState(true)
+  const token = (session as any)?.accessToken as string | undefined
+  const userType = (user as any)?.role || (user as any)?.type
 
-  useEffect(() => {
-    if (authLoading) return
-    if (!user) {
-      setRoles([])
-      setLoading(false)
-      return
+  // We only need to verify via API when the session type isn't explicit.
+  // When it IS explicit, we skip the API call by not passing a token.
+  const needsVerification = !authLoading && !!user && userType !== "admin" && userType !== "vendor"
+  const { profile, loading: profileLoading } = useSellerApplication(needsVerification ? token : undefined)
+
+  if (authLoading) {
+    return { roles: [] as AppRole[], isVendor: false, isAdmin: false, isCustomer: false, loading: true }
+  }
+
+  if (!user) {
+    return { roles: [] as AppRole[], isVendor: false, isAdmin: false, isCustomer: false, loading: false }
+  }
+
+  let roles: AppRole[] = []
+
+  if (userType === "admin") {
+    roles = ["admin", "vendor", "customer"]
+  } else if (userType === "vendor") {
+    roles = ["vendor", "customer"]
+  } else if (needsVerification) {
+    if (profileLoading) {
+      return { roles: [] as AppRole[], isVendor: false, isAdmin: false, isCustomer: false, loading: true }
     }
-
-    const token = (session as any)?.accessToken
-    const userType = (user as any).role || (user as any).type
-
-    async function checkRoles() {
-      // If session explicitly says admin, trust it
-      if (userType === "admin") {
-        setRoles(["admin", "vendor", "customer"])
-        setLoading(false)
-        return
-      }
-
-      // If session explicitly says vendor, trust it
-      if (userType === "vendor") {
-        setRoles(["vendor", "customer"])
-        setLoading(false)
-        return
-      }
-
-      // Otherwise, the user might be an approved vendor but the token is stale.
-      // Let's verify by fetching the application profile.
-      try {
-        if (token) {
-          const profile = await sellerFetchApplication(token)
-          if (profile && profile.status === "approved") {
-            setRoles(["vendor", "customer"])
-            setLoading(false)
-            return
-          }
-        }
-      } catch (err) {
-        // Not a vendor or request failed
-      }
-
-      // Default to customer
-      setRoles(["customer"])
-      setLoading(false)
+    if (profile && (profile as any).status === "approved") {
+      roles = ["vendor", "customer"]
+    } else {
+      roles = ["customer"]
     }
-
-    checkRoles()
-  }, [user, authLoading])
+  } else {
+    roles = ["customer"]
+  }
 
   const isVendor = roles.includes("vendor")
   const isAdmin = roles.includes("admin")
   const isCustomer = roles.includes("customer") || (!isVendor && !isAdmin)
 
-  return { roles, isVendor, isAdmin, isCustomer, loading: loading || authLoading }
+  return { roles, isVendor, isAdmin, isCustomer, loading: false }
 }
 
 export async function requestVendorRole(userId: string) {
-  // ----- ACTUAL FETCH IMPLEMENTATION (Commented out as requested) -----
-  /*
-  try {
-    const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000"}/user/request-vendor`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "Accept": "application/json"
-      },
-      body: JSON.stringify({ user_id: userId })
-    })
-    const data = await res.json()
-    if (!res.ok) throw new Error(data.message || "Failed to request vendor role")
-    return { error: null }
-  } catch (error: any) {
-    return { error }
-  }
-  */
-
-  // ----- MOCK DATA IMPLEMENTATION -----
   return new Promise<{ error: Error | null }>((resolve) => {
     setTimeout(() => {
       resolve({ error: null })

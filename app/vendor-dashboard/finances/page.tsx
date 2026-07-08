@@ -1,11 +1,10 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useState } from "react"
 import { Landmark, ArrowUpRight, ArrowDownRight, Plus, Trash2, Edit2, AlertCircle, Clock, CheckCircle2, XCircle, CreditCard } from "lucide-react"
 import { useAuth } from "@/hooks/use-auth"
 import { toast } from "sonner"
 import {
-  userFetchWallet, userFetchBankAccounts, userFetchWithdrawals,
   userCreateBankAccount, userUpdateBankAccount, userDeleteBankAccount,
   userCreateWithdrawal, type BankAccountData, type WithdrawalData
 } from "@/lib/user-api"
@@ -13,6 +12,7 @@ import { formatNaira } from "@/lib/products"
 import { Input } from "@/components/ui/input"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { useWallet, useBankAccounts, useUserWithdrawals } from "@/hooks/use-swr-data"
 
 function withdrawStatus(status: string) {
   switch (status) {
@@ -25,13 +25,15 @@ function withdrawStatus(status: string) {
 }
 
 export default function VendorFinancesPage() {
-  const { user } = useAuth()
-  
-  const [balance, setBalance] = useState<number | null>(null)
-  const [transactions, setTransactions] = useState<any[]>([])
-  const [bankAccounts, setBankAccounts] = useState<BankAccountData[]>([])
-  const [withdrawals, setWithdrawals] = useState<WithdrawalData[]>([])
-  const [loading, setLoading] = useState(true)
+  const { user, session } = useAuth()
+  const token = (session as any)?.accessToken as string | undefined
+
+  const { wallet, transactions, loading: walletLoading, mutate: mutateWallet } = useWallet(token)
+  const { bankAccounts, loading: banksLoading, mutate: mutateBanks } = useBankAccounts(token)
+  const { withdrawals, loading: withdrawalsLoading, mutate: mutateWithdrawals } = useUserWithdrawals(token)
+
+  const balance = wallet?.balance ?? null
+  const loading = walletLoading || banksLoading || withdrawalsLoading
 
   // Modals
   const [showBankModal, setShowBankModal] = useState(false)
@@ -45,27 +47,6 @@ export default function VendorFinancesPage() {
   // Withdraw form
   const [withdrawForm, setWithdrawForm] = useState({ amount: "", bank_account_id: "" })
   const [savingWithdraw, setSavingWithdraw] = useState(false)
-
-  useEffect(() => {
-    if (!user) return
-    setLoading(true)
-    Promise.all([
-      userFetchWallet().catch(() => null),
-      userFetchBankAccounts().catch(() => []),
-      userFetchWithdrawals().catch(() => ({ withdrawals: [], pagination: null }))
-    ]).then(([wRes, bRes, wdRes]) => {
-      setBalance(wRes?.wallet?.balance ?? 0)
-      setTransactions(wRes?.transactions ?? [])
-      setBankAccounts(bRes as BankAccountData[])
-      setWithdrawals((wdRes as any)?.withdrawals ?? [])
-      
-      // Auto-select default bank for withdrawal if available
-      const defBank = (bRes as BankAccountData[]).find(b => b.is_default) || (bRes as BankAccountData[])[0]
-      if (defBank) {
-        setWithdrawForm(f => ({ ...f, bank_account_id: defBank.id }))
-      }
-    }).finally(() => setLoading(false))
-  }, [user])
 
   function openAddBank() {
     setEditBank(null)
@@ -84,13 +65,12 @@ export default function VendorFinancesPage() {
     try {
       if (editBank) {
         const updated = await userUpdateBankAccount(editBank.id, bankForm)
-        if (updated) setBankAccounts(prev => prev.map(b => b.id === updated.id ? updated : b))
         toast.success("Bank account updated")
       } else {
         const created = await userCreateBankAccount(bankForm)
-        if (created) setBankAccounts(prev => [...prev, created])
         toast.success("Bank account added")
       }
+      mutateBanks()
       setShowBankModal(false)
     } catch (e: any) {
       toast.error(e.message || "Failed to save bank account")
@@ -103,7 +83,7 @@ export default function VendorFinancesPage() {
     if (!confirm("Remove this bank account?")) return
     try {
       await userDeleteBankAccount(id)
-      setBankAccounts(prev => prev.filter(b => b.id !== id))
+      mutateBanks()
       toast.success("Bank account removed")
     } catch (e: any) {
       toast.error(e.message || "Failed to delete bank account")
@@ -119,8 +99,8 @@ export default function VendorFinancesPage() {
     setSavingWithdraw(true)
     try {
       const res = await userCreateWithdrawal({ amount: amt, bank_account_id: withdrawForm.bank_account_id })
-      if (res?.withdrawal) setWithdrawals(prev => [res.withdrawal, ...prev])
-      if (res?.wallet) setBalance(res.wallet.balance)
+      mutateWithdrawals()
+      mutateWallet()
       toast.success("Withdrawal request submitted")
       setShowWithdrawModal(false)
       setWithdrawForm(f => ({ ...f, amount: "" }))

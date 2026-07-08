@@ -1,15 +1,15 @@
 "use client"
 
-import { useEffect, useState, useRef } from "react"
+import { useState, useRef, useEffect } from "react"
 import { Search, Plus, PackageOpen, Edit2, Trash2, X, ImageOff, Package2, AlertCircle, ChevronUp, ChevronDown, BarChart2 } from "lucide-react"
 import { useAuth } from "@/hooks/use-auth"
 import { toast } from "sonner"
 import {
-  sellerFetchProducts, sellerCreateProduct, sellerUpdateProduct,
+  sellerCreateProduct, sellerUpdateProduct,
   sellerUpdateStock, sellerDeleteProduct, sellerPricingPreview,
   type SellerProduct, type PricingSummary
 } from "@/lib/seller-api"
-import { fetchGenericCategories, type GenericCategory } from "@/lib/generic-api"
+import { useSellerProducts, useCategories } from "@/hooks/use-swr-data"
 import { formatNaira } from "@/lib/products"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
@@ -64,10 +64,19 @@ export default function VendorProductsPage() {
   const { user, session } = useAuth()
   const token = (session as any)?.accessToken as string | undefined
 
-  const [products, setProducts] = useState<SellerProduct[]>([])
-  const [categories, setCategories] = useState<GenericCategory[]>([])
-  const [q, setQ] = useState("")
-  const [loading, setLoading] = useState(true)
+  const { products: fetchedProducts, loading: productsLoading, mutate: mutateProducts } = useSellerProducts(token)
+  const { categories } = useCategories()
+
+  const [products, setProducts] = useState<SellerProduct[] | null>(null)
+  const loading = productsLoading && products === null
+
+  // Sync SWR data into local state so we can do optimistic updates
+  useEffect(() => {
+    if (fetchedProducts && products === null) {
+      setProducts(fetchedProducts)
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [fetchedProducts])
 
   // Modal state
   const [showModal, setShowModal] = useState(false)
@@ -90,24 +99,14 @@ export default function VendorProductsPage() {
   const [loadingPreview, setLoadingPreview] = useState(false)
   const previewTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
+  const [q, setQ] = useState("")
+
   // Delete confirm
   const [deleteId, setDeleteId] = useState<string | null>(null)
 
   const fileInputRef = useRef<HTMLInputElement>(null)
 
-  useEffect(() => {
-    if (!token) return
-    setLoading(true)
-    Promise.all([sellerFetchProducts(token), fetchGenericCategories()])
-      .then(([prods, cats]) => {
-        setProducts(prods)
-        setCategories(cats?.categories ?? [])
-      })
-      .catch((e) => toast.error(e.message || "Failed to load products"))
-      .finally(() => setLoading(false))
-  }, [token])
-
-  // Debounced pricing preview — fires 800ms after the seller stops typing a price
+  // Use effect only for the debounced pricing preview (not data loading)
   useEffect(() => {
     if (!token || !showModal) return
     const price = parseFloat(form.price)
@@ -176,10 +175,10 @@ export default function VendorProductsPage() {
     try {
       const updated = await sellerUpdateStock(stockModalProduct.id, qty, token)
       if (updated) {
-        setProducts((prev) => prev.map((p) => p.id === stockModalProduct.id ? { ...p, stock_quantity: qty } : p))
+        setProducts((prev) => prev ? prev.map((p) => p.id === stockModalProduct.id ? { ...p, stock_quantity: qty } : p) : prev)
       } else {
         // API returned no body — update locally
-        setProducts((prev) => prev.map((p) => p.id === stockModalProduct.id ? { ...p, stock_quantity: qty } : p))
+        setProducts((prev) => prev ? prev.map((p) => p.id === stockModalProduct.id ? { ...p, stock_quantity: qty } : p) : prev)
       }
       setStockModalProduct(null)
       toast.success("Stock updated")
@@ -245,14 +244,13 @@ export default function VendorProductsPage() {
 
       if (editProduct) {
         fd.append("_method", "PUT")
-        const updated = await sellerUpdateProduct(editProduct.id, fd, token)
-        if (updated) setProducts((prev) => prev.map((p) => p.id === updated.id ? updated : p))
+        await sellerUpdateProduct(editProduct.id, fd, token)
         toast.success("Product updated")
       } else {
-        const created = await sellerCreateProduct(fd, token)
-        if (created) setProducts((prev) => [created, ...prev])
+        await sellerCreateProduct(fd, token)
         toast.success("Product created")
       }
+      mutateProducts()
       setShowModal(false)
     } catch (e: any) {
       toast.error(e.message || "Failed to save product")
@@ -265,7 +263,7 @@ export default function VendorProductsPage() {
     if (!token) return
     try {
       await sellerDeleteProduct(id, token)
-      setProducts((prev) => prev.filter((p) => p.id !== id))
+      mutateProducts()
       setDeleteId(null)
       toast.success("Product deleted")
     } catch (e: any) {
@@ -278,12 +276,8 @@ export default function VendorProductsPage() {
     const qty = parseInt(stockVal)
     if (isNaN(qty) || qty < 0) { toast.error("Invalid quantity"); return }
     try {
-      const updated = await sellerUpdateStock(id, qty, token)
-      if (updated) {
-        setProducts((prev) => prev.map((p) => p.id === updated.id ? updated : p))
-      } else {
-        setProducts((prev) => prev.map((p) => p.id === id ? { ...p, stock_quantity: qty } : p))
-      }
+      await sellerUpdateStock(id, qty, token)
+      mutateProducts()
       setStockEditId(null)
       toast.success("Stock updated")
     } catch (e: any) {
@@ -291,7 +285,10 @@ export default function VendorProductsPage() {
     }
   }
 
-  const filtered = products.filter((p) => p.name.toLowerCase().includes(q.toLowerCase()))
+  const filtered = (products ?? []).filter((p) => {
+    if (!q) return true
+    return p.name.toLowerCase().includes(q.toLowerCase())
+  })
 
   return (
     <div className="space-y-5">
@@ -299,7 +296,7 @@ export default function VendorProductsPage() {
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
           <h1 className="font-display text-2xl font-bold">Products</h1>
-          <p className="text-sm text-muted-foreground">{products.length} listing{products.length !== 1 ? "s" : ""} in your store</p>
+          <p className="text-sm text-muted-foreground">{(products ?? []).length} listing{(products ?? []).length !== 1 ? "s" : ""} in your store</p>
         </div>
         <div className="flex gap-2">
           <label className="relative hidden sm:block">

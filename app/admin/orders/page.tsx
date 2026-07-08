@@ -6,8 +6,9 @@ import { Eye, Download } from "lucide-react"
 import { DataTable, type Column } from "@/components/DataTable"
 import { StatusBadge } from "@/components/StatusBadge"
 import { useAuth } from "@/hooks/use-auth"
-import { fetchAdminOrders, type AdminOrder } from "@/lib/admin-api"
 import { toast } from "sonner"
+import { type AdminOrder } from "@/lib/admin-api"
+import { useAdminOrders } from "@/hooks/use-swr-data"
 
 type Tab = "all" | "pending" | "processing" | "in_transit" | "delivered" | "cancelled" | "disputed"
 
@@ -16,17 +17,8 @@ export default function AdminOrdersPage() {
   const token = (session as any)?.accessToken as string | undefined
 
   const [tab, setTab] = useState<Tab>("all")
-  const [orders, setOrders] = useState<AdminOrder[]>([])
-  const [loading, setLoading] = useState(true)
-
-  useEffect(() => {
-    if (!token) return
-    setLoading(true)
-    fetchAdminOrders(token)
-      .then((res) => setOrders(res.data?.orders || []))
-      .catch((e) => toast.error(e.message || "Failed to load orders"))
-      .finally(() => setLoading(false))
-  }, [token])
+  
+  const { orders, loading, mutate } = useAdminOrders(token)
 
   const filtered = orders.filter((o) => {
     if (tab === "all") return true

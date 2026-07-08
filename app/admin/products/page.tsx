@@ -13,13 +13,13 @@ import { ConfirmDialog } from "@/components/ConfirmDialog"
 import { toast } from "sonner"
 import { useSession } from "next-auth/react"
 import {
-  fetchAdminProducts,
   approveAdminProduct,
   rejectAdminProduct,
   activateAdminProduct,
   deactivateAdminProduct,
   type AdminProduct,
 } from "@/lib/admin-api"
+import { useAdminProducts } from "@/hooks/use-swr-data"
 
 type Tab = "all" | "pending" | "active" | "inactive" | "rejected" | "draft"
 
@@ -180,9 +180,10 @@ function ProductActionButtons({
 
 export default function AdminProductsPage() {
   const { data: session } = useSession()
+  const token = session?.accessToken as string | undefined
   const [tab, setTab] = useState<Tab>("all")
-  const [products, setProducts] = useState<AdminProduct[]>([])
-  const [loading, setLoading] = useState(true)
+
+  const { products, loading, mutate } = useAdminProducts(token)
 
   // Confirm dialog state (approve / activate / deactivate)
   const [confirmAction, setConfirmAction] = useState<PendingAction | null>(null)
@@ -191,24 +192,6 @@ export default function AdminProductsPage() {
   // Reject modal state
   const [rejectTarget, setRejectTarget] = useState<AdminProduct | null>(null)
   const [rejectLoading, setRejectLoading] = useState(false)
-
-  useEffect(() => {
-    if (session?.accessToken) {
-      loadProducts()
-    }
-  }, [session?.accessToken])
-
-  const loadProducts = async () => {
-    try {
-      setLoading(true)
-      const res = await fetchAdminProducts(session!.accessToken!)
-      setProducts(res.data.products)
-    } catch (err: any) {
-      toast.error(err.message || "Failed to load products")
-    } finally {
-      setLoading(false)
-    }
-  }
 
   // Tab filtering
   const filtered = products.filter((p) => {
@@ -242,24 +225,26 @@ export default function AdminProductsPage() {
   }
 
   const handleConfirmedAction = async () => {
-    if (!confirmAction || !session?.accessToken) return
+    if (!confirmAction || !token) return
     setActionLoading(true)
     const { product, action } = confirmAction
 
     try {
       if (action === "approve") {
-        await approveAdminProduct(product.id, session.accessToken)
-        applyStatusChange(product.id, "active")
-        toast.success(`"${product.name}" approved successfully.`)
+        await approveAdminProduct(product.id, token)
       } else if (action === "activate") {
-        await activateAdminProduct(product.id, session.accessToken)
-        applyStatusChange(product.id, "active")
-        toast.success(`"${product.name}" is now active.`)
+        await activateAdminProduct(product.id, token)
       } else if (action === "deactivate") {
-        await deactivateAdminProduct(product.id, session.accessToken)
-        applyStatusChange(product.id, "inactive")
-        toast.success(`"${product.name}" has been deactivated.`)
+        await deactivateAdminProduct(product.id, token)
       }
+      mutate()
+      toast.success(
+        action === "approve"
+          ? "Product approved successfully."
+          : action === "activate"
+            ? "Product activated successfully."
+            : "Product deactivated successfully."
+      )
     } catch (err: any) {
       toast.error(err.message || `Failed to ${action} product`)
     } finally {
@@ -270,12 +255,12 @@ export default function AdminProductsPage() {
 
   // ── Handle reject action ───────────────────────────────────────────────────
   const handleReject = async (reason: string) => {
-    if (!rejectTarget || !session?.accessToken) return
-    setRejectLoading(true)
+    if (!rejectTarget || !token) return
     try {
-      await rejectAdminProduct(rejectTarget.id, session.accessToken, reason)
-      applyStatusChange(rejectTarget.id, "rejected")
-      toast.success(`"${rejectTarget.name}" rejected.`)
+      setRejectLoading(true)
+      await rejectAdminProduct(rejectTarget.id, token, reason)
+      mutate()
+      toast.success("Product rejected successfully.")
       setRejectTarget(null)
     } catch (err: any) {
       toast.error(err.message || "Failed to reject product")
@@ -284,11 +269,7 @@ export default function AdminProductsPage() {
     }
   }
 
-  const applyStatusChange = (id: string, status: AdminProduct["status"]) => {
-    setProducts((prev) =>
-      prev.map((p) => (p.id === id ? { ...p, status } : p))
-    )
-  }
+
 
   // ── Confirm dialog config ──────────────────────────────────────────────────
   const confirmConfig = () => {

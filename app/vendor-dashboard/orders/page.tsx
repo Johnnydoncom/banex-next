@@ -1,16 +1,17 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useState } from "react"
 import { Search, Package, ChevronDown, ChevronUp, CheckCircle2, XCircle, ImageOff, MapPin } from "lucide-react"
 import { useAuth } from "@/hooks/use-auth"
 import { toast } from "sonner"
 import {
-  sellerFetchOrders, sellerAcceptOrderItem, sellerDeclineOrderItem,
+  sellerAcceptOrderItem, sellerDeclineOrderItem,
   type SellerOrder, type SellerOrderItem
 } from "@/lib/seller-api"
 import { formatNaira } from "@/lib/products"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
+import { useSellerOrders } from "@/hooks/use-swr-data"
 
 const ORDER_STATUSES = ["all", "paid", "accepted", "declined", "delivered"] as const
 
@@ -34,12 +35,12 @@ export default function VendorOrdersPage() {
   const { user, session } = useAuth()
   const token = (session as any)?.accessToken as string | undefined
 
-  const [orders, setOrders] = useState<SellerOrder[]>([])
   const [filter, setFilter] = useState<typeof ORDER_STATUSES[number]>("all")
   const [q, setQ] = useState("")
-  const [loading, setLoading] = useState(true)
   const [page, setPage] = useState(1)
-  const [totalPages, setTotalPages] = useState(1)
+
+  const { orders, pagination, loading, mutate: mutateOrders } = useSellerOrders(token, page)
+  const totalPages = pagination?.last_page ?? 1
 
   // Expanded row
   const [expanded, setExpanded] = useState<string | null>(null)
@@ -49,24 +50,12 @@ export default function VendorOrdersPage() {
   const [declineReason, setDeclineReason] = useState("")
   const [actionLoading, setActionLoading] = useState<string | null>(null)
 
-  useEffect(() => {
-    if (!token) return
-    setLoading(true)
-    sellerFetchOrders(token, page)
-      .then(({ orders: o, pagination }) => {
-        setOrders(o)
-        setTotalPages(pagination?.last_page ?? 1)
-      })
-      .catch((e) => toast.error(e.message || "Failed to load orders"))
-      .finally(() => setLoading(false))
-  }, [token, page])
-
   async function handleAccept(orderId: string, itemId: string) {
     if (!token) return
     setActionLoading(itemId)
     try {
       const updated = await sellerAcceptOrderItem(orderId, itemId, token)
-      if (updated) setOrders((prev) => prev.map((o) => o.id === updated.id ? updated : o))
+      mutateOrders()
       toast.success("Order item accepted")
     } catch (e: any) {
       toast.error(e.message || "Failed to accept")
@@ -81,7 +70,7 @@ export default function VendorOrdersPage() {
     setActionLoading(declineState.itemId)
     try {
       const updated = await sellerDeclineOrderItem(declineState.orderId, declineState.itemId, declineReason, token)
-      if (updated) setOrders((prev) => prev.map((o) => o.id === updated.id ? updated : o))
+      mutateOrders()
       setDeclineState(null)
       setDeclineReason("")
       toast.success("Order item declined")

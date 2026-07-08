@@ -4,34 +4,16 @@ import { useEffect, useState } from "react"
 import { DataTable, type Column } from "@/components/DataTable"
 import { StatusBadge } from "@/components/StatusBadge"
 import { Shield, ShieldAlert, Key, Loader2 } from "lucide-react"
-import { fetchAdminUsers, type AdminUser } from "@/lib/admin-api"
+import { type AdminUser } from "@/lib/admin-api"
 import { useAuth } from "@/hooks/use-auth"
+import { useAdminUsers } from "@/hooks/use-swr-data"
 import { toast } from "sonner"
 import Link from "next/link"
 
 export default function AdminStaffPage() {
   const { session, user } = useAuth()
-  const [admins, setAdmins] = useState<AdminUser[]>([])
-  const [loading, setLoading] = useState(true)
-
-  useEffect(() => {
-    const loadData = async () => {
-      const token = (session as any)?.accessToken
-      if (!token) return
-
-      try {
-        setLoading(true)
-        const res = await fetchAdminUsers(token, "admin")
-        setAdmins(res.data.users)
-      } catch (err: any) {
-        toast.error(err.message || "Failed to load admins")
-      } finally {
-        setLoading(false)
-      }
-    }
-
-    loadData()
-  }, [session])
+  const token = (session as any)?.accessToken
+  const { users: admins, loading, mutate } = useAdminUsers(token, "admin")
 
   const columns: Column<AdminUser>[] = [
     {

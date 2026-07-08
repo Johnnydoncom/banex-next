@@ -7,32 +7,16 @@ import { DataTable, type Column } from "@/components/DataTable"
 import { ConfirmDialog } from "@/components/ConfirmDialog"
 import { toast } from "sonner"
 import { useSession } from "next-auth/react"
-import { fetchAdminCategories, deleteAdminCategory, type AdminCategory } from "@/lib/admin-api"
+import { deleteAdminCategory, type AdminCategory } from "@/lib/admin-api"
+import { useAdminCategories } from "@/hooks/use-swr-data"
 
 export default function AdminCategoriesPage() {
   const { data: session } = useSession()
-  const [categories, setCategories] = useState<AdminCategory[]>([])
-  const [loading, setLoading] = useState(true)
+  const token = session?.accessToken as string | undefined
+  const { categories, loading, mutate } = useAdminCategories(token)
+  
   const [deleteId, setDeleteId] = useState<string | null>(null)
   const [deleting, setDeleting] = useState(false)
-
-  useEffect(() => {
-    if (session?.accessToken) {
-      loadCategories()
-    }
-  }, [session?.accessToken])
-
-  const loadCategories = async () => {
-    try {
-      setLoading(true)
-      const res = await fetchAdminCategories(session!.accessToken!)
-      setCategories(res.data.categories)
-    } catch (err: any) {
-      toast.error(err.message || "Failed to load categories")
-    } finally {
-      setLoading(false)
-    }
-  }
 
   const handleDelete = async () => {
     if (!deleteId || !session?.accessToken) return
@@ -40,7 +24,7 @@ export default function AdminCategoriesPage() {
 
     try {
       await deleteAdminCategory(deleteId, session.accessToken)
-      setCategories((prev) => prev.filter((c) => c.id !== deleteId))
+      mutate()
       toast.success("Category deleted successfully.")
     } catch (err: any) {
       toast.error(err.message || "Failed to delete category")

@@ -9,35 +9,20 @@ import { ConfirmDialog } from "@/components/ConfirmDialog"
 import { RejectSellerModal } from "@/components/RejectSellerModal"
 import { toast } from "sonner"
 import { useSession } from "next-auth/react"
-import { fetchAdminSellers, updateAdminSellerStatus, AdminSeller } from "@/lib/admin-api"
+import { updateAdminSellerStatus, type AdminSeller } from "@/lib/admin-api"
+import { useAdminSellers } from "@/hooks/use-swr-data"
 
 type Tab = "all" | "approved" | "pending" | "suspended"
 
 export default function AdminSellersPage() {
   const { data: session } = useSession()
+  const token = session?.accessToken as string | undefined
   const [tab, setTab] = useState<Tab>("all")
-  const [sellers, setSellers] = useState<AdminSeller[]>([])
-  const [loading, setLoading] = useState(true)
+
+  const { sellers, loading, mutate } = useAdminSellers(token)
 
   const [confirmAction, setConfirmAction] = useState<{ seller: AdminSeller; action: "approve" | "reject" | "suspend" } | null>(null)
   const [actionLoading, setActionLoading] = useState(false)
-
-  const loadSellers = async () => {
-    if (!session?.accessToken) return
-    try {
-      setLoading(true)
-      const res = await fetchAdminSellers(session.accessToken as string)
-      setSellers(res.data?.sellers || [])
-    } catch (error: any) {
-      toast.error(error.message || "Failed to load sellers")
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  useEffect(() => {
-    loadSellers()
-  }, [session?.accessToken])
 
   const filtered = sellers.filter((s) => {
     if (tab === "approved") return s.status === "approved"
@@ -52,9 +37,14 @@ export default function AdminSellersPage() {
 
     try {
       await updateAdminSellerStatus(confirmAction.seller.id, confirmAction.action, session.accessToken as string, reason)
-      toast.success(`Seller ${confirmAction.action}d successfully.`)
-      // Refresh the list
-      await loadSellers()
+      mutate()
+      toast.success(
+        confirmAction.action === "approve"
+          ? "Seller approved"
+          : confirmAction.action === "suspend"
+          ? "Seller suspended"
+          : "Seller rejected"
+      )
     } catch (error: any) {
       toast.error(error.message || `Failed to ${confirmAction.action} seller`)
     } finally {
