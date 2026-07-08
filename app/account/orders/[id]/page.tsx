@@ -14,6 +14,7 @@ import {
   type OrderData, type PaymentMethodData
 } from "@/lib/user-api"
 import { formatNaira } from "@/lib/products"
+import { BankTransferUploadScreen } from "@/components/BankTransferUpload"
 
 function parseDate(raw: string | { item: string } | undefined): string {
   if (!raw) return ""
@@ -51,52 +52,59 @@ function StatusBadge({ status }: { status: string }) {
 }
 
 
-// ── Pay Now Banner ────────────────────────────────────────────────────────────
-function PayNowBanner({
+// ── Payment Section ────────────────────────────────────────────────────────────
+function PaymentSection({
   order,
+  paymentMethods,
   onPaymentSuccess,
 }: {
   order: OrderData
+  paymentMethods: PaymentMethodData[]
   onPaymentSuccess: (updated: OrderData) => void
 }) {
   const [state, setState] = useState<"idle" | "loading" | "redirecting" | "verifying" | "success" | "error">("idle")
   const [errorMsg, setErrorMsg] = useState("")
-  const [methods, setMethods] = useState<PaymentMethodData[]>([])
-  const [selectedMethod, setSelectedMethod] = useState<string>("")
-  const total = order.summary?.total ?? order.lines_summary?.subtotal ?? 0
+  const [selectedMethodId, setSelectedMethodId] = useState<string>("")
+
+  // Check if we already have a manual payment proof uploaded
+  const hasManualProof = !!order.payment?.proof_status
+  const isBankTransferOrder = order.payment?.payment_method?.slug === "manual" || order.payment?.payment_method?.name?.toLowerCase().includes("bank transfer")
+
+  // The active methods to show in the dropdown
+  const activeMethods = paymentMethods.filter(m => m.status === "active")
 
   useEffect(() => {
-    userFetchPaymentMethods()
-      .then(data => {
-        const active = data.filter(m => m.status === "active")
-        setMethods(active)
-        if (active.length > 0) {
-          // Default to card/paystack if available, else first active
-          const card = active.find(m => m.slug === "card" || m.slug.includes("paystack"))
-          setSelectedMethod(card ? card.id : active[0].id)
-        }
-      })
-      .catch(console.error)
-  }, [])
+    if (activeMethods.length > 0 && !selectedMethodId) {
+      if (hasManualProof || isBankTransferOrder) {
+        const manual = activeMethods.find(m => m.slug === "manual" || m.name.toLowerCase().includes("bank transfer"))
+        if (manual) setSelectedMethodId(manual.id)
+      } else {
+        const card = activeMethods.find(m => m.slug === "card" || m.slug.includes("paystack"))
+        setSelectedMethodId(card ? card.id : activeMethods[0].id)
+      }
+    }
+  }, [activeMethods, selectedMethodId, hasManualProof, isBankTransferOrder])
 
-  const handlePay = useCallback(async () => {
-    if (!selectedMethod) {
+  const selectedMethod = activeMethods.find(m => m.id === selectedMethodId)
+  const isManualSelected = selectedMethod?.slug === "manual" || selectedMethod?.name.toLowerCase().includes("bank transfer") || !!selectedMethod?.manual_payment_instructions
+
+  const total = order.summary?.total ?? order.lines_summary?.subtotal ?? 0
+
+  const handlePaystackPay = useCallback(async () => {
+    if (!selectedMethodId) {
       setErrorMsg("Please select a payment method")
       return
     }
     setState("loading")
     setErrorMsg("")
     try {
-      // Build absolute callback URL so Paystack can redirect back after payment
       const callbackUrl = `${window.location.origin}/checkout/verify?orderId=${order.id}`
-      const data = await userInitializeOrderPayment(order.id, selectedMethod, callbackUrl)
+      const data = await userInitializeOrderPayment(order.id, selectedMethodId, callbackUrl)
       if (data?.payment_intent?.authorization_url) {
         setState("redirecting")
-        // Store orderId in sessionStorage so the verify page can pick it up as a fallback
         sessionStorage.setItem("pending_order_id", order.id)
         window.location.href = data.payment_intent.authorization_url
       } else {
-        // Fallback: try verifying directly (in case payment was captured server-side)
         setState("verifying")
         const updated = await userCheckoutVerifyPayment(order.id)
         if (updated) {
@@ -116,104 +124,123 @@ function PayNowBanner({
       }
       setState("error")
     }
-  }, [order.id, selectedMethod, onPaymentSuccess])
+  }, [order.id, selectedMethodId, onPaymentSuccess])
 
   return (
-    <div className="relative overflow-hidden rounded-2xl border border-amber-300 bg-gradient-to-br from-amber-50 to-orange-50 p-5 dark:border-amber-700/50 dark:from-amber-950/30 dark:to-orange-950/30">
-      {/* Decorative background */}
-      <div className="pointer-events-none absolute -right-8 -top-8 h-28 w-28 rounded-full bg-amber-400/20 blur-2xl" />
-      <div className="pointer-events-none absolute -bottom-6 -left-6 h-24 w-24 rounded-full bg-orange-400/15 blur-xl" />
+    <div className="mb-6 space-y-4">
+      {/* Selector Banner */}
+      <div className="relative overflow-hidden rounded-2xl border border-amber-300 bg-gradient-to-br from-amber-50 to-orange-50 p-5 dark:border-amber-700/50 dark:from-amber-950/30 dark:to-orange-950/30">
+        <div className="pointer-events-none absolute -right-8 -top-8 h-28 w-28 rounded-full bg-amber-400/20 blur-2xl" />
+        <div className="pointer-events-none absolute -bottom-6 -left-6 h-24 w-24 rounded-full bg-orange-400/15 blur-xl" />
 
-      <div className="relative flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-        <div className="flex-1">
-          <div className="flex items-center gap-2">
-            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-amber-500/20">
-              <Clock className="h-4 w-4 text-amber-700 dark:text-amber-400" />
+        <div className="relative flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+          <div className="flex-1">
+            <div className="flex items-center gap-2">
+              <div className="flex h-8 w-8 items-center justify-center rounded-full bg-amber-500/20">
+                <Clock className="h-4 w-4 text-amber-700 dark:text-amber-400" />
+              </div>
+              <h3 className="font-display font-bold text-amber-900 dark:text-amber-300">
+                Payment Required
+              </h3>
             </div>
-            <h3 className="font-display font-bold text-amber-900 dark:text-amber-300">
-              Payment Required
-            </h3>
-          </div>
-          <p className="mt-2 text-sm text-amber-800/80 dark:text-amber-400/80">
-            This order is awaiting payment. Complete your payment to confirm the order and begin processing.
-          </p>
-          {state === "error" && (
-            <p className="mt-2 flex items-center gap-1.5 text-xs font-medium text-rose-700 dark:text-rose-400">
-              <AlertTriangle className="h-3.5 w-3.5 flex-none" />
-              {errorMsg}
+            <p className="mt-2 text-sm text-amber-800/80 dark:text-amber-400/80">
+              This order is awaiting payment. Please complete your payment to confirm the order.
             </p>
-          )}
-          {state === "success" && (
-            <p className="mt-2 flex items-center gap-1.5 text-xs font-medium text-emerald-700">
-              <CheckCircle2 className="h-3.5 w-3.5 flex-none" />
-              Payment confirmed! Refreshing order details…
-            </p>
-          )}
-        </div>
-        <div className="flex flex-col items-center sm:items-end flex-none">
-          <div className="flex flex-col sm:flex-row items-center gap-3">
-            {methods.length > 0 && state !== "success" && (
-              <select
-                value={selectedMethod}
-                onChange={e => setSelectedMethod(e.target.value)}
-                disabled={state !== "idle" && state !== "error"}
-                className="h-11 rounded-xl border border-amber-300/50 bg-white/60 px-4 text-sm font-semibold text-amber-950 outline-none backdrop-blur-sm transition-colors focus:border-amber-500 focus:bg-white dark:border-amber-700/50 dark:bg-amber-950/40 dark:text-amber-100 dark:focus:border-amber-500 dark:focus:bg-amber-950/60"
-              >
-                {methods.map(m => (
-                  <option key={m.id} value={m.id}>{m.name}</option>
-                ))}
-              </select>
+            {state === "error" && !isManualSelected && (
+              <p className="mt-2 flex items-center gap-1.5 text-xs font-medium text-rose-700 dark:text-rose-400">
+                <AlertTriangle className="h-3.5 w-3.5 flex-none" />
+                {errorMsg}
+              </p>
             )}
-            <button
-              onClick={handlePay}
-              disabled={state === "loading" || state === "redirecting" || state === "verifying" || state === "success"}
-              className={`relative inline-flex min-w-[160px] items-center justify-center gap-2 overflow-hidden rounded-xl px-6 py-3 text-sm font-bold shadow-lg transition-all duration-200 ${
-                state === "success"
-                  ? "bg-emerald-500 text-white"
-                  : "bg-gradient-to-r from-amber-500 to-orange-500 text-white hover:from-amber-600 hover:to-orange-600 hover:shadow-amber-500/30 active:scale-95 disabled:opacity-70"
-              }`}
-            >
-              {state === "loading" && <Loader2 className="h-4 w-4 animate-spin" />}
-              {state === "redirecting" && <Loader2 className="h-4 w-4 animate-spin" />}
-              {state === "verifying" && <Loader2 className="h-4 w-4 animate-spin" />}
-              {state === "success" && <CheckCircle2 className="h-4 w-4" />}
-              {(state === "idle" || state === "error") && <CreditCard className="h-4 w-4" />}
-              <span>
-                {state === "idle" && `Pay ${formatNaira(total)}`}
-                {state === "loading" && "Initializing…"}
-                {state === "redirecting" && "Redirecting…"}
-                {state === "verifying" && "Verifying…"}
-                {state === "success" && "Paid!"}
-                {state === "error" && `Retry Payment`}
-              </span>
-            </button>
+            {state === "success" && (
+              <p className="mt-2 flex items-center gap-1.5 text-xs font-medium text-emerald-700">
+                <CheckCircle2 className="h-3.5 w-3.5 flex-none" />
+                Payment confirmed! Refreshing order details…
+              </p>
+            )}
           </div>
-          <p className="mt-2 text-[10px] font-medium text-amber-700/60 dark:text-amber-500/60">
-            🔒 Secured by Paystack
-          </p>
+          <div className="flex flex-col items-center sm:items-end flex-none">
+            <div className="flex flex-col sm:flex-row items-center gap-3">
+              {activeMethods.length > 0 && state !== "success" && (
+                <select
+                  value={selectedMethodId}
+                  onChange={e => setSelectedMethodId(e.target.value)}
+                  disabled={state !== "idle" && state !== "error"}
+                  className="h-11 rounded-xl border border-amber-300/50 bg-white/60 px-4 text-sm font-semibold text-amber-950 outline-none backdrop-blur-sm transition-colors focus:border-amber-500 focus:bg-white dark:border-amber-700/50 dark:bg-amber-950/40 dark:text-amber-100 dark:focus:border-amber-500 dark:focus:bg-amber-950/60"
+                >
+                  {activeMethods.map(m => (
+                    <option key={m.id} value={m.id}>{m.name}</option>
+                  ))}
+                </select>
+              )}
+              {!isManualSelected && (
+                <button
+                  onClick={handlePaystackPay}
+                  disabled={state === "loading" || state === "redirecting" || state === "verifying" || state === "success"}
+                  className={`relative inline-flex min-w-[160px] items-center justify-center gap-2 overflow-hidden rounded-xl px-6 py-3 text-sm font-bold shadow-lg transition-all duration-200 ${
+                    state === "success"
+                      ? "bg-emerald-500 text-white"
+                      : "bg-gradient-to-r from-amber-500 to-orange-500 text-white hover:from-amber-600 hover:to-orange-600 hover:shadow-amber-500/30 active:scale-95 disabled:opacity-70"
+                  }`}
+                >
+                  {state === "loading" && <Loader2 className="h-4 w-4 animate-spin" />}
+                  {state === "redirecting" && <Loader2 className="h-4 w-4 animate-spin" />}
+                  {state === "verifying" && <Loader2 className="h-4 w-4 animate-spin" />}
+                  {state === "success" && <CheckCircle2 className="h-4 w-4" />}
+                  {(state === "idle" || state === "error") && <CreditCard className="h-4 w-4" />}
+                  <span>
+                    {state === "idle" && `Pay ${formatNaira(total)}`}
+                    {state === "loading" && "Initializing…"}
+                    {state === "redirecting" && "Redirecting…"}
+                    {state === "verifying" && "Verifying…"}
+                    {state === "success" && "Paid!"}
+                    {state === "error" && `Retry Payment`}
+                  </span>
+                </button>
+              )}
+            </div>
+            {!isManualSelected && (
+              <p className="mt-2 text-[10px] font-medium text-amber-700/60 dark:text-amber-500/60">
+                🔒 Secured by Paystack
+              </p>
+            )}
+          </div>
         </div>
       </div>
+
+      {/* Manual Payment Section */}
+      {isManualSelected && (
+        <div className="rounded-2xl border border-border bg-card overflow-hidden shadow-sm">
+          <BankTransferUploadScreen
+            order={order}
+            paymentInstructions={selectedMethod?.manual_payment_instructions}
+            compact={true}
+            onSuccess={(updated) => {
+              if (updated) onPaymentSuccess(updated)
+            }}
+          />
+        </div>
+      )}
     </div>
   )
 }
 
 // ── Main Page ─────────────────────────────────────────────────────────────────
 export default function OrderDetailsPage() {
-  const { id } = useParams() as { id: string }
+  const { id } = useParams()
   const router = useRouter()
   const { user } = useAuth()
 
   const [order, setOrder] = useState<OrderData | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState("")
+  const [paymentMethods, setPaymentMethods] = useState<PaymentMethodData[]>([])
 
   const loadOrder = useCallback(async (orderId: string) => {
     setError("")
     try {
       const data = await userFetchOrder(orderId)
       if (data) {
-        // Debug: log the real status from API so we can expand PAID_TERMINAL_STATUSES if needed
-        console.log("[OrderDetails] order.status =", data.status, "| isUnpaid =", !PAID_TERMINAL_STATUSES.includes(data.status))
         setOrder(data)
       } else {
         setError("Order not found")
@@ -228,7 +255,9 @@ export default function OrderDetailsPage() {
   useEffect(() => {
     if (!user?.id || !id) return
     setLoading(true)
-    loadOrder(id)
+    loadOrder(Array.isArray(id) ? id[0] : id)
+    // Fetch payment methods to pass bank instructions if needed
+    userFetchPaymentMethods().then(setPaymentMethods).catch(console.error)
   }, [user?.id, id, loadOrder])
 
   if (loading) {
@@ -311,13 +340,13 @@ export default function OrderDetailsPage() {
         </div>
       </div>
 
-      {/* ── Pay Now Banner (only for unpaid orders) ── */}
+      {/* ── Payment Section (only for unpaid orders) ── */}
       {isUnpaid && (
-        <PayNowBanner
+        <PaymentSection
           order={order}
+          paymentMethods={paymentMethods}
           onPaymentSuccess={(updated) => {
             setOrder(updated)
-            // Brief delay then reload to get full details
             setTimeout(() => loadOrder(order.id), 1500)
           }}
         />

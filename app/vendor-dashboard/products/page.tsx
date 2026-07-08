@@ -1,16 +1,20 @@
 "use client"
 
 import { useEffect, useState, useRef } from "react"
-import { Search, Plus, PackageOpen, Edit2, Trash2, X, ImageOff, Package2, AlertCircle, ChevronUp, ChevronDown } from "lucide-react"
+import { Search, Plus, PackageOpen, Edit2, Trash2, X, ImageOff, Package2, AlertCircle, ChevronUp, ChevronDown, BarChart2 } from "lucide-react"
 import { useAuth } from "@/hooks/use-auth"
 import { toast } from "sonner"
 import {
   sellerFetchProducts, sellerCreateProduct, sellerUpdateProduct,
-  sellerUpdateStock, sellerDeleteProduct, type SellerProduct
+  sellerUpdateStock, sellerDeleteProduct, sellerPricingPreview,
+  type SellerProduct, type PricingSummary
 } from "@/lib/seller-api"
 import { fetchGenericCategories, type GenericCategory } from "@/lib/generic-api"
 import { formatNaira } from "@/lib/products"
-
+import { Input } from "@/components/ui/input"
+import { Textarea } from "@/components/ui/textarea"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Switch } from "@/components/ui/switch"
 type ProductForm = {
   name: string
   brand: string
@@ -70,9 +74,18 @@ export default function VendorProductsPage() {
   const [saving, setSaving] = useState(false)
   const [imagePreviewUrls, setImagePreviewUrls] = useState<string[]>([])
 
-  // Stock update inline
-  const [stockEditId, setStockEditId] = useState<string | null>(null)
+  // Stock update modal
+  const [stockModalProduct, setStockModalProduct] = useState<SellerProduct | null>(null)
   const [stockVal, setStockVal] = useState("")
+  const [savingStock, setSavingStock] = useState(false)
+
+  // Inline stock edit (table row)
+  const [stockEditId, setStockEditId] = useState<string | null>(null)
+
+  // Pricing preview
+  const [pricingPreview, setPricingPreview] = useState<PricingSummary | null>(null)
+  const [loadingPreview, setLoadingPreview] = useState(false)
+  const previewTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   // Delete confirm
   const [deleteId, setDeleteId] = useState<string | null>(null)
@@ -91,10 +104,34 @@ export default function VendorProductsPage() {
       .finally(() => setLoading(false))
   }, [token])
 
+  // Debounced pricing preview — fires 800ms after the seller stops typing a price
+  useEffect(() => {
+    if (!token || !showModal) return
+    const price = parseFloat(form.price)
+    if (!form.price || isNaN(price) || price <= 0) {
+      setPricingPreview(null)
+      return
+    }
+    if (previewTimerRef.current) clearTimeout(previewTimerRef.current)
+    previewTimerRef.current = setTimeout(async () => {
+      setLoadingPreview(true)
+      try {
+        const summary = await sellerPricingPreview(price, token)
+        setPricingPreview(summary)
+      } catch {
+        setPricingPreview(null)
+      } finally {
+        setLoadingPreview(false)
+      }
+    }, 800)
+    return () => { if (previewTimerRef.current) clearTimeout(previewTimerRef.current) }
+  }, [form.price, token, showModal])
+
   function openAdd() {
     setEditProduct(null)
     setForm(defaultForm())
     setImagePreviewUrls([])
+    setPricingPreview(null)
     setShowModal(true)
   }
 
@@ -117,7 +154,35 @@ export default function VendorProductsPage() {
       primary_image_index: 0,
     })
     setImagePreviewUrls(p.images?.map((i) => i.url) ?? [])
+    setPricingPreview(null)
     setShowModal(true)
+  }
+
+  function openStockModal(p: SellerProduct) {
+    setStockModalProduct(p)
+    setStockVal(String(p.stock_quantity ?? 0))
+  }
+
+  async function handleStockModalSave() {
+    if (!token || !stockModalProduct) return
+    const qty = parseInt(stockVal)
+    if (isNaN(qty) || qty < 0) { toast.error("Invalid quantity"); return }
+    setSavingStock(true)
+    try {
+      const updated = await sellerUpdateStock(stockModalProduct.id, qty, token)
+      if (updated) {
+        setProducts((prev) => prev.map((p) => p.id === stockModalProduct.id ? { ...p, stock_quantity: qty } : p))
+      } else {
+        // API returned no body — update locally
+        setProducts((prev) => prev.map((p) => p.id === stockModalProduct.id ? { ...p, stock_quantity: qty } : p))
+      }
+      setStockModalProduct(null)
+      toast.success("Stock updated")
+    } catch (e: any) {
+      toast.error(e.message || "Failed to update stock")
+    } finally {
+      setSavingStock(false)
+    }
   }
 
   function handleImageChange(e: React.ChangeEvent<HTMLInputElement>) {
@@ -189,7 +254,11 @@ export default function VendorProductsPage() {
     if (isNaN(qty) || qty < 0) { toast.error("Invalid quantity"); return }
     try {
       const updated = await sellerUpdateStock(id, qty, token)
-      if (updated) setProducts((prev) => prev.map((p) => p.id === updated.id ? updated : p))
+      if (updated) {
+        setProducts((prev) => prev.map((p) => p.id === updated.id ? updated : p))
+      } else {
+        setProducts((prev) => prev.map((p) => p.id === id ? { ...p, stock_quantity: qty } : p))
+      }
       setStockEditId(null)
       toast.success("Stock updated")
     } catch (e: any) {
@@ -210,11 +279,11 @@ export default function VendorProductsPage() {
         <div className="flex gap-2">
           <label className="relative hidden sm:block">
             <Search className="pointer-events-none absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
-            <input
+            <Input
               value={q}
               onChange={(e) => setQ(e.target.value)}
               placeholder="Search products"
-              className="h-9 w-52 rounded-full border border-border bg-card pl-9 pr-3 text-xs outline-none focus:border-emerald-500"
+              className="h-9 w-52 rounded-full bg-card pl-9 pr-3 text-xs"
             />
           </label>
           <button
@@ -276,11 +345,11 @@ export default function VendorProductsPage() {
                       <td className="px-5 py-3">
                         {stockEditId === p.id ? (
                           <div className="flex items-center gap-1">
-                            <input
+                            <Input
                               type="number"
                               value={stockVal}
                               onChange={(e) => setStockVal(e.target.value)}
-                              className="h-7 w-16 rounded border border-border bg-background px-2 text-xs outline-none focus:border-emerald-500"
+                              className="h-7 w-16 px-2 text-xs"
                               autoFocus
                               onKeyDown={(e) => { if (e.key === "Enter") handleStockSave(p.id); if (e.key === "Escape") setStockEditId(null) }}
                             />
@@ -309,6 +378,13 @@ export default function VendorProductsPage() {
                       </td>
                       <td className="px-5 py-3 text-right">
                         <div className="flex items-center justify-end gap-1">
+                          <button
+                            onClick={() => openStockModal(p)}
+                            title="Manage stock"
+                            className="rounded-lg p-1.5 text-muted-foreground hover:bg-blue-500/10 hover:text-blue-600 transition-colors"
+                          >
+                            <Package2 className="h-4 w-4" />
+                          </button>
                           <button
                             onClick={() => openEdit(p)}
                             className="rounded-lg p-1.5 text-muted-foreground hover:bg-emerald-500/10 hover:text-emerald-600 transition-colors"
@@ -383,45 +459,76 @@ export default function VendorProductsPage() {
 
               {/* Basic info */}
               <F label="Product Name *">
-                <input value={form.name} onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))} placeholder="e.g. Samsung Galaxy S24" />
+                <Input value={form.name} onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))} placeholder="e.g. Samsung Galaxy S24" />
               </F>
               <div className="grid grid-cols-2 gap-4">
                 <F label="Brand">
-                  <input value={form.brand} onChange={(e) => setForm((f) => ({ ...f, brand: e.target.value }))} placeholder="e.g. Samsung" />
+                  <Input value={form.brand} onChange={(e) => setForm((f) => ({ ...f, brand: e.target.value }))} placeholder="e.g. Samsung" />
                 </F>
                 <F label="Category *">
-                  <select value={form.category_id} onChange={(e) => setForm((f) => ({ ...f, category_id: e.target.value }))} className="select-input">
-                    <option value="">Select...</option>
-                    {categories.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
-                  </select>
+                  <Select value={form.category_id} onValueChange={(val) => setForm((f) => ({ ...f, category_id: val }))}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {categories.map((c) => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
                 </F>
               </div>
               <div className="grid grid-cols-3 gap-4">
                 <F label="Price (₦) *">
-                  <input type="number" value={form.price} onChange={(e) => setForm((f) => ({ ...f, price: e.target.value }))} placeholder="0" />
+                  <Input type="number" value={form.price} onChange={(e) => setForm((f) => ({ ...f, price: e.target.value }))} placeholder="0" />
                 </F>
-                <F label="Stock Qty *">
-                  <input type="number" value={form.stock_quantity} onChange={(e) => setForm((f) => ({ ...f, stock_quantity: e.target.value }))} placeholder="0" />
+                <F label="Stock Qty">
+                  <Input type="number" value={form.stock_quantity} onChange={(e) => setForm((f) => ({ ...f, stock_quantity: e.target.value }))} placeholder="0" />
                 </F>
-                <F label="Weight (kg) *">
-                  <input type="number" step="0.1" value={form.weight_kg} onChange={(e) => setForm((f) => ({ ...f, weight_kg: e.target.value }))} placeholder="0.5" />
+                <F label="Weight (kg)">
+                  <Input type="number" step="0.1" value={form.weight_kg} onChange={(e) => setForm((f) => ({ ...f, weight_kg: e.target.value }))} placeholder="0.5" />
                 </F>
               </div>
+
+              {/* Pricing preview panel */}
+              {(pricingPreview || loadingPreview) && (
+                <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/5 p-4">
+                  <div className="flex items-center gap-2 mb-3">
+                    <BarChart2 className="h-4 w-4 text-emerald-600" />
+                    <p className="text-xs font-semibold text-emerald-700">Pricing Breakdown</p>
+                    {loadingPreview && <span className="ml-auto text-[10px] text-muted-foreground animate-pulse">Calculating…</span>}
+                  </div>
+                  {pricingPreview && !loadingPreview && (
+                    <div className="space-y-2 text-xs">
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Listing Price</span>
+                        <span className="font-semibold">{formatNaira(pricingPreview.listing_price)}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Platform Commission ({pricingPreview.commission_percent_label})</span>
+                        <span className="font-semibold text-rose-600">− {formatNaira(pricingPreview.commission_amount)}</span>
+                      </div>
+                      <div className="my-1 border-t border-emerald-500/20" />
+                      <div className="flex justify-between">
+                        <span className="font-semibold text-emerald-700">You Receive</span>
+                        <span className="font-bold text-emerald-700 text-sm">{formatNaira(pricingPreview.seller_receives)}</span>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
               <div className="grid grid-cols-2 gap-4">
                 <F label="Location">
-                  <input value={form.location} onChange={(e) => setForm((f) => ({ ...f, location: e.target.value }))} placeholder="e.g. Banex Mall" />
+                  <Input value={form.location} onChange={(e) => setForm((f) => ({ ...f, location: e.target.value }))} placeholder="e.g. Banex Mall" />
                 </F>
                 <F label="Delivery Estimate">
-                  <input value={form.delivery_estimate} onChange={(e) => setForm((f) => ({ ...f, delivery_estimate: e.target.value }))} placeholder="e.g. 1-2 days" />
+                  <Input value={form.delivery_estimate} onChange={(e) => setForm((f) => ({ ...f, delivery_estimate: e.target.value }))} placeholder="e.g. 1-2 days" />
                 </F>
               </div>
               <F label="Description *">
-                <textarea
+                <Textarea
                   value={form.description}
                   onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))}
                   rows={3}
                   placeholder="Describe your product..."
-                  className="w-full rounded-xl border border-border bg-background px-4 py-2.5 text-sm outline-none focus:border-emerald-500"
                 />
               </F>
 
@@ -431,7 +538,7 @@ export default function VendorProductsPage() {
                 <div className="space-y-2">
                   {form.specifications.map((s, i) => (
                     <div key={i} className="flex gap-2">
-                      <input
+                      <Input
                         value={s}
                         onChange={(e) => {
                           const specs = [...form.specifications]
@@ -439,7 +546,6 @@ export default function VendorProductsPage() {
                           setForm((f) => ({ ...f, specifications: specs }))
                         }}
                         placeholder={`Spec ${i + 1} (e.g. RAM: 8GB)`}
-                        className="h-9 flex-1 rounded-xl border border-border bg-background px-3 text-sm outline-none focus:border-emerald-500"
                       />
                       {form.specifications.length > 1 && (
                         <button
@@ -497,6 +603,55 @@ export default function VendorProductsPage() {
         </div>
       )}
 
+      {/* Dedicated Manage Stock Modal */}
+      {stockModalProduct && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
+          <div className="w-full max-w-sm rounded-2xl border border-border bg-card p-6 shadow-2xl">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-500/10">
+                <Package2 className="h-5 w-5 text-blue-600" />
+              </div>
+              <div>
+                <h3 className="font-display text-base font-bold">Manage Stock</h3>
+                <p className="text-xs text-muted-foreground line-clamp-1">{stockModalProduct.name}</p>
+              </div>
+            </div>
+
+            <div className="rounded-xl border border-border bg-surface/40 p-3 mb-4 text-xs text-muted-foreground">
+              Current stock: <strong className="text-foreground">{stockModalProduct.stock_quantity ?? 0} units</strong>
+            </div>
+
+            <F label="New Stock Quantity">
+              <Input
+                type="number"
+                min="0"
+                value={stockVal}
+                onChange={(e) => setStockVal(e.target.value)}
+                placeholder="Enter new quantity"
+                autoFocus
+                onKeyDown={(e) => { if (e.key === "Enter") handleStockModalSave() }}
+              />
+            </F>
+
+            <div className="mt-5 flex gap-3">
+              <button
+                onClick={handleStockModalSave}
+                disabled={savingStock}
+                className="flex-1 rounded-full bg-blue-600 py-2.5 text-sm font-semibold text-white disabled:opacity-60 hover:bg-blue-700 transition-colors"
+              >
+                {savingStock ? "Updating…" : "Update Stock"}
+              </button>
+              <button
+                onClick={() => setStockModalProduct(null)}
+                className="flex-1 rounded-full border border-border bg-card py-2.5 text-sm font-semibold hover:border-foreground/30 transition-colors"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Delete confirm */}
       {deleteId && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
@@ -541,50 +696,13 @@ function F({ label, children }: { label: string; children: React.ReactNode }) {
 // Wrap inputs automatically with standard classes via cloneElement not available — use a wrapper approach
 // The input inside F must have the right classes. Convenience: just apply them inline in each callsite above.
 // Override select styling:
-const _selectCls = "h-9 w-full rounded-xl border border-border bg-background px-3 text-sm outline-none focus:border-emerald-500"
-declare module "react" {
-  // Extend CSSProperties if needed — no-op
-}
-
-// Add a style element for the .select-input class used above:
-if (typeof document !== "undefined") {
-  const style = document.getElementById("vcss") || document.createElement("style")
-  style.id = "vcss"
-  style.textContent = `
-    .select-input { height:2.25rem; width:100%; border-radius:0.75rem; border:1px solid hsl(var(--border)); background:hsl(var(--background)); padding-left:0.75rem; padding-right:0.75rem; font-size:0.875rem; outline:none; }
-    .select-input:focus { border-color: rgb(16 185 129); }
-  `
-  if (!document.getElementById("vcss")) document.head.appendChild(style)
-}
-
-// For all text inputs within F labels, add standard classes — use a wrapper
-// Actually simpler: apply the class directly in the JSX above. Let's ensure:
-// Add className to all inputs inside F via the style override approach
-if (typeof document !== "undefined") {
-  const style2 = document.getElementById("vcss2") || document.createElement("style")
-  style2.id = "vcss2"
-  style2.textContent = `
-    label input:not([type=checkbox]):not([type=file]), label textarea {
-      display:block; width:100%; border-radius:0.75rem; border:1px solid hsl(var(--border));
-      background:hsl(var(--background)); padding:0.5rem 0.75rem; font-size:0.875rem; outline:none;
-    }
-    label input:not([type=checkbox]):not([type=file]) { height:2.25rem; }
-    label input:not([type=checkbox]):not([type=file]):focus,
-    label textarea:focus { border-color: rgb(16 185 129); }
-  `
-  if (!document.getElementById("vcss2")) document.head.appendChild(style2)
-}
+// Removed generic styles since we now use shadcn UI components natively.
 
 function Toggle({ checked, onChange, label }: { checked: boolean; onChange: (v: boolean) => void; label: string }) {
   return (
     <label className="flex cursor-pointer items-center justify-between rounded-xl border border-border bg-background px-4 py-3">
       <span className="text-sm font-medium">{label}</span>
-      <div
-        onClick={() => onChange(!checked)}
-        className={`relative h-5 w-9 rounded-full transition-colors ${checked ? "bg-emerald-600" : "bg-muted-foreground/30"}`}
-      >
-        <div className={`absolute top-0.5 h-4 w-4 rounded-full bg-white shadow transition-transform ${checked ? "translate-x-4" : "translate-x-0.5"}`} />
-      </div>
+      <Switch checked={checked} onCheckedChange={onChange} />
     </label>
   )
 }

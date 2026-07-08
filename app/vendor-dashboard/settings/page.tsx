@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react"
 import { useAuth } from "@/hooks/use-auth"
 import { toast } from "sonner"
-
+import { Checkbox } from "@/components/ui/checkbox"
 export default function VendorSettingsPage() {
   const { user } = useAuth()
   const [form, setForm] = useState({
@@ -14,7 +14,7 @@ export default function VendorSettingsPage() {
 
   useEffect(() => {
     if (!user) return
-    
+
     // In a real implementation, you would fetch these from the API
     setForm({
       notifications_email: true,
@@ -25,9 +25,9 @@ export default function VendorSettingsPage() {
   const save = async () => {
     if (!user) return
     setSaving(true)
-    
+
     // API Call here...
-    
+
     setTimeout(() => {
       toast.success("Settings updated")
       setSaving(false)
@@ -44,23 +44,19 @@ export default function VendorSettingsPage() {
       <section className="rounded-2xl border border-border bg-card p-5">
         <h2 className="font-display text-lg font-semibold">Notifications</h2>
         <p className="mb-5 text-xs text-muted-foreground">How should we contact you about new orders and payouts?</p>
-        
+
         <div className="space-y-4">
           <label className="flex items-center gap-3">
-            <input
-              type="checkbox"
+            <Checkbox
               checked={form.notifications_email}
-              onChange={(e) => setForm({ ...form, notifications_email: e.target.checked })}
-              className="h-4 w-4 rounded border-border text-emerald-600 focus:ring-emerald-600"
+              onCheckedChange={(checked) => setForm({ ...form, notifications_email: checked as boolean })}
             />
             <span className="text-sm font-medium">Email notifications</span>
           </label>
           <label className="flex items-center gap-3">
-            <input
-              type="checkbox"
+            <Checkbox
               checked={form.notifications_sms}
-              onChange={(e) => setForm({ ...form, notifications_sms: e.target.checked })}
-              className="h-4 w-4 rounded border-border text-emerald-600 focus:ring-emerald-600"
+              onCheckedChange={(checked) => setForm({ ...form, notifications_sms: checked as boolean })}
             />
             <span className="text-sm font-medium">SMS notifications</span>
           </label>

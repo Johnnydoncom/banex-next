@@ -4,6 +4,7 @@ import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { useEffect, useState, useMemo, useRef } from "react"
 import { useCart } from "@/components/CartContext"
+import { BankTransferUploadScreen } from "@/components/BankTransferUpload"
 import { formatNaira } from "@/lib/products"
 import {
   ShieldCheck,
@@ -19,6 +20,11 @@ import {
   CreditCard as CreditCardIcon,
   Smartphone as SmartphoneIcon,
   Landmark as LandmarkIcon,
+  Upload,
+  Loader2,
+  AlertTriangle,
+  FileImage,
+  X,
 } from "lucide-react"
 import { toast } from "sonner"
 import { useAuth } from "@/hooks/use-auth"
@@ -30,6 +36,8 @@ import {
   userFetchPaymentMethods,
   userFetchWallet,
   userCheckoutValidateShipping,
+  userUploadPaymentProof,
+  type OrderData,
   type ShippingRate,
   type AddressData,
   type CheckoutBreakdown,
@@ -59,6 +67,8 @@ export default function CheckoutPage() {
   const [breakdown, setBreakdown] = useState<CheckoutBreakdown | null>(null)
   const [submitting, setSubmitting] = useState(false)
   const [done, setDone] = useState<string | null>(null)
+  // Bank-transfer pending order — show receipt upload screen
+  const [bankTransferOrder, setBankTransferOrder] = useState<OrderData | null>(null)
 
   // Ref to hold the AbortController for the in-flight breakdown request
   const breakdownAbortRef = useRef<AbortController | null>(null)
@@ -98,7 +108,7 @@ export default function CheckoutPage() {
         else setShowNewAddress(true)
 
         setPaymentMethods(methodsData)
-        if (walletData) setWallet(walletData)
+        if (walletData) setWallet(walletData.wallet)
 
         // Select first active method by default if current method isn't in list
         if (methodsData.length > 0 && !methodsData.find(m => m.slug === "card" || m.slug === method)) {
@@ -240,6 +250,14 @@ export default function CheckoutPage() {
         return
       }
 
+      // For manual/bank-transfer payments: show receipt upload screen
+      const selectedPm = paymentMethods.find(pm => pm.id === method)
+      if (selectedPm?.slug === "manual" || selectedPm?.manual_payment_instructions) {
+        setBankTransferOrder(res.order)
+        toast.success("Order placed! Please upload your bank transfer receipt.")
+        return
+      }
+
       // For wallet or other non-redirect payments, show the confirmation screen directly
       setDone(res.order.reference)
       toast.success("Order placed successfully")
@@ -286,6 +304,17 @@ export default function CheckoutPage() {
           </button>
         </div>
       </section>
+    )
+  }
+
+  if (bankTransferOrder) {
+    return (
+      <BankTransferUploadScreen
+        order={bankTransferOrder}
+        paymentInstructions={paymentMethods.find(pm => pm.id === method)?.manual_payment_instructions}
+        onSuccess={() => router.push(`/account/orders/${bankTransferOrder.id}`)}
+        onSkip={() => router.push(`/account/orders/${bankTransferOrder.id}`)}
+      />
     )
   }
 

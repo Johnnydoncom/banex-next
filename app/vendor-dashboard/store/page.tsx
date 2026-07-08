@@ -6,7 +6,9 @@ import { toast } from "sonner"
 import { Upload, Store, Star, Package2, Clock, CheckCircle2, XCircle, MapPin } from "lucide-react"
 import { sellerFetchApplication, sellerUpdateProfile, type SellerProfile } from "@/lib/seller-api"
 import { fetchGenericCategories, type GenericCategory } from "@/lib/generic-api"
-
+import { Input } from "@/components/ui/input"
+import { Textarea } from "@/components/ui/textarea"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 function statusBanner(profile: SellerProfile) {
   if (profile.status === "approved") {
     return (
@@ -203,19 +205,23 @@ export default function VendorStorePage() {
         <p className="mb-4 font-display text-sm font-semibold">Store Details</p>
         <div className="grid gap-4 md:grid-cols-2">
           <SField label="Shop Name" className="md:col-span-2">
-            <input value={form.shop_name} onChange={(e) => setForm({ ...form, shop_name: e.target.value })} placeholder="e.g. Samsung Store" />
+            <Input value={form.shop_name} onChange={(e) => setForm({ ...form, shop_name: e.target.value })} placeholder="e.g. Samsung Store" />
           </SField>
           <SField label="Phone">
-            <input type="tel" value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} placeholder="+234 800 000 0000" />
+            <Input type="tel" value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} placeholder="+234 800 000 0000" />
           </SField>
           <SField label="Category">
-            <select value={form.category_id} onChange={(e) => setForm({ ...form, category_id: e.target.value })}>
-              <option value="">Select category...</option>
-              {categories.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
-            </select>
+            <Select value={form.category_id} onValueChange={(val) => setForm({ ...form, category_id: val })}>
+              <SelectTrigger>
+                <SelectValue placeholder="Select category..." />
+              </SelectTrigger>
+              <SelectContent>
+                {categories.map((c) => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
+              </SelectContent>
+            </Select>
           </SField>
           <SField label="Description" className="md:col-span-2">
-            <textarea value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} rows={3} placeholder="Describe your store..." />
+            <Textarea value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} rows={3} placeholder="Describe your store..." />
           </SField>
         </div>
       </section>
@@ -226,16 +232,16 @@ export default function VendorStorePage() {
         <p className="mb-4 text-xs text-muted-foreground flex items-center gap-1"><MapPin className="h-3 w-3" /> Your shop location within Banex Mall</p>
         <div className="grid gap-4 md:grid-cols-3">
           <SField label="Plot / Area" className="md:col-span-1">
-            <input value={form.location} onChange={(e) => setForm({ ...form, location: e.target.value })} placeholder="e.g. Plot 10" />
+            <Input value={form.location} onChange={(e) => setForm({ ...form, location: e.target.value })} placeholder="e.g. Plot 10" />
           </SField>
           <SField label="Floor">
-            <input value={form.floor} onChange={(e) => setForm({ ...form, floor: e.target.value })} placeholder="e.g. Ground Floor" />
+            <Input value={form.floor} onChange={(e) => setForm({ ...form, floor: e.target.value })} placeholder="e.g. Ground Floor" />
           </SField>
           <SField label="Shop No.">
-            <input value={form.shop_no} onChange={(e) => setForm({ ...form, shop_no: e.target.value })} placeholder="e.g. 015" />
+            <Input value={form.shop_no} onChange={(e) => setForm({ ...form, shop_no: e.target.value })} placeholder="e.g. 015" />
           </SField>
           <SField label="Operating Hours" className="md:col-span-2">
-            <input value={form.operating_hours} onChange={(e) => setForm({ ...form, operating_hours: e.target.value })} placeholder="e.g. Mon-Sun 9:00 - 21:00" />
+            <Input value={form.operating_hours} onChange={(e) => setForm({ ...form, operating_hours: e.target.value })} placeholder="e.g. Mon-Sun 9:00 - 21:00" />
           </SField>
         </div>
       </section>
@@ -245,10 +251,10 @@ export default function VendorStorePage() {
         <p className="mb-4 font-display text-sm font-semibold">Delivery Settings</p>
         <div className="grid gap-4 md:grid-cols-2">
           <SField label="Delivery Estimate (minutes)">
-            <input type="number" value={form.delivery_estimate_minutes} onChange={(e) => setForm({ ...form, delivery_estimate_minutes: e.target.value })} placeholder="e.g. 60" />
+            <Input type="number" value={form.delivery_estimate_minutes} onChange={(e) => setForm({ ...form, delivery_estimate_minutes: e.target.value })} placeholder="e.g. 60" />
           </SField>
           <SField label="Delivery Fee (₦)">
-            <input type="number" value={form.delivery_fee} onChange={(e) => setForm({ ...form, delivery_fee: e.target.value })} placeholder="e.g. 500" />
+            <Input type="number" value={form.delivery_fee} onChange={(e) => setForm({ ...form, delivery_fee: e.target.value })} placeholder="e.g. 500" />
           </SField>
         </div>
       </section>
@@ -268,9 +274,7 @@ function SField({ label, children, className = "" }: { label: string; children: 
   return (
     <label className={`block ${className}`}>
       <span className="mb-1.5 block text-[11px] font-semibold uppercase tracking-widest text-muted-foreground">{label}</span>
-      <div className="[&_input]:h-10 [&_input]:w-full [&_input]:rounded-xl [&_input]:border [&_input]:border-border [&_input]:bg-background [&_input]:px-3 [&_input]:text-sm [&_input]:outline-none [&_input:focus]:border-emerald-500 [&_select]:h-10 [&_select]:w-full [&_select]:rounded-xl [&_select]:border [&_select]:border-border [&_select]:bg-background [&_select]:px-3 [&_select]:text-sm [&_select]:outline-none [&_select:focus]:border-emerald-500 [&_textarea]:w-full [&_textarea]:rounded-xl [&_textarea]:border [&_textarea]:border-border [&_textarea]:bg-background [&_textarea]:px-3 [&_textarea]:py-2 [&_textarea]:text-sm [&_textarea]:outline-none [&_textarea:focus]:border-emerald-500">
-        {children}
-      </div>
+      {children}
     </label>
   )
 }

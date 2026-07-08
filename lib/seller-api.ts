@@ -255,6 +255,27 @@ export async function sellerDeleteProduct(id: string, token: string) {
   await proxyFetch<null>(`/seller/products/${id}`, token, "DELETE")
 }
 
+export type PricingSummary = {
+  listing_price: number
+  commission_percent: number
+  commission_percent_label: string
+  commission_amount: number
+  seller_receives: number
+  currency: string
+}
+
+export async function sellerPricingPreview(price: number, token: string): Promise<PricingSummary | null> {
+  const fd = new FormData()
+  fd.append("price", String(price))
+  const res = await proxyFetchFormData<{ pricing_summary: PricingSummary }>(
+    "/seller/products/pricing-preview",
+    token,
+    "POST",
+    fd
+  )
+  return res.data?.pricing_summary ?? null
+}
+
 // ─── Seller Orders ─────────────────────────────────────────────────────────────
 
 export async function sellerFetchOrders(token: string, page = 1) {

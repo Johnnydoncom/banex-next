@@ -10,6 +10,9 @@ import {
   userCreateWithdrawal, type BankAccountData, type WithdrawalData
 } from "@/lib/user-api"
 import { formatNaira } from "@/lib/products"
+import { Input } from "@/components/ui/input"
+import { Checkbox } from "@/components/ui/checkbox"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 
 function withdrawStatus(status: string) {
   switch (status) {
@@ -294,18 +297,18 @@ export default function VendorFinancesPage() {
             <div className="mt-4 space-y-3">
               <label className="block text-xs font-medium">
                 Bank Name
-                <input value={bankForm.bank_name} onChange={e => setBankForm(f => ({ ...f, bank_name: e.target.value }))} className="mt-1 w-full rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none focus:border-emerald-500" placeholder="e.g. GTBank" />
+                <Input value={bankForm.bank_name} onChange={e => setBankForm(f => ({ ...f, bank_name: e.target.value }))} className="mt-1" placeholder="e.g. GTBank" />
               </label>
               <label className="block text-xs font-medium">
                 Account Number
-                <input value={bankForm.account_number} onChange={e => setBankForm(f => ({ ...f, account_number: e.target.value }))} className="mt-1 w-full rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none focus:border-emerald-500" placeholder="10 digits" />
+                <Input value={bankForm.account_number} onChange={e => setBankForm(f => ({ ...f, account_number: e.target.value }))} className="mt-1" placeholder="10 digits" />
               </label>
               <label className="block text-xs font-medium">
                 Account Name
-                <input value={bankForm.account_name} onChange={e => setBankForm(f => ({ ...f, account_name: e.target.value }))} className="mt-1 w-full rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none focus:border-emerald-500" placeholder="John Doe" />
+                <Input value={bankForm.account_name} onChange={e => setBankForm(f => ({ ...f, account_name: e.target.value }))} className="mt-1" placeholder="John Doe" />
               </label>
               <label className="flex items-center gap-2 text-xs font-medium mt-2">
-                <input type="checkbox" checked={bankForm.is_default} onChange={e => setBankForm(f => ({ ...f, is_default: e.target.checked }))} className="rounded border-border text-emerald-600 focus:ring-emerald-600" />
+                <Checkbox checked={bankForm.is_default} onCheckedChange={(checked) => setBankForm(f => ({ ...f, is_default: checked as boolean }))} />
                 Set as default for withdrawals
               </label>
             </div>
@@ -331,16 +334,22 @@ export default function VendorFinancesPage() {
             <div className="mt-5 space-y-4">
               <label className="block text-xs font-medium">
                 Amount (₦)
-                <input type="number" value={withdrawForm.amount} onChange={e => setWithdrawForm(f => ({ ...f, amount: e.target.value }))} className="mt-1 w-full rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none focus:border-emerald-500" placeholder="0.00" />
+                <Input type="number" value={withdrawForm.amount} onChange={e => setWithdrawForm(f => ({ ...f, amount: e.target.value }))} className="mt-1" placeholder="0.00" />
               </label>
               <label className="block text-xs font-medium">
                 Withdraw to
-                <select value={withdrawForm.bank_account_id} onChange={e => setWithdrawForm(f => ({ ...f, bank_account_id: e.target.value }))} className="mt-1 w-full rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none focus:border-emerald-500">
-                  <option value="">Select bank account</option>
-                  {bankAccounts.map(b => (
-                    <option key={b.id} value={b.id}>{b.bank_name} - ***{b.account_number.slice(-4)}</option>
-                  ))}
-                </select>
+                <div className="mt-1">
+                  <Select value={withdrawForm.bank_account_id} onValueChange={(val) => setWithdrawForm(f => ({ ...f, bank_account_id: val }))}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select bank account" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {bankAccounts.map(b => (
+                        <SelectItem key={b.id} value={b.id}>{b.bank_name} - ***{b.account_number.slice(-4)}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
               </label>
             </div>
             

@@ -9,6 +9,8 @@ import {
   type SellerOrder, type SellerOrderItem
 } from "@/lib/seller-api"
 import { formatNaira } from "@/lib/products"
+import { Input } from "@/components/ui/input"
+import { Textarea } from "@/components/ui/textarea"
 
 const ORDER_STATUSES = ["all", "paid", "accepted", "declined", "delivered"] as const
 
@@ -106,11 +108,11 @@ export default function VendorOrdersPage() {
         </div>
         <label className="relative">
           <Search className="pointer-events-none absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
-          <input
+          <Input
             value={q}
             onChange={(e) => setQ(e.target.value)}
             placeholder="Search reference…"
-            className="h-9 w-52 rounded-full border border-border bg-card pl-9 pr-3 text-xs outline-none focus:border-emerald-500"
+            className="h-9 w-52 rounded-full bg-card pl-9 pr-3 text-xs"
           />
         </label>
       </div>
@@ -121,11 +123,10 @@ export default function VendorOrdersPage() {
           <button
             key={s}
             onClick={() => setFilter(s)}
-            className={`rounded-full px-3.5 py-1.5 text-xs font-semibold capitalize transition-colors ${
-              filter === s
+            className={`rounded-full px-3.5 py-1.5 text-xs font-semibold capitalize transition-colors ${filter === s
                 ? "bg-emerald-600 text-white"
                 : "border border-border bg-card text-muted-foreground hover:text-foreground"
-            }`}
+              }`}
           >
             {s === "paid" ? "Pending Action" : s}
           </button>
@@ -282,12 +283,12 @@ export default function VendorOrdersPage() {
             </div>
             <h3 className="mt-4 font-display text-lg font-bold">Decline Order Item</h3>
             <p className="mt-1 text-sm text-muted-foreground">Please provide a reason for declining this item.</p>
-            <textarea
+            <Textarea
               value={declineReason}
               onChange={(e) => setDeclineReason(e.target.value)}
+              className="mt-3"
               rows={3}
-              placeholder="e.g. Item is out of stock at our shop"
-              className="mt-4 w-full rounded-xl border border-border bg-background p-3 text-sm outline-none focus:border-rose-500"
+              placeholder="e.g. Item is out of stock"
             />
             <div className="mt-4 flex gap-3">
               <button

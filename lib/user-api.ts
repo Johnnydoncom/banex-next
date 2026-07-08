@@ -124,6 +124,20 @@ export type OrderData = {
     access_code: string
     reference: string
   }
+  // Present on order detail when manual (bank-transfer) payment is used
+  payment?: {
+    id: string
+    reference: string
+    status: string  // e.g. "pending", "paid"
+    proof_status: string | null  // "pending_review" | "approved" | "rejected" | null
+    proof_rejection_reason?: string | null
+    payment_method?: {
+      id: string
+      name: string
+      slug: string  // "manual" for bank transfer
+    }
+    has_proof: boolean
+  } | null
 }
 
 export type PaymentMethodData = {
@@ -277,6 +291,26 @@ export async function userCheckoutPlaceOrder(
 export async function userCheckoutVerifyPayment(orderId: string) {
   const res = await apiPost<ApiEnvelope<{ order: OrderData }>>(`${PROXY_BASE}/user/orders/${orderId}/payment/verify`, {})
   return res.data?.order
+}
+
+// Upload manual payment proof (bank transfer receipt)
+// Endpoint: POST /user/orders/:orderId/payment/manual/proof
+// Body: FormData with field "receipt" (image file)
+export async function userUploadPaymentProof(orderId: string, file: File): Promise<{ payment: OrderData["payment"] }> {
+  const formData = new FormData()
+  formData.append("receipt", file)
+
+  const response = await fetch(`${PROXY_BASE}/user/orders/${orderId}/payment/manual/proof`, {
+    method: "POST",
+    body: formData,
+    // Do NOT set Content-Type — browser auto-sets multipart/form-data with boundary
+  })
+
+  const json = await response.json() as ApiEnvelope<{ payment: OrderData["payment"] }>
+  if (!json.success) {
+    throw new Error(json.message || "Failed to upload payment proof")
+  }
+  return json.data
 }
 
 // ─── ORDERS ───────────────────────────────────────────────────────────────────
