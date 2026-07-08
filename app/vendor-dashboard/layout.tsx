@@ -1,6 +1,6 @@
 "use client"
 
-import { LayoutDashboard, Package, Store, Settings, PackageOpen, Landmark } from "lucide-react"
+import { LayoutDashboard, Package, Store, Settings, PackageOpen, Landmark, UserCircle } from "lucide-react"
 import { DashboardLayout } from "@/components/DashboardLayout"
 import { useAuth } from "@/hooks/use-auth"
 import { useRoles } from "@/hooks/use-roles"
@@ -31,6 +31,7 @@ export default function VendorDashboardLayout({ children }: { children: React.Re
         { to: "/vendor-dashboard/finances", label: "Finances", icon: Landmark },
         { to: "/vendor-dashboard/store", label: "Store Profile", icon: Store },
         { to: "/vendor-dashboard/settings", label: "Settings", icon: Settings },
+        { to: "/account", label: "Customer Account", icon: UserCircle },
       ]}
     >
       {children}

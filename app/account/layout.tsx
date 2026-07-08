@@ -25,6 +25,8 @@ export default function AccountLayout({ children }: { children: React.ReactNode 
 
   if (!isVendor) {
     navItems.push({ to: "/account/become-vendor", label: "Become a Vendor", icon: Store })
+  } else {
+    navItems.push({ to: "/vendor-dashboard", label: "Vendor Dashboard", icon: Store })
   }
   
   // Add Settings to the end
