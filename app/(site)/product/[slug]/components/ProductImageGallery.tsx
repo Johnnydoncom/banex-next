@@ -11,9 +11,9 @@ interface ProductImageGalleryProps {
 export function ProductImageGallery({ images, name }: ProductImageGalleryProps) {
   // Sort images so primary is first or by sort_order
   const sortedImages = [...images].sort((a, b) => {
-    if (a.is_primary) return -1
-    if (b.is_primary) return 1
-    return a.sort_order - b.sort_order
+    if (a.is_primary && !b.is_primary) return -1
+    if (!a.is_primary && b.is_primary) return 1
+    return (a.sort_order || 0) - (b.sort_order || 0)
   })
 
   const [activeIdx, setActiveIdx] = useState(0)

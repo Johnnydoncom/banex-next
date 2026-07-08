@@ -234,7 +234,21 @@ export default function VendorProductsPage() {
       fd.append("delivery_estimate", form.delivery_estimate)
       fd.append("is_nationwide_delivery", form.is_nationwide_delivery ? "1" : "0")
       fd.append("is_authentic_only", form.is_authentic_only ? "1" : "0")
-      fd.append("primary_image_index", String(form.primary_image_index))
+      // Handle primary image logic (id for existing, index relative to new files for new uploads)
+      const primaryImg = previewImages[form.primary_image_index]
+      if (primaryImg) {
+        if (primaryImg.id) {
+          fd.append("primary_image_id", primaryImg.id)
+        } else {
+          // Find the index of this new image among the filtered new images
+          const newImagesList = previewImages.filter(img => img.file)
+          const newIdx = newImagesList.findIndex(img => img === primaryImg)
+          if (newIdx !== -1) {
+            fd.append("primary_image_index", String(newIdx))
+          }
+        }
+      }
+
       form.specifications.filter(Boolean).forEach((s, i) => fd.append(`specifications[${i}]`, s))
       previewImages.filter(img => img.file).forEach(img => fd.append("images[]", img.file!))
       

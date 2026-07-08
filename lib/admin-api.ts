@@ -30,7 +30,7 @@ async function proxyFetch<T>(path: string, token: string, method = "GET", body?:
     Authorization: `Bearer ${token}`,
     ...customHeaders,
   }
-  
+
   if (body && !customHeaders?.["Content-Type"]) {
     headers["Content-Type"] = "application/json"
   }
@@ -62,7 +62,7 @@ async function proxyFetchFormData<T>(path: string, token: string, method = "POST
     Accept: "application/json",
     Authorization: `Bearer ${token}`,
   }
-  
+
   // Note: Do not set Content-Type for FormData, the browser handles it (including the boundary string).
 
   const res = await fetch(url, {
@@ -179,19 +179,19 @@ export async function updateAdminSeller(id: string, data: FormData, token: strin
 }
 
 export async function updateAdminSellerStatus(
-  id: string, 
-  action: "approve" | "reject" | "suspend", 
-  token: string, 
+  id: string,
+  action: "approve" | "reject" | "suspend",
+  token: string,
   reason?: string
 ) {
   const body = reason ? new URLSearchParams({ reason }).toString() : undefined
   const headers = reason ? { "Content-Type": "application/x-www-form-urlencoded" } : undefined
-  
+
   return proxyFetch<{ seller: AdminSeller }>(
-    `/admin/sellers/${id}/${action}`, 
-    token, 
-    "POST", 
-    body, 
+    `/admin/sellers/${id}/${action}`,
+    token,
+    "POST",
+    body,
     headers
   )
 }
@@ -261,7 +261,7 @@ export async function updateAdminProduct(id: string, formData: FormData, token: 
  *  - deactivate→ POST /admin/products/{id}/deactivate (active → inactive)
  */
 export async function approveAdminProduct(id: string, token: string) {
-  return proxyFetch<{ product: AdminProduct }>(`/admin/products/${id}/approved`, token, "POST")
+  return proxyFetch<{ product: AdminProduct }>(`/admin/products/${id}/approve`, token, "POST")
 }
 
 export async function rejectAdminProduct(id: string, token: string, reason?: string) {
