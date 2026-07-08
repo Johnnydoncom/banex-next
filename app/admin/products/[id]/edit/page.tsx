@@ -322,14 +322,19 @@ export default function AdminEditProductPage({
         .filter((i) => i.toDelete)
         .forEach((i) => fd.append("delete_image_ids[]", i.id))
 
-      // Primary image: tell the backend which one is primary
-      // For existing primary, send the image id; for a new upload, send its index among new images
+      // Primary image: send its index in the merged list (active existing + new images)
+      const activeExisting = existingImages.filter(i => !i.toDelete)
+      let primaryIndex = 0
+      
       if (primaryKey.startsWith("existing:")) {
-        fd.append("primary_image_id", primaryKey.replace("existing:", ""))
+        const id = primaryKey.replace("existing:", "")
+        primaryIndex = activeExisting.findIndex(i => i.id === id)
       } else if (primaryKey.startsWith("new:")) {
         const idx = parseInt(primaryKey.replace("new:", ""), 10)
-        fd.append("primary_image_index", String(idx))
+        primaryIndex = activeExisting.length + idx
       }
+      
+      fd.append("primary_image_index", String(Math.max(0, primaryIndex)))
 
       await updateAdminProduct(id, fd, session.accessToken)
       toast.success("Product updated successfully!")
