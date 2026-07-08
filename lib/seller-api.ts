@@ -309,3 +309,119 @@ export async function sellerDeclineOrderItem(orderId: string, itemId: string, re
   )
   return res.data?.order ?? null
 }
+
+// ─── Seller Finances ──────────────────────────────────────────────────────────
+// These are seller-specific finance endpoints, distinct from the customer wallet.
+
+export type SellerWallet = {
+  balance: number
+  currency: string
+  total_earned: number
+  total_withdrawn: number
+}
+
+export type SellerTransaction = {
+  id: string
+  type: "credit" | "debit"
+  amount: number
+  description: string
+  reference: string | null
+  balance_before: number
+  balance_after: number
+  created_at: { item: string }
+}
+
+export type SellerEarningsSummary = {
+  total_earned: number
+  commission_paid: number
+  net_earnings: number
+  pending_payout: number
+  currency: string
+}
+
+export type SellerEarningsLine = {
+  id: string
+  order_id: string
+  order_reference: string
+  gross_amount: number
+  commission_amount: number
+  net_amount: number
+  commission_percent: number
+  status: "pending" | "settled" | "reversed"
+  created_at: { item: string }
+}
+
+export type SellerFinanceOverview = {
+  wallet: SellerWallet
+  earnings: SellerEarningsSummary
+}
+
+export type SellerWithdrawal = {
+  id: string
+  reference: string
+  amount: number
+  status: "pending" | "approved" | "rejected" | "processed" | "cancelled"
+  bank_name: string
+  account_number: string
+  account_name: string
+  bank_code: string | null
+  bank_account_id: string
+  created_at: { item: string }
+  updated_at: { item: string }
+  processed_at: { item: string } | null
+}
+
+export async function sellerFetchWallet(token: string) {
+  const res = await proxyFetch<{ wallet: SellerWallet }>("/seller/finance/wallet", token)
+  return res.data?.wallet ?? null
+}
+
+export async function sellerFetchTransactions(token: string, page = 1) {
+  const res = await proxyFetch<{ transactions: SellerTransaction[]; pagination: { current_page: number; per_page: number; total: number; last_page: number } }>(
+    `/seller/finance/wallet/transactions?page=${page}`,
+    token
+  )
+  return res.data ?? { transactions: [], pagination: null }
+}
+
+export async function sellerFetchEarningsSummary(token: string) {
+  const res = await proxyFetch<{ summary: SellerEarningsSummary }>("/seller/finance/earnings/summary", token)
+  return res.data?.summary ?? null
+}
+
+export async function sellerFetchEarningsLines(token: string, page = 1) {
+  const res = await proxyFetch<{ lines: SellerEarningsLine[]; pagination: { current_page: number; per_page: number; total: number; last_page: number } }>(
+    `/seller/finance/earnings/lines?page=${page}`,
+    token
+  )
+  return res.data ?? { lines: [], pagination: null }
+}
+
+export async function sellerFetchFinanceOverview(token: string) {
+  const res = await proxyFetch<{ wallet: SellerWallet; earnings: SellerEarningsSummary }>("/seller/finance/overview", token)
+  return res.data ?? null
+}
+
+export async function sellerFetchWithdrawals(token: string, page = 1) {
+  const res = await proxyFetch<{ withdrawals: SellerWithdrawal[]; pagination: { current_page: number; per_page: number; total: number; last_page: number } }>(
+    `/seller/finance/withdrawals?page=${page}`,
+    token
+  )
+  return res.data ?? { withdrawals: [], pagination: null }
+}
+
+export async function sellerFetchWithdrawal(id: string, token: string) {
+  const res = await proxyFetch<{ withdrawal: SellerWithdrawal }>(`/seller/finance/withdrawals/${id}`, token)
+  return res.data?.withdrawal ?? null
+}
+
+export async function sellerCreateWithdrawal(data: { bank_account_id: string; amount: number }, token: string) {
+  const res = await proxyFetch<{ withdrawal: SellerWithdrawal; wallet: SellerWallet }>(
+    "/seller/finance/withdrawals",
+    token,
+    "POST",
+    data
+  )
+  return res.data ?? null
+}
+

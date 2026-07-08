@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation"
 import { ArrowLeft, Save, Loader2 } from "lucide-react"
 import { toast } from "sonner"
 import { useSession } from "next-auth/react"
-import { fetchAdminCategory, createAdminCategory, updateAdminCategory } from "@/lib/admin-api"
+import { fetchAdminCategory, createAdminCategory, updateAdminCategory, deleteAdminCategory } from "@/lib/admin-api"
 
 export default function AdminCategoryEditPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params)
@@ -25,6 +25,7 @@ export default function AdminCategoryEditPage({ params }: { params: Promise<{ id
   
   const [loading, setLoading] = useState(!isNew)
   const [saving, setSaving] = useState(false)
+  const [deleting, setDeleting] = useState(false)
 
   useEffect(() => {
     if (session?.accessToken && id !== "new") {
@@ -82,6 +83,21 @@ export default function AdminCategoryEditPage({ params }: { params: Promise<{ id
     }
   }
 
+  const handleDelete = async () => {
+    if (!session?.accessToken || isNew) return
+    if (!confirm(`Delete category "${form.name}"? This may affect products assigned to it.`)) return
+    setDeleting(true)
+    try {
+      await deleteAdminCategory(id, session.accessToken)
+      toast.success("Category deleted")
+      router.push("/admin/categories")
+    } catch (err: any) {
+      toast.error(err.message || "Failed to delete category")
+    } finally {
+      setDeleting(false)
+    }
+  }
+
   return (
     <div className="space-y-6 max-w-3xl">
       <Link href="/admin/categories" className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground">
@@ -125,7 +141,13 @@ export default function AdminCategoryEditPage({ params }: { params: Promise<{ id
             </div>
           </div>
 
-          <div className="mt-6 flex justify-end border-t border-border pt-4">
+          <div className="mt-6 flex justify-between border-t border-border pt-4">
+            {!isNew && (
+              <button onClick={handleDelete} disabled={deleting} className="inline-flex items-center gap-2 rounded-xl border border-rose-500/20 bg-rose-500/5 px-4 py-2 text-xs font-semibold text-rose-600 hover:bg-rose-500/10 disabled:opacity-60">
+                {deleting ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : null}
+                {deleting ? "Deleting…" : "Delete Category"}
+              </button>
+            )}
             <button onClick={handleSave} disabled={saving} className="inline-flex items-center gap-2 rounded-xl bg-gradient-brand px-6 py-2.5 text-sm font-semibold text-primary-foreground shadow-brand disabled:opacity-60">
               {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />} 
               {saving ? "Saving…" : "Save Category"}

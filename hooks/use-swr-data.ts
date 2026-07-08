@@ -25,9 +25,19 @@ import {
   sellerFetchApplication,
   sellerFetchProducts,
   sellerFetchOrders,
+  sellerFetchWallet,
+  sellerFetchTransactions,
+  sellerFetchEarningsSummary,
+  sellerFetchEarningsLines,
+  sellerFetchWithdrawals,
   type SellerProfile,
   type SellerProduct,
   type SellerOrder,
+  type SellerWallet,
+  type SellerTransaction,
+  type SellerEarningsSummary,
+  type SellerEarningsLine,
+  type SellerWithdrawal,
 } from "@/lib/seller-api"
 import {
   userFetchWallet,
@@ -105,6 +115,11 @@ export const SWR_KEYS = {
   adminPayouts: (token: string) => ["/admin/payouts", token] as const,
   adminSellerTiers: (token: string) => ["/admin/seller-tiers", token] as const,
   adminContacts: (token: string) => ["/admin/contacts", token] as const,
+  sellerTransactions: (token: string, page: number) => ["/seller/finance/transactions", token, page] as const,
+  sellerEarnings: (token: string) => ["/seller/finance/earnings", token] as const,
+  sellerEarningsLines: (token: string, page: number) => ["/seller/finance/earnings/lines", token, page] as const,
+  sellerWallet: (token: string) => ["/seller/finance/wallet", token] as const,
+  sellerWithdrawals: (token: string, page: number) => ["/seller/finance/withdrawals", token, page] as const,
   adminPaymentMethods: (token: string) => ["/admin/payment-methods", token] as const,
 } as const
 
@@ -174,6 +189,79 @@ export function useSellerOrders(token: string | undefined, page = 1) {
   return {
     orders: data?.orders ?? [] as SellerOrder[],
     pagination: data?.pagination ?? null,
+    loading: isLoading,
+    error,
+    mutate,
+  }
+}
+
+export function useSellerWallet(token: string | undefined) {
+  const { data, error, isLoading, mutate } = useSWR<SellerWallet | null>(
+    token ? SWR_KEYS.sellerWallet(token) : null,
+    ([, t]) => sellerFetchWallet(t as string),
+    { revalidateOnFocus: false }
+  )
+  return {
+    wallet: data ?? null,
+    loading: isLoading,
+    error,
+    mutate,
+  }
+}
+
+export function useSellerTransactions(token: string | undefined, page = 1) {
+  const { data, error, isLoading, mutate } = useSWR(
+    token ? SWR_KEYS.sellerTransactions(token, page) : null,
+    ([, t]) => sellerFetchTransactions(t as string, page),
+    { revalidateOnFocus: false }
+  )
+  return {
+    transactions: ((data as any)?.transactions ?? []) as SellerTransaction[],
+    pagination: (data as any)?.pagination ?? null,
+    loading: isLoading,
+    error,
+    mutate,
+  }
+}
+
+export function useSellerEarnings(token: string | undefined) {
+  const { data, error, isLoading, mutate } = useSWR<SellerEarningsSummary | null>(
+    token ? SWR_KEYS.sellerEarnings(token) : null,
+    ([, t]) => sellerFetchEarningsSummary(t as string),
+    { revalidateOnFocus: false }
+  )
+  return {
+    earnings: data ?? null,
+    loading: isLoading,
+    error,
+    mutate,
+  }
+}
+
+export function useSellerEarningsLines(token: string | undefined, page = 1) {
+  const { data, error, isLoading, mutate } = useSWR(
+    token ? SWR_KEYS.sellerEarningsLines(token, page) : null,
+    ([, t]) => sellerFetchEarningsLines(t as string, page),
+    { revalidateOnFocus: false }
+  )
+  return {
+    lines: ((data as any)?.lines ?? []) as SellerEarningsLine[],
+    pagination: (data as any)?.pagination ?? null,
+    loading: isLoading,
+    error,
+    mutate,
+  }
+}
+
+export function useSellerWithdrawals(token: string | undefined, page = 1) {
+  const { data, error, isLoading, mutate } = useSWR(
+    token ? SWR_KEYS.sellerWithdrawals(token, page) : null,
+    ([, t]) => sellerFetchWithdrawals(t as string, page),
+    { revalidateOnFocus: false }
+  )
+  return {
+    withdrawals: ((data as any)?.withdrawals ?? []) as SellerWithdrawal[],
+    pagination: (data as any)?.pagination ?? null,
     loading: isLoading,
     error,
     mutate,

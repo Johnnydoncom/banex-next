@@ -5,7 +5,7 @@ import Link from "next/link"
 import { ArrowLeft, User, MapPin, Truck, Calendar, ImageOff } from "lucide-react"
 import { StatusBadge } from "@/components/StatusBadge"
 import { useAuth } from "@/hooks/use-auth"
-import { fetchAdminOrder, updateAdminOrderStatus, cancelAdminOrder, type AdminOrder } from "@/lib/admin-api"
+import { fetchAdminOrder, updateAdminOrderStatus, cancelAdminOrder, sellerActionAdminOrder, type AdminOrder } from "@/lib/admin-api"
 import { toast } from "sonner"
 
 export default function AdminOrderDetailPage({ params }: { params: Promise<{ id: string }> }) {
@@ -16,6 +16,9 @@ export default function AdminOrderDetailPage({ params }: { params: Promise<{ id:
   const [order, setOrder] = useState<AdminOrder | null>(null)
   const [loading, setLoading] = useState(true)
   const [updating, setUpdating] = useState(false)
+  const [itemAction, setItemAction] = useState<{ itemId: string; action: "accept" | "decline" } | null>(null)
+  const [declineReason, setDeclineReason] = useState("")
+  const [itemActioning, setItemActioning] = useState(false)
 
   useEffect(() => {
     if (!token) return
@@ -54,6 +57,26 @@ export default function AdminOrderDetailPage({ params }: { params: Promise<{ id:
       toast.error(err.message || "Failed to update status")
     } finally {
       setUpdating(false)
+    }
+  }
+
+  async function handleItemAction(confirm_action = false) {
+    if (!itemAction || !token) return
+    if (itemAction.action === "decline" && !declineReason.trim()) {
+      toast.error("Please provide a reason for declining")
+      return
+    }
+    setItemActioning(true)
+    try {
+      const res = await sellerActionAdminOrder(id, itemAction.itemId, itemAction.action, token, declineReason || undefined)
+      setOrder(res.data?.order ?? null)
+      toast.success(`Item ${itemAction.action === "accept" ? "accepted" : "declined"} successfully`)
+      setItemAction(null)
+      setDeclineReason("")
+    } catch (err: any) {
+      toast.error(err.message || `Failed to ${itemAction.action} item`)
+    } finally {
+      setItemActioning(false)
     }
   }
 
@@ -122,6 +145,23 @@ export default function AdminOrderDetailPage({ params }: { params: Promise<{ id:
                     <p className="font-semibold">{item.product_name}</p>
                     <p className="text-xs text-muted-foreground">Sold by {item.seller?.shop_name || "Unknown"}</p>
                     <div className="mt-1 text-sm font-medium">₦{item.unit_price?.toLocaleString()} × {item.quantity}</div>
+                    {/* Per-item accept/decline for seller */}
+                    {item.status === "paid" && (
+                      <div className="mt-2 flex gap-2">
+                        <button
+                          onClick={() => setItemAction({ itemId: item.id, action: "accept" })}
+                          className="rounded-lg bg-emerald-500/10 px-3 py-1 text-xs font-semibold text-emerald-700 hover:bg-emerald-500/20 transition-colors"
+                        >
+                          Accept for Seller
+                        </button>
+                        <button
+                          onClick={() => setItemAction({ itemId: item.id, action: "decline" })}
+                          className="rounded-lg bg-rose-500/10 px-3 py-1 text-xs font-semibold text-rose-700 hover:bg-rose-500/20 transition-colors"
+                        >
+                          Decline for Seller
+                        </button>
+                      </div>
+                    )}
                   </div>
                   <div className="text-right font-semibold flex flex-col justify-between">
                     <span>₦{((item.unit_price || 0) * (item.quantity || 1)).toLocaleString()}</span>
@@ -170,6 +210,48 @@ export default function AdminOrderDetailPage({ params }: { params: Promise<{ id:
           </div>
         </div>
       </div>
+
+      {/* Item Action Modal (Accept / Decline for Seller) */}
+      {itemAction && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
+          <div className="w-full max-w-sm rounded-2xl border border-border bg-card p-6 shadow-2xl">
+            <h3 className="font-display text-lg font-bold capitalize">
+              {itemAction.action} Item for Seller
+            </h3>
+            <p className="mt-1 text-sm text-muted-foreground">
+              {itemAction.action === "accept"
+                ? "This will accept the order item on behalf of the seller."
+                : "Provide a reason for declining this item."}
+            </p>
+            {itemAction.action === "decline" && (
+              <textarea
+                value={declineReason}
+                onChange={e => setDeclineReason(e.target.value)}
+                placeholder="Reason for declining..."
+                rows={3}
+                className="mt-4 w-full rounded-xl border border-border bg-background px-3 py-2 text-sm outline-none focus:border-brand focus:ring-1 focus:ring-brand resize-none"
+              />
+            )}
+            <div className="mt-6 flex gap-3">
+              <button
+                onClick={() => handleItemAction()}
+                disabled={itemActioning || (itemAction.action === "decline" && !declineReason.trim())}
+                className={`flex-1 rounded-full py-2.5 text-sm font-semibold text-white disabled:opacity-60 transition-colors ${
+                  itemAction.action === "accept" ? "bg-emerald-600 hover:bg-emerald-700" : "bg-rose-600 hover:bg-rose-700"
+                }`}
+              >
+                {itemActioning ? "Processing..." : itemAction.action === "accept" ? "Confirm Accept" : "Confirm Decline"}
+              </button>
+              <button
+                onClick={() => { setItemAction(null); setDeclineReason("") }}
+                className="flex-1 rounded-full border border-border bg-card py-2.5 text-sm font-semibold hover:border-foreground/30"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
