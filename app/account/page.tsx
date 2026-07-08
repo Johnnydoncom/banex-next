@@ -14,8 +14,12 @@ type RecentOrder = {
   created_at: string
 }
 
+import { useRoles } from "@/hooks/use-roles"
+import { Store } from "lucide-react"
+
 export default function AccountOverview() {
   const { user } = useAuth()
+  const { isVendor } = useRoles()
   const [orders, setOrders] = useState<RecentOrder[]>([])
   const [counts, setCounts] = useState({ orders: 0, wishlist: 0, addresses: 0, spent: 0 })
 
@@ -103,17 +107,27 @@ export default function AccountOverview() {
       </section>
 
       {/* Vendor CTA */}
-      {user && (user as any)?.type !== "vendor" && (user as any)?.type !== "admin" && (
+      {user && isVendor ? (
+        <section className="flex flex-col sm:flex-row items-center justify-between gap-4 rounded-2xl border border-emerald-500/20 bg-gradient-to-r from-emerald-600/10 to-emerald-600/5 p-6">
+          <div>
+            <h2 className="font-display text-lg font-bold text-emerald-800">Go to Merchant Center</h2>
+            <p className="mt-1 text-sm text-muted-foreground">Manage your store products, fulfill orders, and track your finances.</p>
+          </div>
+          <Link href="/vendor-dashboard" className="inline-flex flex-none items-center gap-2 rounded-xl bg-emerald-600 px-6 py-3 text-sm font-semibold text-white shadow-emerald-500/30 shadow-lg hover:bg-emerald-700 transition-colors">
+            <Store className="h-4 w-4" /> Merchant Center
+          </Link>
+        </section>
+      ) : user ? (
         <section className="flex flex-col sm:flex-row items-center justify-between gap-4 rounded-2xl border border-brand/20 bg-gradient-to-r from-brand/10 to-brand/5 p-6">
           <div>
             <h2 className="font-display text-lg font-bold">Start Selling on Banex Mall</h2>
             <p className="mt-1 text-sm text-muted-foreground">Open your store, reach thousands of customers, and grow your business today.</p>
           </div>
-          <Link href="/account/become-vendor" className="inline-flex flex-none items-center gap-2 rounded-xl bg-gradient-brand px-6 py-3 text-sm font-semibold text-primary-foreground shadow-brand">
+          <Link href="/account/become-vendor" className="inline-flex flex-none items-center gap-2 rounded-xl bg-gradient-brand px-6 py-3 text-sm font-semibold text-primary-foreground shadow-brand hover:opacity-90 transition-opacity">
             Become a Vendor
           </Link>
         </section>
-      )}
+      ) : null}
 
       <div className="grid gap-6 lg:grid-cols-3">
         <section className="lg:col-span-2 rounded-2xl border border-border bg-card">

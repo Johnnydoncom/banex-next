@@ -1,156 +1,276 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useEffect, useRef, useState } from "react"
 import { useAuth } from "@/hooks/use-auth"
 import { toast } from "sonner"
-import Image from "next/image"
+import { Upload, Store, Star, Package2, Clock, CheckCircle2, XCircle, MapPin } from "lucide-react"
+import { sellerFetchApplication, sellerUpdateProfile, type SellerProfile } from "@/lib/seller-api"
+import { fetchGenericCategories, type GenericCategory } from "@/lib/generic-api"
+
+function statusBanner(profile: SellerProfile) {
+  if (profile.status === "approved") {
+    return (
+      <div className="flex items-center gap-2 rounded-xl border border-emerald-500/30 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-700">
+        <CheckCircle2 className="h-4 w-4 flex-shrink-0" />
+        <span>Your store is <strong>approved</strong> and live on the marketplace.</span>
+      </div>
+    )
+  }
+  if (profile.status === "pending") {
+    return (
+      <div className="flex items-center gap-2 rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-700">
+        <Clock className="h-4 w-4 flex-shrink-0" />
+        <span>Application is <strong>under review</strong>. We'll notify you once approved.</span>
+      </div>
+    )
+  }
+  if (profile.status === "rejected") {
+    return (
+      <div className="flex items-center gap-2 rounded-xl border border-rose-500/30 bg-rose-500/10 px-4 py-3 text-sm text-rose-700">
+        <XCircle className="h-4 w-4 flex-shrink-0" />
+        <span><strong>Rejected:</strong> {profile.rejection_reason ?? "Your application was rejected."}</span>
+      </div>
+    )
+  }
+  return null
+}
 
 export default function VendorStorePage() {
-  const { user } = useAuth()
-  const [form, setForm] = useState({
-    name: "",
-    slug: "",
-    description: "",
-    logo_url: "",
-    banner_url: "",
-  })
+  const { user, session } = useAuth()
+  const token = (session as any)?.accessToken as string | undefined
+
+  const [profile, setProfile] = useState<SellerProfile | null>(null)
+  const [categories, setCategories] = useState<GenericCategory[]>([])
+  const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
 
+  const [form, setForm] = useState({
+    shop_name: "",
+    phone: "",
+    description: "",
+    location: "",
+    floor: "",
+    shop_no: "",
+    operating_hours: "",
+    delivery_estimate_minutes: "",
+    delivery_fee: "",
+    category_id: "",
+  })
+
+  const [coverImageFile, setCoverImageFile] = useState<File | null>(null)
+  const [coverPreview, setCoverPreview] = useState<string | null>(null)
+  const [removeCover, setRemoveCover] = useState(false)
+  const fileInputRef = useRef<HTMLInputElement>(null)
+
   useEffect(() => {
-    if (!user) return
-    // ----- ACTUAL FETCH IMPLEMENTATION -----
-    /*
-    async function fetchStore() {
-      try {
-        const token = (user as any).accessToken
-        const headers = { Authorization: `Bearer ${token}`, Accept: "application/json" }
-        const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000"
-        
-        const res = await fetch(`${apiUrl}/vendor/store`, { headers })
-        const data = await res.json()
-        if (data?.data) {
+    if (!token) return
+    Promise.all([sellerFetchApplication(token), fetchGenericCategories()])
+      .then(([prof, cats]) => {
+        setCategories(cats?.categories ?? [])
+        if (prof) {
+          setProfile(prof)
           setForm({
-            name: data.data.name || "",
-            slug: data.data.slug || "",
-            description: data.data.description || "",
-            logo_url: data.data.logo_url || "",
-            banner_url: data.data.banner_url || ""
+            shop_name: prof.shop_name ?? "",
+            phone: prof.phone ?? "",
+            description: prof.description ?? "",
+            location: prof.location ?? "",
+            floor: prof.floor ?? "",
+            shop_no: prof.shop_no ?? "",
+            operating_hours: prof.operating_hours ?? "",
+            delivery_estimate_minutes: String(prof.delivery_estimate_minutes ?? ""),
+            delivery_fee: String(prof.delivery_fee ?? ""),
+            category_id: prof.category_id ?? "",
           })
+          setCoverPreview(prof.cover_image_url ?? null)
         }
-      } catch (err) {}
-    }
-    fetchStore()
-    */
-
-    // ----- MOCK DATA -----
-    setForm({
-      name: "Johnny's Electronics",
-      slug: "johnnys-electronics",
-      description: "Best electronics in town.",
-      logo_url: "",
-      banner_url: "",
-    })
-  }, [user?.id])
-
-  const save = async () => {
-    if (!user) return
-    setSaving(true)
-    // ----- ACTUAL FETCH IMPLEMENTATION -----
-    /*
-    try {
-      const token = (user as any).accessToken
-      const headers = { Authorization: `Bearer ${token}`, "Content-Type": "application/json", Accept: "application/json" }
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000"
-      
-      const res = await fetch(`${apiUrl}/vendor/store`, {
-        method: 'PUT',
-        headers,
-        body: JSON.stringify(form)
       })
-      if (!res.ok) throw new Error("Failed to update store profile")
-      toast.success("Store profile updated")
-    } catch (err: any) {
-      toast.error(err.message)
+      .catch((e) => toast.error(e.message || "Failed to load profile"))
+      .finally(() => setLoading(false))
+  }, [token])
+
+  function handleCoverChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    if (!file) return
+    setCoverImageFile(file)
+    setCoverPreview(URL.createObjectURL(file))
+    setRemoveCover(false)
+  }
+
+  async function save() {
+    if (!token) return
+    setSaving(true)
+    try {
+      const fd = new FormData()
+      fd.append("_method", "PUT")
+      // Text fields
+      Object.entries(form).forEach(([k, v]) => { if (v) fd.append(k, v) })
+      if (coverImageFile) fd.append("cover_image", coverImageFile)
+      fd.append("remove_cover_image", removeCover ? "1" : "0")
+
+      const updated = await sellerUpdateProfile(fd, token)
+      if (updated) {
+        setProfile(updated)
+        setCoverPreview(updated.cover_image_url ?? null)
+        setCoverImageFile(null)
+        toast.success("Store profile updated")
+      }
+    } catch (e: any) {
+      toast.error(e.message || "Failed to update profile")
     } finally {
       setSaving(false)
     }
-    */
-    
-    setTimeout(() => {
-      toast.success("Store profile updated")
-      setSaving(false)
-    }, 800)
+  }
+
+  if (loading) {
+    return (
+      <div className="space-y-4">
+        <div className="h-8 w-48 animate-pulse rounded-lg bg-surface" />
+        <div className="h-48 animate-pulse rounded-2xl border border-border bg-card" />
+      </div>
+    )
   }
 
   return (
     <div className="space-y-6">
       <div>
         <h1 className="font-display text-2xl font-bold">Store Profile</h1>
-        <p className="text-sm text-muted-foreground">Customize how your store appears to customers.</p>
+        <p className="text-sm text-muted-foreground">Customize how your store appears on the marketplace.</p>
       </div>
 
+      {profile && statusBanner(profile)}
+
+      {/* Store stats strip */}
+      {profile && (
+        <div className="grid grid-cols-3 gap-3">
+          <div className="rounded-xl border border-border bg-card p-4 text-center">
+            <p className="font-display text-xl font-bold text-emerald-600">{profile.products_count}</p>
+            <p className="mt-0.5 text-xs text-muted-foreground flex items-center justify-center gap-1"><Package2 className="h-3 w-3" /> Products</p>
+          </div>
+          <div className="rounded-xl border border-border bg-card p-4 text-center">
+            <p className="font-display text-xl font-bold text-amber-500">{profile.rating_average?.toFixed(1) ?? "—"}</p>
+            <p className="mt-0.5 text-xs text-muted-foreground flex items-center justify-center gap-1"><Star className="h-3 w-3" /> Rating</p>
+          </div>
+          <div className="rounded-xl border border-border bg-card p-4 text-center">
+            <p className="font-display text-xl font-bold">{profile.reviews_count}</p>
+            <p className="mt-0.5 text-xs text-muted-foreground flex items-center justify-center gap-1"><Store className="h-3 w-3" /> Reviews</p>
+          </div>
+        </div>
+      )}
+
+      {/* Cover image */}
       <section className="rounded-2xl border border-border bg-card p-5">
-        <div className="mb-6 aspect-[3/1] w-full overflow-hidden rounded-xl bg-surface relative">
-          {form.banner_url ? (
-            <Image src={form.banner_url} alt="Banner" fill className="object-cover" />
+        <p className="mb-3 font-display text-sm font-semibold">Cover Image</p>
+        <div
+          className="relative mb-3 aspect-[3/1] w-full cursor-pointer overflow-hidden rounded-xl border border-dashed border-border bg-surface"
+          onClick={() => fileInputRef.current?.click()}
+        >
+          {coverPreview ? (
+            <img src={coverPreview} alt="Cover" className="h-full w-full object-cover" />
           ) : (
-            <div className="flex h-full w-full items-center justify-center text-sm text-muted-foreground">No banner uploaded</div>
+            <div className="flex h-full flex-col items-center justify-center gap-2 text-muted-foreground">
+              <Upload className="h-8 w-8" />
+              <p className="text-sm font-medium">Click to upload cover image</p>
+              <p className="text-xs">Recommended: 1200×400px</p>
+            </div>
+          )}
+          <div className="absolute inset-0 flex items-center justify-center bg-black/0 hover:bg-black/20 transition-colors">
+            <Upload className="h-6 w-6 text-white opacity-0 hover:opacity-100" />
+          </div>
+        </div>
+        <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handleCoverChange} />
+        <div className="flex gap-2">
+          <button
+            type="button"
+            onClick={() => fileInputRef.current?.click()}
+            className="rounded-full border border-border bg-card px-4 py-1.5 text-xs font-semibold hover:border-emerald-500 hover:text-emerald-600 transition-colors"
+          >
+            {coverPreview ? "Change image" : "Upload image"}
+          </button>
+          {coverPreview && (
+            <button
+              type="button"
+              onClick={() => { setCoverPreview(null); setCoverImageFile(null); setRemoveCover(true) }}
+              className="rounded-full border border-rose-500/30 bg-rose-500/10 px-4 py-1.5 text-xs font-semibold text-rose-600 hover:bg-rose-500/20 transition-colors"
+            >
+              Remove
+            </button>
           )}
         </div>
-
-        <div className="grid gap-4 md:grid-cols-2">
-          <label className="md:col-span-2">
-            <span className="text-[11px] font-medium text-muted-foreground">Store Name</span>
-            <input
-              value={form.name}
-              onChange={(e) => setForm({ ...form, name: e.target.value })}
-              className="mt-1 h-10 w-full rounded-lg border border-border bg-background px-3 text-sm outline-none focus:border-emerald-500"
-            />
-          </label>
-          <label>
-            <span className="text-[11px] font-medium text-muted-foreground">Store URL Slug</span>
-            <input
-              value={form.slug}
-              onChange={(e) => setForm({ ...form, slug: e.target.value })}
-              className="mt-1 h-10 w-full rounded-lg border border-border bg-background px-3 text-sm outline-none focus:border-emerald-500"
-            />
-          </label>
-          <label>
-            <span className="text-[11px] font-medium text-muted-foreground">Logo URL</span>
-            <input
-              value={form.logo_url}
-              onChange={(e) => setForm({ ...form, logo_url: e.target.value })}
-              className="mt-1 h-10 w-full rounded-lg border border-border bg-background px-3 text-sm outline-none focus:border-emerald-500"
-            />
-          </label>
-          <label className="md:col-span-2">
-            <span className="text-[11px] font-medium text-muted-foreground">Description</span>
-            <textarea
-              value={form.description}
-              onChange={(e) => setForm({ ...form, description: e.target.value })}
-              rows={4}
-              className="mt-1 w-full rounded-lg border border-border bg-background p-3 text-sm outline-none focus:border-emerald-500"
-            />
-          </label>
-          <label className="md:col-span-2">
-            <span className="text-[11px] font-medium text-muted-foreground">Banner URL</span>
-            <input
-              value={form.banner_url}
-              onChange={(e) => setForm({ ...form, banner_url: e.target.value })}
-              className="mt-1 h-10 w-full rounded-lg border border-border bg-background px-3 text-sm outline-none focus:border-emerald-500"
-            />
-          </label>
-        </div>
-
-        <button
-          onClick={save}
-          disabled={saving}
-          className="mt-5 rounded-full bg-emerald-600 px-5 py-2 text-xs font-semibold text-primary-foreground disabled:opacity-60"
-        >
-          {saving ? "Saving…" : "Save profile"}
-        </button>
       </section>
+
+      {/* Store details form */}
+      <section className="rounded-2xl border border-border bg-card p-5">
+        <p className="mb-4 font-display text-sm font-semibold">Store Details</p>
+        <div className="grid gap-4 md:grid-cols-2">
+          <SField label="Shop Name" className="md:col-span-2">
+            <input value={form.shop_name} onChange={(e) => setForm({ ...form, shop_name: e.target.value })} placeholder="e.g. Samsung Store" />
+          </SField>
+          <SField label="Phone">
+            <input type="tel" value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} placeholder="+234 800 000 0000" />
+          </SField>
+          <SField label="Category">
+            <select value={form.category_id} onChange={(e) => setForm({ ...form, category_id: e.target.value })}>
+              <option value="">Select category...</option>
+              {categories.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+            </select>
+          </SField>
+          <SField label="Description" className="md:col-span-2">
+            <textarea value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} rows={3} placeholder="Describe your store..." />
+          </SField>
+        </div>
+      </section>
+
+      {/* Physical location */}
+      <section className="rounded-2xl border border-border bg-card p-5">
+        <p className="mb-1 font-display text-sm font-semibold">Physical Location</p>
+        <p className="mb-4 text-xs text-muted-foreground flex items-center gap-1"><MapPin className="h-3 w-3" /> Your shop location within Banex Mall</p>
+        <div className="grid gap-4 md:grid-cols-3">
+          <SField label="Plot / Area" className="md:col-span-1">
+            <input value={form.location} onChange={(e) => setForm({ ...form, location: e.target.value })} placeholder="e.g. Plot 10" />
+          </SField>
+          <SField label="Floor">
+            <input value={form.floor} onChange={(e) => setForm({ ...form, floor: e.target.value })} placeholder="e.g. Ground Floor" />
+          </SField>
+          <SField label="Shop No.">
+            <input value={form.shop_no} onChange={(e) => setForm({ ...form, shop_no: e.target.value })} placeholder="e.g. 015" />
+          </SField>
+          <SField label="Operating Hours" className="md:col-span-2">
+            <input value={form.operating_hours} onChange={(e) => setForm({ ...form, operating_hours: e.target.value })} placeholder="e.g. Mon-Sun 9:00 - 21:00" />
+          </SField>
+        </div>
+      </section>
+
+      {/* Delivery */}
+      <section className="rounded-2xl border border-border bg-card p-5">
+        <p className="mb-4 font-display text-sm font-semibold">Delivery Settings</p>
+        <div className="grid gap-4 md:grid-cols-2">
+          <SField label="Delivery Estimate (minutes)">
+            <input type="number" value={form.delivery_estimate_minutes} onChange={(e) => setForm({ ...form, delivery_estimate_minutes: e.target.value })} placeholder="e.g. 60" />
+          </SField>
+          <SField label="Delivery Fee (₦)">
+            <input type="number" value={form.delivery_fee} onChange={(e) => setForm({ ...form, delivery_fee: e.target.value })} placeholder="e.g. 500" />
+          </SField>
+        </div>
+      </section>
+
+      <button
+        onClick={save}
+        disabled={saving}
+        className="rounded-full bg-emerald-600 px-6 py-2.5 text-sm font-semibold text-white disabled:opacity-60 hover:bg-emerald-700 transition-colors"
+      >
+        {saving ? "Saving…" : "Save Store Profile"}
+      </button>
     </div>
   )
 }
 
+function SField({ label, children, className = "" }: { label: string; children: React.ReactNode; className?: string }) {
+  return (
+    <label className={`block ${className}`}>
+      <span className="mb-1.5 block text-[11px] font-semibold uppercase tracking-widest text-muted-foreground">{label}</span>
+      <div className="[&_input]:h-10 [&_input]:w-full [&_input]:rounded-xl [&_input]:border [&_input]:border-border [&_input]:bg-background [&_input]:px-3 [&_input]:text-sm [&_input]:outline-none [&_input:focus]:border-emerald-500 [&_select]:h-10 [&_select]:w-full [&_select]:rounded-xl [&_select]:border [&_select]:border-border [&_select]:bg-background [&_select]:px-3 [&_select]:text-sm [&_select]:outline-none [&_select:focus]:border-emerald-500 [&_textarea]:w-full [&_textarea]:rounded-xl [&_textarea]:border [&_textarea]:border-border [&_textarea]:bg-background [&_textarea]:px-3 [&_textarea]:py-2 [&_textarea]:text-sm [&_textarea]:outline-none [&_textarea:focus]:border-emerald-500">
+        {children}
+      </div>
+    </label>
+  )
+}

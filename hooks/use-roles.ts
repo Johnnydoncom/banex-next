@@ -2,12 +2,12 @@
 
 import { useEffect, useState } from "react"
 import { useAuth } from "./use-auth"
-import { toast } from "sonner"
+import { sellerFetchApplication } from "@/lib/seller-api"
 
 export type AppRole = "admin" | "vendor" | "customer"
 
 export function useRoles() {
-  const { user, loading: authLoading } = useAuth()
+  const { user, session, loading: authLoading } = useAuth()
   const [roles, setRoles] = useState<AppRole[]>([])
   const [loading, setLoading] = useState(true)
 
@@ -19,17 +19,45 @@ export function useRoles() {
       return
     }
 
-    const userType = (user as any).role
+    const token = (session as any)?.accessToken
+    const userType = (user as any).role || (user as any).type
 
-    if (userType === "vendor") {
-      setRoles(["vendor", "customer"])
-    } else if (userType === "admin") {
-      setRoles(["admin", "vendor", "customer"])
-    } else {
+    async function checkRoles() {
+      // If session explicitly says admin, trust it
+      if (userType === "admin") {
+        setRoles(["admin", "vendor", "customer"])
+        setLoading(false)
+        return
+      }
+
+      // If session explicitly says vendor, trust it
+      if (userType === "vendor") {
+        setRoles(["vendor", "customer"])
+        setLoading(false)
+        return
+      }
+
+      // Otherwise, the user might be an approved vendor but the token is stale.
+      // Let's verify by fetching the application profile.
+      try {
+        if (token) {
+          const profile = await sellerFetchApplication(token)
+          if (profile && profile.status === "approved") {
+            setRoles(["vendor", "customer"])
+            setLoading(false)
+            return
+          }
+        }
+      } catch (err) {
+        // Not a vendor or request failed
+      }
+
+      // Default to customer
       setRoles(["customer"])
+      setLoading(false)
     }
 
-    setLoading(false)
+    checkRoles()
   }, [user, authLoading])
 
   const isVendor = roles.includes("vendor")

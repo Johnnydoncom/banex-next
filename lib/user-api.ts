@@ -132,6 +132,12 @@ export type PaymentMethodData = {
   slug: string
   image: string | null
   status: string
+  manual_payment_instructions?: {
+    bank_name?: string
+    account_name?: string
+    account_number?: string
+    instructions?: string
+  } | null
 }
 
 export type WalletData = {
@@ -323,11 +329,87 @@ export async function userFetchPaymentMethods() {
 }
 
 export async function userFetchWallet() {
-  const res = await apiGet<ApiEnvelope<{ wallet: WalletData }>>(`${PROXY_BASE}/user/wallet`)
-  return res.data?.wallet
+  const res = await apiGet<ApiEnvelope<{ wallet: WalletData; transactions: any[] }>>(`${PROXY_BASE}/user/wallet`)
+  return res.data
 }
 
-// ─── WISHLIST ─────────────────────────────────────────────────────────────────
+// ─── BANK ACCOUNTS ─────────────────────────────────────────────────────────────
+
+export type BankAccountData = {
+  id: string
+  bank_name: string
+  bank_code: string | null
+  account_number: string
+  account_name: string
+  is_default: boolean
+  created_at?: { item: string }
+  updated_at?: { item: string }
+}
+
+export async function userFetchBankAccounts() {
+  const res = await apiGet<ApiEnvelope<{ bank_accounts: BankAccountData[] }>>(`${PROXY_BASE}/user/wallet/bank-accounts`)
+  return res.data?.bank_accounts || []
+}
+
+export async function userCreateBankAccount(data: {
+  bank_name: string
+  bank_code?: string
+  account_number: string
+  account_name: string
+  is_default?: boolean
+}) {
+  const res = await apiPost<ApiEnvelope<{ bank_account: BankAccountData }>>(`${PROXY_BASE}/user/wallet/bank-accounts`, data)
+  return res.data?.bank_account
+}
+
+export async function userUpdateBankAccount(id: string, data: {
+  bank_name?: string
+  bank_code?: string
+  account_number?: string
+  account_name?: string
+  is_default?: boolean
+}) {
+  const res = await apiPut<ApiEnvelope<{ bank_account: BankAccountData }>>(`${PROXY_BASE}/user/wallet/bank-accounts/${id}`, data)
+  return res.data?.bank_account
+}
+
+export async function userDeleteBankAccount(id: string) {
+  const res = await apiDelete<ApiEnvelope<null>>(`${PROXY_BASE}/user/wallet/bank-accounts/${id}`)
+  return res.data
+}
+
+// ─── WITHDRAWALS ──────────────────────────────────────────────────────────────
+
+export type WithdrawalData = {
+  id: string
+  status: "pending" | "approved" | "rejected" | "processed"
+  amount: number
+  currency: string
+  bank_name: string
+  bank_code: string | null
+  account_number: string
+  account_name: string
+  processed_at: { item: string } | null
+  created_at: { item: string }
+  updated_at: { item: string }
+}
+
+export async function userFetchWithdrawals(page = 1) {
+  const res = await apiGet<ApiEnvelope<{ withdrawals: WithdrawalData[]; pagination: { current_page: number; per_page: number; total: number; last_page: number } }>>(
+    `${PROXY_BASE}/user/wallet/withdrawals?page=${page}`
+  )
+  return res.data ?? { withdrawals: [], pagination: null }
+}
+
+export async function userCreateWithdrawal(data: { bank_account_id: string; amount: number }) {
+  const res = await apiPost<ApiEnvelope<{ withdrawal: WithdrawalData; wallet: WalletData }>>(
+    `${PROXY_BASE}/user/wallet/withdrawals`,
+    data
+  )
+  return res.data
+}
+
+
 // Based on Postman collection:
 //   GET    /user/wishlist         → data.wishlist: [{id, product_id, created_at}]
 //   POST   /user/wishlist         → data.item: {id, product_id, created_at}

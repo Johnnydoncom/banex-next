@@ -1,6 +1,6 @@
 "use client"
 
-import { LayoutDashboard, Package, Store, Settings, PackageOpen } from "lucide-react"
+import { LayoutDashboard, Package, Store, Settings, PackageOpen, Landmark } from "lucide-react"
 import { DashboardLayout } from "@/components/DashboardLayout"
 import { useAuth } from "@/hooks/use-auth"
 import { useRoles } from "@/hooks/use-roles"
@@ -17,8 +17,8 @@ export default function VendorDashboardLayout({ children }: { children: React.Re
 
   return (
     <DashboardLayout
-      title="Vendor Hub"
-      subtitle={`Welcome, ${name}`}
+      title="Merchant Center"
+      subtitle={`Welcome back, ${name}`}
       accent="emerald"
       guard={() => {
         if (loading) return null
@@ -28,6 +28,7 @@ export default function VendorDashboardLayout({ children }: { children: React.Re
         { to: "/vendor-dashboard", label: "Overview", icon: LayoutDashboard, exact: true },
         { to: "/vendor-dashboard/orders", label: "Orders", icon: Package },
         { to: "/vendor-dashboard/products", label: "Products", icon: PackageOpen },
+        { to: "/vendor-dashboard/finances", label: "Finances", icon: Landmark },
         { to: "/vendor-dashboard/store", label: "Store Profile", icon: Store },
         { to: "/vendor-dashboard/settings", label: "Settings", icon: Settings },
       ]}

@@ -418,7 +418,7 @@ export default function CheckoutPage() {
               {paymentMethods.length === 0 ? (
                 <div className="mt-3 text-sm text-muted-foreground animate-pulse">Loading payment methods...</div>
               ) : (
-                <div className="mt-3 grid gap-2 sm:grid-cols-3">
+                <div className="mt-3 grid gap-3 sm:grid-cols-2">
                   {paymentMethods.map(pm => {
                     if (pm.status !== "active") return null
 
@@ -444,6 +444,37 @@ export default function CheckoutPage() {
                 </div>
               )}
             </fieldset>
+
+            {(() => {
+              const selectedPm = paymentMethods.find(pm => pm.id === method)
+              const instructions = selectedPm?.manual_payment_instructions
+              if (instructions && typeof instructions === 'object') {
+                return (
+                  <div className="rounded-2xl border border-[#0ba4db]/30 bg-[#0ba4db]/5 p-5 text-sm">
+                    <p className="flex items-center gap-2 font-display font-semibold text-[#0ba4db]">
+                      <LandmarkIcon className="h-4 w-4" /> Payment Instructions
+                    </p>
+                    <div className="mt-3 space-y-2 text-muted-foreground">
+                      {instructions.bank_name && (
+                        <p><strong className="text-foreground">Bank:</strong> {instructions.bank_name}</p>
+                      )}
+                      {instructions.account_name && (
+                        <p><strong className="text-foreground">Account Name:</strong> {instructions.account_name}</p>
+                      )}
+                      {instructions.account_number && (
+                        <p><strong className="text-foreground">Account Number:</strong> {instructions.account_number}</p>
+                      )}
+                      {instructions.instructions && (
+                        <div className="pt-2 mt-2 border-t border-[#0ba4db]/10 whitespace-pre-wrap leading-relaxed">
+                          {instructions.instructions}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )
+              }
+              return null
+            })()}
 
             <div className="rounded-2xl border border-brand/30 bg-brand-soft/15 p-5 text-sm">
               <p className="flex items-center gap-2 font-display font-semibold text-brand-deep">
@@ -580,71 +611,57 @@ function PayOption({
       type="button"
       onClick={onClick}
       disabled={disabled}
-      className={`group relative flex flex-col justify-between overflow-hidden rounded-2xl border p-4 text-left transition-all duration-300 ${
+      className={`group relative flex items-center gap-3 rounded-xl border p-3 text-left transition-all duration-200 ${
         active
           ? isWallet 
-            ? "border-brand bg-gradient-to-br from-brand-deep to-brand text-white shadow-lg shadow-brand/20 scale-[1.02]"
-            : "border-[#0ba4db] bg-gradient-to-br from-white to-[#0ba4db]/5 shadow-lg shadow-[#0ba4db]/10 scale-[1.02]"
+            ? "border-brand bg-brand-soft/10 ring-1 ring-brand/20 shadow-sm"
+            : "border-[#0ba4db] bg-[#0ba4db]/5 ring-1 ring-[#0ba4db]/20 shadow-sm"
           : disabled
-            ? "border-border bg-surface/50 opacity-60 cursor-not-allowed"
-            : "border-border bg-card hover:border-brand/50 hover:shadow-md"
+            ? "border-border bg-surface/50 opacity-50 cursor-not-allowed"
+            : "border-border bg-card hover:border-brand/40 hover:bg-surface/30"
       }`}
     >
-      {/* Dynamic Background Accents */}
-      {active && isPaystack && (
-        <div className="absolute -right-6 -top-6 h-24 w-24 rounded-full bg-[#0ba4db]/10 blur-xl transition-all" />
-      )}
-      {active && isWallet && (
-        <div className="absolute -right-4 -top-4 h-20 w-20 rounded-full bg-white/10 blur-lg transition-all" />
-      )}
-
-      {/* Icon or Image */}
-      <div className={`relative mb-6 flex h-10 w-10 items-center justify-center rounded-xl transition-colors ${
+      {/* Icon */}
+      <div className={`flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-lg border transition-colors ${
         active
-          ? isWallet ? "bg-white/20 text-white" : "bg-[#0ba4db]/10 text-[#0ba4db]"
-          : "bg-surface text-muted-foreground group-hover:bg-brand-soft/50 group-hover:text-brand"
+          ? isWallet ? "border-brand/30 bg-brand/10 text-brand" : "border-[#0ba4db]/30 bg-[#0ba4db]/10 text-[#0ba4db]"
+          : "border-border bg-background text-muted-foreground group-hover:text-foreground group-hover:border-border/80"
       }`}>
         {isPaystack ? (
-          <PaystackLogo className="h-6 w-auto drop-shadow-sm" />
+          <PaystackLogo className="h-5 w-auto" />
         ) : imageUrl ? (
-          <img src={imageUrl} alt={label} className="h-6 w-auto object-contain" />
+          <img src={imageUrl} alt={label} className="h-5 w-auto object-contain" />
         ) : (
           <Icon className="h-5 w-5" />
         )}
       </div>
 
       {/* Label and Sub */}
-      <div className="relative z-10 w-full">
-        <span className={`block font-display text-[15px] font-bold ${
-          active ? (isWallet ? "text-white" : "text-foreground") : "text-foreground"
-        }`}>
+      <div className="flex-1 overflow-hidden">
+        <span className={`block truncate font-display text-sm font-semibold ${active ? "text-foreground" : "text-foreground"}`}>
           {label}
         </span>
-        {sub && (
-          <span className={`mt-1 block truncate text-[11px] font-medium tracking-wide ${
-            active ? (isWallet ? "text-white/80" : "text-muted-foreground") : "text-muted-foreground"
-          }`}>
+        {sub && !disabled && (
+          <span className="mt-0.5 block truncate text-[11px] font-medium text-muted-foreground">
             {sub}
           </span>
         )}
         {disabled && (
-          <span className="mt-1 block text-[11px] font-bold text-rose-500">
+          <span className="mt-0.5 block truncate text-[11px] font-bold text-rose-500">
             Insufficient funds
           </span>
         )}
       </div>
 
-      {/* Active Checkmark */}
-      <div className={`absolute right-4 top-4 transition-all duration-300 ${
-        active ? "scale-100 opacity-100" : "scale-50 opacity-0"
+      {/* Radio indicator */}
+      <div className={`flex h-4 w-4 flex-shrink-0 items-center justify-center rounded-full border transition-all ${
+        active 
+          ? isWallet ? "border-brand bg-brand text-white" : "border-[#0ba4db] bg-[#0ba4db] text-white"
+          : "border-muted-foreground/30"
       }`}>
-        <div className={`flex h-5 w-5 items-center justify-center rounded-full ${
-          isWallet ? "bg-white text-brand" : "bg-[#0ba4db] text-white"
-        }`}>
-          <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
-            <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-          </svg>
-        </div>
+        {active && (
+          <div className="h-1.5 w-1.5 rounded-full bg-white" />
+        )}
       </div>
     </button>
   )
