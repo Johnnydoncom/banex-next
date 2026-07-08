@@ -58,6 +58,8 @@ function statusBadge(status: string) {
   }
 }
 
+type PreviewImg = { url: string; file?: File; id?: string }
+
 export default function VendorProductsPage() {
   const { user, session } = useAuth()
   const token = (session as any)?.accessToken as string | undefined
@@ -72,7 +74,8 @@ export default function VendorProductsPage() {
   const [editProduct, setEditProduct] = useState<SellerProduct | null>(null)
   const [form, setForm] = useState<ProductForm>(defaultForm())
   const [saving, setSaving] = useState(false)
-  const [imagePreviewUrls, setImagePreviewUrls] = useState<string[]>([])
+  const [previewImages, setPreviewImages] = useState<PreviewImg[]>([])
+  const [deletedImageIds, setDeletedImageIds] = useState<string[]>([])
 
   // Stock update modal
   const [stockModalProduct, setStockModalProduct] = useState<SellerProduct | null>(null)
@@ -130,7 +133,8 @@ export default function VendorProductsPage() {
   function openAdd() {
     setEditProduct(null)
     setForm(defaultForm())
-    setImagePreviewUrls([])
+    setPreviewImages([])
+    setDeletedImageIds([])
     setPricingPreview(null)
     setShowModal(true)
   }
@@ -153,7 +157,8 @@ export default function VendorProductsPage() {
       images: [],
       primary_image_index: 0,
     })
-    setImagePreviewUrls(p.images?.map((i) => i.url) ?? [])
+    setPreviewImages(p.images?.map((i) => ({ url: i.url, id: i.id })) ?? [])
+    setDeletedImageIds([])
     setPricingPreview(null)
     setShowModal(true)
   }
@@ -187,10 +192,26 @@ export default function VendorProductsPage() {
 
   function handleImageChange(e: React.ChangeEvent<HTMLInputElement>) {
     const files = Array.from(e.target.files ?? [])
-    setForm((f) => ({ ...f, images: [...f.images, ...files] }))
-    files.forEach((file) => {
-      const url = URL.createObjectURL(file)
-      setImagePreviewUrls((prev) => [...prev, url])
+    const newPreviews = files.map(file => ({ url: URL.createObjectURL(file), file }))
+    setPreviewImages((prev) => [...prev, ...newPreviews])
+  }
+
+  function removeImage(index: number, e: React.MouseEvent) {
+    e.stopPropagation()
+    const img = previewImages[index]
+    if (img.id) {
+      setDeletedImageIds((prev) => [...prev, img.id!])
+    }
+    setPreviewImages((prev) => prev.filter((_, i) => i !== index))
+    
+    setForm(f => {
+      let newPrimary = f.primary_image_index
+      if (newPrimary === index) {
+        newPrimary = 0
+      } else if (newPrimary > index) {
+        newPrimary = newPrimary - 1
+      }
+      return { ...f, primary_image_index: newPrimary }
     })
   }
 
@@ -216,7 +237,11 @@ export default function VendorProductsPage() {
       fd.append("is_authentic_only", form.is_authentic_only ? "1" : "0")
       fd.append("primary_image_index", String(form.primary_image_index))
       form.specifications.filter(Boolean).forEach((s, i) => fd.append(`specifications[${i}]`, s))
-      form.images.forEach((img) => fd.append("images[]", img))
+      previewImages.filter(img => img.file).forEach(img => fd.append("images[]", img.file!))
+      
+      if (editProduct && deletedImageIds.length > 0) {
+        deletedImageIds.forEach(id => fd.append("delete_image_ids[]", id))
+      }
 
       if (editProduct) {
         fd.append("_method", "PUT")
@@ -432,16 +457,23 @@ export default function VendorProductsPage() {
               <div>
                 <label className="mb-2 block text-[11px] font-semibold uppercase tracking-widest text-muted-foreground">Images</label>
                 <div className="flex flex-wrap gap-2">
-                  {imagePreviewUrls.map((url, i) => (
+                  {previewImages.map((img, i) => (
                     <div
                       key={i}
                       onClick={() => setForm((f) => ({ ...f, primary_image_index: i }))}
-                      className={`relative h-20 w-20 cursor-pointer overflow-hidden rounded-lg border-2 transition-all ${form.primary_image_index === i ? "border-emerald-500 shadow-emerald-500/30 shadow-md" : "border-border"}`}
+                      className={`relative group h-20 w-20 cursor-pointer overflow-hidden rounded-lg border-2 transition-all ${form.primary_image_index === i ? "border-emerald-500 shadow-emerald-500/30 shadow-md" : "border-border"}`}
                     >
-                      <img src={url} alt="" className="h-full w-full object-cover" />
+                      <img src={img.url} alt="" className="h-full w-full object-cover" />
                       {form.primary_image_index === i && (
                         <span className="absolute bottom-0 left-0 right-0 bg-emerald-600 text-center text-[9px] font-bold text-white py-0.5">PRIMARY</span>
                       )}
+                      <button
+                        type="button"
+                        onClick={(e) => removeImage(i, e)}
+                        className="absolute right-1 top-1 rounded-full bg-black/60 p-1 text-white opacity-0 transition-opacity hover:bg-rose-500 group-hover:opacity-100"
+                      >
+                        <X className="h-3 w-3" />
+                      </button>
                     </div>
                   ))}
                   <button

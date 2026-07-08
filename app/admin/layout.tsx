@@ -10,6 +10,11 @@ import {
   Settings,
   Store,
   Shield,
+  CreditCard,
+  Banknote,
+  TrendingUp,
+  Coins,
+  Award,
 } from "lucide-react"
 import { AdminShell } from "@/components/AdminShell"
 import { useAuth } from "@/hooks/use-auth"
@@ -42,10 +47,16 @@ export default function AdminDashboardLayout({ children }: { children: React.Rea
         
         { to: "/admin/orders", label: "Orders", icon: ShoppingCart, group: "Sales" },
 
+        { to: "/admin/revenue", label: "Revenue", icon: TrendingUp, group: "Finance" },
+        { to: "/admin/payments", label: "Payments", icon: CreditCard, group: "Finance" },
+        { to: "/admin/withdrawals", label: "Withdrawals", icon: Banknote, group: "Finance" },
+        { to: "/admin/payouts", label: "Seller Payouts", icon: Coins, group: "Finance" },
+
         { to: "/admin/users/sellers", label: "Sellers & Vendors", icon: Store, group: "People" },
         { to: "/admin/users/customers", label: "Customers", icon: Users, group: "People" },
         { to: "/admin/users/admins", label: "Administrators", icon: Shield, group: "People" },
         
+        { to: "/admin/seller-tiers", label: "Seller Tiers", icon: Award, group: "System" },
         { to: "/admin/contacts", label: "WhatsApp Contacts", icon: MessageCircle, group: "System" },
         { to: "/admin/settings", label: "Settings", icon: Settings, group: "System" },
       ]}

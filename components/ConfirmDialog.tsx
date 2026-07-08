@@ -21,6 +21,7 @@ type ConfirmDialogProps = {
   destructive?: boolean
   onConfirm: () => void
   loading?: boolean
+  children?: React.ReactNode
 }
 
 export function ConfirmDialog({
@@ -33,6 +34,7 @@ export function ConfirmDialog({
   destructive = false,
   onConfirm,
   loading = false,
+  children,
 }: ConfirmDialogProps) {
   return (
     <AlertDialog open={open} onOpenChange={onOpenChange}>
@@ -44,6 +46,7 @@ export function ConfirmDialog({
               {description}
             </AlertDialogDescription>
           )}
+          {children}
         </AlertDialogHeader>
         <AlertDialogFooter>
           <AlertDialogCancel

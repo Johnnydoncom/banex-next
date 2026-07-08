@@ -6,19 +6,13 @@ import { DataTable, type Column } from "@/components/DataTable"
 import { ConfirmDialog } from "@/components/ConfirmDialog"
 import { toast } from "sonner"
 import { useAuth } from "@/hooks/use-auth"
-import { apiGet, apiPost, apiPut, apiDelete } from "@/lib/api-client"
+import { fetchAdminWhatsAppContacts, storeAdminWhatsAppContact, updateAdminWhatsAppContact, deleteAdminWhatsAppContact, type AdminWhatsAppContact } from "@/lib/admin-api"
 
 /* ------------------------------------------------------------------ */
 /*  Types & Mock Data                                                  */
 /* ------------------------------------------------------------------ */
 
-type Contact = {
-  id: string
-  label: string
-  phone_number: string
-  is_active: boolean
-  sellers_count?: number
-}
+type Contact = AdminWhatsAppContact
 
 export default function AdminContactsPage() {
   const { session, loading: authLoading } = useAuth()
@@ -41,10 +35,8 @@ export default function AdminContactsPage() {
     }
     const fetchContacts = async () => {
       try {
-        const res = await apiGet<any>("api/admin/whatsapp-contacts", { token })
-        if (res?.success) {
-          setContacts(res.data.whatsapp_contacts || [])
-        }
+        const res = await fetchAdminWhatsAppContacts(token)
+        setContacts(res.data?.whatsapp_contacts || [])
       } catch (err) {
         toast.error("Failed to load contacts")
       } finally {
@@ -69,17 +61,15 @@ export default function AdminContactsPage() {
     setSaving(true)
     try {
       if (editingId) {
-        const res = await apiPut<any>(`api/admin/whatsapp-contacts/${editingId}`, form, { token })
-        if (res?.success) {
-          setContacts((prev) => prev.map((c) => (c.id === editingId ? res.data.whatsapp_contact : c)))
-          toast.success("Contact updated.")
-        }
+        const res = await updateAdminWhatsAppContact(editingId, form, token)
+        setContacts((prev) => prev.map((c) => (c.id === editingId ? (res.data?.whatsapp_contact || c) : c)))
+        toast.success("Contact updated.")
       } else {
-        const res = await apiPost<any>("api/admin/whatsapp-contacts", form, { token })
-        if (res?.success) {
+        const res = await storeAdminWhatsAppContact(form, token)
+        if (res.data?.whatsapp_contact) {
           setContacts((prev) => [...prev, res.data.whatsapp_contact])
-          toast.success("Contact added.")
         }
+        toast.success("Contact added.")
       }
       setModalOpen(false)
     } catch (err: any) {
@@ -93,7 +83,7 @@ export default function AdminContactsPage() {
     if (!deleteId) return
     setSaving(true)
     try {
-      await apiDelete(`api/admin/whatsapp-contacts/${deleteId}`, { token })
+      await deleteAdminWhatsAppContact(deleteId, token)
       setContacts((prev) => prev.filter((c) => c.id !== deleteId))
       toast.success("Contact deleted.")
     } catch (err: any) {

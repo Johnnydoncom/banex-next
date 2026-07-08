@@ -1,39 +1,32 @@
 "use client"
 
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import Link from "next/link"
 import { Eye, Download } from "lucide-react"
 import { DataTable, type Column } from "@/components/DataTable"
 import { StatusBadge } from "@/components/StatusBadge"
+import { useAuth } from "@/hooks/use-auth"
+import { fetchAdminOrders, type AdminOrder } from "@/lib/admin-api"
+import { toast } from "sonner"
 
-/* ------------------------------------------------------------------ */
-/*  Types & Mock Data                                                  */
-/* ------------------------------------------------------------------ */
-
-type Order = {
-  id: string
-  orderNumber: string
-  customer: string
-  items: number
-  total: number
-  status: "pending" | "processing" | "shipped" | "delivered" | "cancelled"
-  date: string
-}
-
-const mockOrders: Order[] = [
-  { id: "o1", orderNumber: "ORD-1042", customer: "Adewale O.", items: 2, total: 380000, status: "pending", date: "2026-06-22T10:15:00Z" },
-  { id: "o2", orderNumber: "ORD-1041", customer: "Chioma E.", items: 1, total: 750000, status: "processing", date: "2026-06-21T14:20:00Z" },
-  { id: "o3", orderNumber: "ORD-1040", customer: "Ibrahim M.", items: 4, total: 120000, status: "shipped", date: "2026-06-20T09:05:00Z" },
-  { id: "o4", orderNumber: "ORD-1039", customer: "Funke A.", items: 1, total: 300000, status: "delivered", date: "2026-06-18T16:45:00Z" },
-  { id: "o5", orderNumber: "ORD-1038", customer: "Blessing O.", items: 3, total: 95000, status: "delivered", date: "2026-06-18T11:10:00Z" },
-  { id: "o6", orderNumber: "ORD-1037", customer: "Sunday A.", items: 1, total: 45000, status: "cancelled", date: "2026-06-17T08:30:00Z" },
-]
-
-type Tab = "all" | "pending" | "processing" | "shipped" | "delivered" | "cancelled"
+type Tab = "all" | "pending" | "processing" | "in_transit" | "delivered" | "cancelled" | "disputed"
 
 export default function AdminOrdersPage() {
+  const { session } = useAuth()
+  const token = (session as any)?.accessToken as string | undefined
+
   const [tab, setTab] = useState<Tab>("all")
-  const [orders, setOrders] = useState(mockOrders)
+  const [orders, setOrders] = useState<AdminOrder[]>([])
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    if (!token) return
+    setLoading(true)
+    fetchAdminOrders(token)
+      .then((res) => setOrders(res.data?.orders || []))
+      .catch((e) => toast.error(e.message || "Failed to load orders"))
+      .finally(() => setLoading(false))
+  }, [token])
 
   const filtered = orders.filter((o) => {
     if (tab === "all") return true
@@ -44,19 +37,20 @@ export default function AdminOrdersPage() {
     { key: "all", label: "All", count: orders.length },
     { key: "pending", label: "Pending", count: orders.filter((o) => o.status === "pending").length },
     { key: "processing", label: "Processing", count: orders.filter((o) => o.status === "processing").length },
-    { key: "shipped", label: "Shipped", count: orders.filter((o) => o.status === "shipped").length },
+    { key: "in_transit", label: "In Transit", count: orders.filter((o) => o.status === "in_transit").length },
     { key: "delivered", label: "Delivered", count: orders.filter((o) => o.status === "delivered").length },
     { key: "cancelled", label: "Cancelled", count: orders.filter((o) => o.status === "cancelled").length },
+    { key: "disputed", label: "Disputed", count: orders.filter((o) => o.status === "disputed").length },
   ]
 
-  const columns: Column<Order>[] = [
+  const columns: Column<AdminOrder>[] = [
     {
-      key: "orderNumber",
+      key: "reference",
       label: "Order",
       sortable: true,
       render: (o) => (
         <Link href={`/admin/orders/${o.id}`} className="font-semibold text-brand hover:underline">
-          {o.orderNumber}
+          {o.reference}
         </Link>
       ),
     },
@@ -64,27 +58,30 @@ export default function AdminOrdersPage() {
       key: "customer",
       label: "Customer",
       sortable: true,
-      render: (o) => <span className="text-sm">{o.customer}</span>,
+      render: (o) => <span className="text-sm">{o.customer?.full_name || "Unknown"}</span>,
     },
     {
       key: "date",
       label: "Date",
       sortable: true,
-      render: (o) => (
-        <div>
-          <p className="text-sm">{new Date(o.date).toLocaleDateString()}</p>
-          <p className="text-[11px] text-muted-foreground">{new Date(o.date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</p>
-        </div>
-      ),
+      render: (o) => {
+        const d = new Date(o.created_at?.item || Date.now())
+        return (
+          <div>
+            <p className="text-sm">{d.toLocaleDateString()}</p>
+            <p className="text-[11px] text-muted-foreground">{d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</p>
+          </div>
+        )
+      },
     },
     {
-      key: "total",
+      key: "total_amount",
       label: "Total",
       sortable: true,
       render: (o) => (
         <div>
-          <p className="text-sm font-semibold">₦{o.total.toLocaleString()}</p>
-          <p className="text-[11px] text-muted-foreground">{o.items} items</p>
+          <p className="text-sm font-semibold">₦{o.total_amount?.toLocaleString()}</p>
+          <p className="text-[11px] text-muted-foreground">{o.items?.length || 0} items</p>
         </div>
       ),
     },
@@ -130,14 +127,20 @@ export default function AdminOrdersPage() {
         ))}
       </div>
 
-      <DataTable
-        columns={columns}
-        data={filtered}
-        rowKey={(o) => o.id}
-        searchPlaceholder="Search by order # or customer…"
-        searchFilter={(o, q) => o.orderNumber.toLowerCase().includes(q) || o.customer.toLowerCase().includes(q)}
-        pageSize={15}
-      />
+      {loading ? (
+        <div className="space-y-3">
+          {[...Array(5)].map((_, i) => <div key={i} className="h-16 animate-pulse rounded-xl bg-card" />)}
+        </div>
+      ) : (
+        <DataTable
+          columns={columns}
+          data={filtered}
+          rowKey={(o) => o.id}
+          searchPlaceholder="Search by order ref or customer…"
+          searchFilter={(o, q) => o.reference?.toLowerCase().includes(q) || o.customer?.full_name?.toLowerCase().includes(q)}
+          pageSize={15}
+        />
+      )}
     </div>
   )
 }

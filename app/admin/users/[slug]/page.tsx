@@ -4,7 +4,7 @@ import { use, useEffect, useState } from "react"
 import Link from "next/link"
 import { ArrowLeft, Mail, Calendar, Check, X, Ban, Loader2 } from "lucide-react"
 import { StatusBadge } from "@/components/StatusBadge"
-import { fetchAdminUser, type AdminUser } from "@/lib/admin-api"
+import { fetchAdminUser, toggleUserVerification, toggleUserSuspension, type AdminUser } from "@/lib/admin-api"
 import { useAuth } from "@/hooks/use-auth"
 import { toast } from "sonner"
 
@@ -33,6 +33,30 @@ export default function AdminUserDetailPage({ params }: { params: Promise<{ slug
 
     loadUser()
   }, [slug, session])
+
+  const handleToggleVerification = async () => {
+    const token = (session as any)?.accessToken
+    if (!token || !user) return
+    try {
+      const res = await toggleUserVerification(user.id, token)
+      setUser(res.data?.user || { ...user, email_verified_at: user.email_verified_at ? null : new Date().toISOString() })
+      toast.success("Verification status toggled")
+    } catch (err: any) {
+      toast.error(err.message || "Failed to toggle verification")
+    }
+  }
+
+  const handleToggleSuspension = async () => {
+    const token = (session as any)?.accessToken
+    if (!token || !user) return
+    try {
+      const res = await toggleUserSuspension(user.id, token)
+      setUser(res.data?.user || { ...user, status: user.status === "suspended" ? "active" : "suspended" })
+      toast.success("Suspension status toggled")
+    } catch (err: any) {
+      toast.error(err.message || "Failed to toggle suspension")
+    }
+  }
 
   if (loading) {
     return (
@@ -81,6 +105,15 @@ export default function AdminUserDetailPage({ params }: { params: Promise<{ slug
                 <span className="rounded-full bg-surface px-2 py-0.5 text-[10px] font-bold uppercase text-muted-foreground">{user.type}</span>
               </div>
             </div>
+          </div>
+          
+          <div className="flex items-center gap-2">
+             <button onClick={handleToggleVerification} className="rounded-lg border border-border bg-card px-4 py-2 text-xs font-semibold hover:bg-surface">
+               {user.email_verified_at ? "Unverify Email" : "Verify Email"}
+             </button>
+             <button onClick={handleToggleSuspension} className={`rounded-lg px-4 py-2 text-xs font-semibold text-white ${user.status === "suspended" ? "bg-emerald-600 hover:bg-emerald-700" : "bg-rose-600 hover:bg-rose-700"}`}>
+               {user.status === "suspended" ? "Unsuspend" : "Suspend"}
+             </button>
           </div>
         </div>
       </div>

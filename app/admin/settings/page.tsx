@@ -1,8 +1,10 @@
 "use client"
 
-import { useState } from "react"
-import { Save } from "lucide-react"
+import { useState, useEffect } from "react"
+import { Save, Loader2, CreditCard } from "lucide-react"
 import { toast } from "sonner"
+import { useAuth } from "@/hooks/use-auth"
+import { fetchAdminPaymentMethods, updateAdminPaymentMethod, type AdminPaymentMethod } from "@/lib/admin-api"
 
 export default function AdminSettingsPage() {
   const [form, setForm] = useState({
@@ -13,6 +15,36 @@ export default function AdminSettingsPage() {
     allowNewVendors: true,
   })
   const [saving, setSaving] = useState(false)
+
+  const { session } = useAuth()
+  const token = (session as any)?.accessToken as string | undefined
+
+  const [paymentMethods, setPaymentMethods] = useState<AdminPaymentMethod[]>([])
+  const [loadingPMs, setLoadingPMs] = useState(true)
+
+  useEffect(() => {
+    if (!token) return
+    setLoadingPMs(true)
+    fetchAdminPaymentMethods(token)
+      .then((res) => setPaymentMethods(res.data?.payment_methods || []))
+      .catch((err) => toast.error("Failed to load payment methods"))
+      .finally(() => setLoadingPMs(false))
+  }, [token])
+
+  const togglePaymentMethod = async (pm: AdminPaymentMethod) => {
+    if (!token) return
+    const updatedStatus = !pm.is_active
+    // Optimistic update
+    setPaymentMethods(prev => prev.map(p => p.id === pm.id ? { ...p, is_active: updatedStatus } : p))
+    try {
+      await updateAdminPaymentMethod(pm.id, { is_active: updatedStatus }, token)
+      toast.success(`${pm.name} is now ${updatedStatus ? "active" : "inactive"}`)
+    } catch (err: any) {
+      toast.error(err.message || "Failed to update payment method")
+      // Revert on failure
+      setPaymentMethods(prev => prev.map(p => p.id === pm.id ? { ...p, is_active: !updatedStatus } : p))
+    }
+  }
 
   const handleSave = async () => {
     setSaving(true)
@@ -70,6 +102,35 @@ export default function AdminSettingsPage() {
               <span className="text-xs text-muted-foreground">If disabled, the "Become a Vendor" form will be hidden.</span>
             </div>
           </label>
+        </section>
+
+        {/* Payment Methods */}
+        <section>
+          <h2 className="font-display text-lg font-semibold border-b border-border pb-2 mb-4 flex items-center gap-2"><CreditCard className="h-5 w-5 text-brand" /> Payment Methods</h2>
+          {loadingPMs ? (
+            <div className="flex h-24 items-center justify-center rounded-xl border border-border bg-surface/30">
+              <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+            </div>
+          ) : paymentMethods.length === 0 ? (
+            <div className="rounded-xl border border-border bg-surface/30 p-6 text-center text-sm text-muted-foreground">
+              No payment methods found.
+            </div>
+          ) : (
+            <div className="grid gap-4 sm:grid-cols-2">
+              {paymentMethods.map(pm => (
+                <div key={pm.id} className="flex items-center justify-between rounded-xl border border-border bg-background p-4">
+                  <div>
+                    <h3 className="font-semibold">{pm.name}</h3>
+                    <p className="text-xs text-muted-foreground">ID: {pm.slug}</p>
+                  </div>
+                  <label className="relative inline-flex cursor-pointer items-center">
+                    <input type="checkbox" className="peer sr-only" checked={pm.is_active} onChange={() => togglePaymentMethod(pm)} />
+                    <div className="peer h-6 w-11 rounded-full bg-border after:absolute after:left-[2px] after:top-[2px] after:h-5 after:w-5 after:rounded-full after:border after:border-gray-300 after:bg-white after:transition-all after:content-[''] peer-checked:bg-brand peer-checked:after:translate-x-full peer-checked:after:border-white peer-focus:outline-none dark:border-gray-600"></div>
+                  </label>
+                </div>
+              ))}
+            </div>
+          )}
         </section>
 
         <div className="flex justify-end pt-4">
