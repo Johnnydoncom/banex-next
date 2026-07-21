@@ -1,8 +1,14 @@
-"use client"
-
 import Link from "next/link"
 import { PageShell } from "@/components/PageShell"
 import { Clock, PackageCheck, RefreshCw, Wallet } from "lucide-react"
+import { buildMetadata } from "@/lib/seo/metadata"
+
+export const metadata = buildMetadata({
+  title: "Returns & Refunds — 7-Day Buyer Protection",
+  description:
+    "Banex Mall's 7-day buyer protection means you only pay when you're happy. Learn how returns, free pickup and escrow refunds work.",
+  path: "/returns",
+})
 
 export default function ReturnsPage() {
   return (

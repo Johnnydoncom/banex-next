@@ -1,8 +1,17 @@
-"use client"
-
 import Link from "next/link"
 import { PageShell } from "@/components/PageShell"
 import { ArrowRight, BadgeCheck, Camera, DollarSign, Megaphone, ShieldCheck, Upload } from "lucide-react"
+import { buildMetadata } from "@/lib/seo/metadata"
+import { JsonLd } from "@/lib/seo/JsonLd"
+import { breadcrumbSchema, webPageSchema } from "@/lib/seo/jsonld"
+
+export const metadata = buildMetadata({
+  title: "Sell on Banex Mall — List Anything in Nigeria",
+  titleAbsolute: true,
+  description:
+    "Reach thousands of verified buyers across Nigeria. Zero setup fees, secure escrow payouts, built-in marketing and tools to grow your business on Banex Mall.",
+  path: "/sell",
+})
 
 export default function SellPage() {
   return (
@@ -11,6 +20,7 @@ export default function SellPage() {
       title="Sell anything on Banex Mall"
       description="Reach thousands of verified buyers across Nigeria. Zero setup fees, secure escrow payouts, and tools to grow your business."
     >
+      <JsonLd schema={[webPageSchema({ name: "Sell on Banex Mall", path: "/sell", description: "How to sell on Banex Mall." }), breadcrumbSchema([{ name: "Home", path: "/" }, { name: "Sell", path: "/sell" }])]} />
       <div className="grid gap-5 md:grid-cols-3">
         {[
           { icon: Upload, t: "1. Create your listing", s: "Add clear photos, set your price, and describe your item." },

@@ -1,8 +1,14 @@
-"use client"
-
 import Link from "next/link"
 import { Navigation, Bike, Store } from "lucide-react"
 import { PageShell } from "@/components/PageShell"
+import { buildMetadata } from "@/lib/seo/metadata"
+
+export const metadata = buildMetadata({
+  title: "Mall Map & Shop Locator",
+  description:
+    "Banex Mall is a real, physical mall in Abuja. Find shops, opening hours and directions — or order same-hour rider delivery from any tenant.",
+  path: "/mall-map",
+})
 
 export default function MallMapPage() {
   return (

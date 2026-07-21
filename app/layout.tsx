@@ -2,6 +2,16 @@ import type { Metadata } from "next"
 import { Inter, Plus_Jakarta_Sans } from "next/font/google"
 import "./globals.css"
 import { Providers } from "@/components/providers"
+import { JsonLd } from "@/lib/seo/JsonLd"
+import { organizationSchema, websiteSchema } from "@/lib/seo/jsonld"
+import {
+  SITE_URL,
+  SITE_NAME,
+  SITE_TAGLINE,
+  SITE_DESCRIPTION,
+  SITE_LOCALE,
+  TWITTER_HANDLE,
+} from "@/lib/seo/config"
 
 const inter = Inter({
   subsets: ["latin"],
@@ -17,33 +27,44 @@ const plusJakartaSans = Plus_Jakarta_Sans({
 })
 
 export const metadata: Metadata = {
+  metadataBase: new URL(SITE_URL),
   title: {
-    default: "Banex Mall — Buy & Sell Anything in Nigeria",
-    template: "%s — Banex Mall",
+    default: `${SITE_NAME} — ${SITE_TAGLINE}`,
+    template: `%s — ${SITE_NAME}`,
   },
-  description:
-    "Banex Mall is Nigeria's friendly online marketplace. Buy and sell vehicles, property, electronics, fashion, home goods and more from verified sellers.",
-  metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000"),
+  description: SITE_DESCRIPTION,
+  applicationName: SITE_NAME,
+  alternates: { canonical: "/" },
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: {
+      index: true,
+      follow: true,
+      "max-image-preview": "large",
+      "max-snippet": -1,
+      "max-video-preview": -1,
+    },
+  },
   openGraph: {
-    title: "Banex Mall — Buy & Sell Anything in Nigeria",
-    description:
-      "Vehicles, property, electronics, fashion, home & more from verified sellers across Nigeria.",
+    // Image comes from app/opengraph-image.tsx (branded, generated).
+    title: `${SITE_NAME} — ${SITE_TAGLINE}`,
+    description: SITE_DESCRIPTION,
     type: "website",
-    images: [
-      {
-        url: "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/6e796a94-0f0e-40ce-a53e-f76abf305e2e/id-preview-a3ba764a--166f733e-077c-41a6-8377-613ea87b5b0e.lovable.app-1776692435494.png",
-        width: 1200,
-        height: 630,
-        alt: "Banex Mall",
-      },
-    ],
+    siteName: SITE_NAME,
+    locale: SITE_LOCALE,
+    url: SITE_URL,
   },
   twitter: {
     card: "summary_large_image",
-    title: "Banex Mall — Buy & Sell Anything in Nigeria",
-    description:
-      "Vehicles, property, electronics, fashion, home & more from verified sellers across Nigeria.",
+    site: TWITTER_HANDLE,
+    title: `${SITE_NAME} — ${SITE_TAGLINE}`,
+    description: SITE_DESCRIPTION,
   },
+}
+
+export const viewport = {
+  themeColor: "#7DC243",
 }
 
 export default function RootLayout({
@@ -58,6 +79,7 @@ export default function RootLayout({
       className={`${inter.variable} ${plusJakartaSans.variable}`}
     >
       <body className="antialiased">
+        <JsonLd schema={[organizationSchema(), websiteSchema()]} />
         <Providers>{children}</Providers>
       </body>
     </html>

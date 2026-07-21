@@ -12,7 +12,6 @@ type Props = {
 export function PageShell({ eyebrow, title, description, children }: Props) {
   return (
     <div className="min-h-screen">
-      <Header />
       <section className="relative overflow-hidden border-b border-border">
         <div
           className="pointer-events-none absolute inset-0"
@@ -35,7 +34,6 @@ export function PageShell({ eyebrow, title, description, children }: Props) {
         </div>
       </section>
       <main className="mx-auto max-w-5xl px-4 py-12 md:px-8 md:py-16">{children}</main>
-      <Footer />
     </div>
   )
 }

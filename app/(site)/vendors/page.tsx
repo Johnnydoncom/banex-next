@@ -4,6 +4,17 @@ import { PageShell } from "@/components/PageShell"
 import { MallVendorCard } from "@/components/MallVendorCard"
 import { fetchGenericSellers, GenericSeller, fetchGenericCategories } from "@/lib/generic-api"
 import { VendorFilters } from "./components/VendorFilters"
+import { buildMetadata } from "@/lib/seo/metadata"
+import { JsonLd } from "@/lib/seo/JsonLd"
+import { itemListSchema, breadcrumbSchema } from "@/lib/seo/jsonld"
+
+export const metadata = buildMetadata({
+  title: "Banex Mall Vendors — Every Shop in the Mall",
+  titleAbsolute: true,
+  description:
+    "Browse every shop inside Banex Mall — anchor brands to neighbourhood favourites. Order in for same-hour rider delivery or visit them in-store.",
+  path: "/vendors",
+})
 
 export default async function VendorsPage({
   searchParams,
@@ -42,12 +53,32 @@ export default async function VendorsPage({
     return true
   })
 
+  const vendorsJsonLd = [
+    breadcrumbSchema([
+      { name: "Home", path: "/" },
+      { name: "Vendors", path: "/vendors" },
+    ]),
+    ...(filteredSellers.length
+      ? [
+          itemListSchema(
+            "Banex Mall vendors",
+            filteredSellers.map((v) => ({
+              name: v.shop_name,
+              path: `/vendor/${v.slug}`,
+              image: v.cover_image_url,
+            })),
+          ),
+        ]
+      : []),
+  ]
+
   return (
     <PageShell
       eyebrow="Tenants"
       title="Banex Mall vendors"
       description="Every shop inside our physical mall — from anchor brands to neighbourhood favourites. Order in for rider delivery or visit them in-store."
     >
+      <JsonLd schema={vendorsJsonLd} />
       <VendorFilters categories={categories} />
 
       <div className="mt-6 flex flex-wrap items-center gap-3 text-xs text-muted-foreground">

@@ -1,7 +1,13 @@
-"use client"
-
 import { PageShell } from "@/components/PageShell"
 import { Bike, MapPin, PackageCheck, Truck } from "lucide-react"
+import { buildMetadata } from "@/lib/seo/metadata"
+
+export const metadata = buildMetadata({
+  title: "Delivery Across Nigeria — Zones, Times & Fees",
+  description:
+    "Same-hour rider delivery in Lagos, Abuja and Port Harcourt, plus reliable 1–5 day nationwide courier to all 36 states. See delivery zones, times and fees.",
+  path: "/delivery",
+})
 
 const zones = [
   { city: "Lagos", time: "Same-day – 1 day", fee: "₦1,500 – ₦3,500" },

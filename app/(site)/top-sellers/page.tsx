@@ -1,9 +1,16 @@
-"use client"
-
 import Link from "next/link"
 import { PageShell } from "@/components/PageShell"
 import { products } from "@/lib/products"
 import { BadgeCheck, MapPin, Star } from "lucide-react"
+import { buildMetadata } from "@/lib/seo/metadata"
+
+export const metadata = buildMetadata({
+  title: "Top Sellers on Banex Mall",
+  titleAbsolute: true,
+  description:
+    "Meet the highest-rated, most-trusted verified sellers on Banex Mall — ranked by ratings and reviews across Nigeria.",
+  path: "/top-sellers",
+})
 
 export default function TopSellersPage() {
   // Aggregate unique sellers across all products

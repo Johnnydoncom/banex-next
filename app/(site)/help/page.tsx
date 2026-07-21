@@ -1,8 +1,16 @@
-"use client"
-
 import Link from "next/link"
 import { PageShell } from "@/components/PageShell"
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion"
+import { buildMetadata } from "@/lib/seo/metadata"
+import { JsonLd } from "@/lib/seo/JsonLd"
+import { faqSchema, breadcrumbSchema } from "@/lib/seo/jsonld"
+
+export const metadata = buildMetadata({
+  title: "Help Center & FAQ",
+  description:
+    "Answers about escrow, becoming a verified seller, payments, offers, returns and buyer protection on Banex Mall.",
+  path: "/help",
+})
 
 const faqs = [
   { q: "How does escrow work on Banex Mall?", a: "When you pay, your money is held safely by Banex. We only release it to the seller once you confirm you've received the item as described." },
@@ -20,6 +28,7 @@ export default function HelpPage() {
       title="Help center"
       description="Find quick answers, or reach out to our team — we're here to help."
     >
+      <JsonLd schema={[faqSchema(faqs), breadcrumbSchema([{ name: "Home", path: "/" }, { name: "Help", path: "/help" }])]} />
       <Accordion type="single" collapsible className="rounded-2xl border border-border bg-card px-2 shadow-soft">
         {faqs.map((f, i) => (
           <AccordionItem key={i} value={`f-${i}`} className="border-b border-border last:border-0">

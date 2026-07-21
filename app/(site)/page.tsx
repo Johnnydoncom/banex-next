@@ -24,14 +24,19 @@ import {
 import { MallVendorCard } from "@/components/MallVendorCard"
 import { ApiProductCard } from "@/components/ApiProductCard"
 import { fetchGenericHome, GenericCategory, GenericSeller } from "@/lib/generic-api"
+import { buildMetadata } from "@/lib/seo/metadata"
+import { JsonLd } from "@/lib/seo/JsonLd"
+import { itemListSchema } from "@/lib/seo/jsonld"
 
 // ─── SEO ─────────────────────────────────────────────────────────────────────
 
-export const metadata = {
-  title: "Banex Mall Marketplace — Shop, Delivered in an Hour",
+export const metadata = buildMetadata({
+  title: "Banex Mall — Shop, Delivered in an Hour",
+  titleAbsolute: true,
   description:
-    "Order from 100+ vendors inside Banex Mall — phones, fashion, groceries, beauty, electronics — delivered same-hour by our riders across the city.",
-}
+    "Order from 100+ vendors inside Banex Mall — phones, fashion, groceries, beauty, electronics — delivered same-hour by our riders across the city, or ready for in-mall pickup.",
+  path: "/",
+})
 
 // ISR: Regenerate the page every 60 seconds in the background.
 // The first build generates an empty page (if API is down), 
@@ -124,8 +129,32 @@ export default async function Home() {
   const popularListings = data?.popular_listings ?? []
   const openVendors = mallVendors.filter((v: GenericSeller) => v.is_open).length
 
+  const homeJsonLd = [
+    ...(categories.length
+      ? [
+          itemListSchema(
+            "Shop by category",
+            categories.map((c: GenericCategory) => ({ name: c.name, path: `/shop/${c.slug}` })),
+          ),
+        ]
+      : []),
+    ...(featuredListings.length
+      ? [
+          itemListSchema(
+            "Featured listings",
+            featuredListings.slice(0, 12).map((p) => ({
+              name: p.name,
+              path: `/product/${p.slug}`,
+              image: p.images?.find((i) => i.is_primary)?.url || p.images?.[0]?.url,
+            })),
+          ),
+        ]
+      : []),
+  ]
+
   return (
     <div>
+      {homeJsonLd.length > 0 && <JsonLd schema={homeJsonLd} />}
       {/* Hero */}
       <section className="relative overflow-hidden">
         <div
