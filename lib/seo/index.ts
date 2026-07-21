@@ -2,4 +2,4 @@
 export * from "./config"
 export * from "./metadata"
 export * from "./jsonld"
-export { JsonLd } from "./JsonLd"
+export { JsonLd } from "./JsonLdComponent"

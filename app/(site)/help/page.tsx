@@ -2,7 +2,7 @@ import Link from "next/link"
 import { PageShell } from "@/components/PageShell"
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion"
 import { buildMetadata } from "@/lib/seo/metadata"
-import { JsonLd } from "@/lib/seo/JsonLd"
+import { JsonLd } from "@/lib/seo/JsonLdComponent"
 import { faqSchema, breadcrumbSchema } from "@/lib/seo/jsonld"
 
 export const metadata = buildMetadata({

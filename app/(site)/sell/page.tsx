@@ -2,7 +2,7 @@ import Link from "next/link"
 import { PageShell } from "@/components/PageShell"
 import { ArrowRight, BadgeCheck, Camera, DollarSign, Megaphone, ShieldCheck, Upload } from "lucide-react"
 import { buildMetadata } from "@/lib/seo/metadata"
-import { JsonLd } from "@/lib/seo/JsonLd"
+import { JsonLd } from "@/lib/seo/JsonLdComponent"
 import { breadcrumbSchema, webPageSchema } from "@/lib/seo/jsonld"
 
 export const metadata = buildMetadata({

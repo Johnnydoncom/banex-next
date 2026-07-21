@@ -9,7 +9,7 @@ import { fetchGenericSeller } from "@/lib/generic-api"
 import { VendorOrderAll, VendorQuickOrder } from "./components/VendorActions"
 import type { Metadata } from "next"
 import { buildMetadata } from "@/lib/seo/metadata"
-import { JsonLd } from "@/lib/seo/JsonLd"
+import { JsonLd } from "@/lib/seo/JsonLdComponent"
 import { storeSchema, breadcrumbSchema, itemListSchema } from "@/lib/seo/jsonld"
 
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {

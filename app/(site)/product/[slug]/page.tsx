@@ -8,7 +8,7 @@ import { ProductSellerCard } from "./components/ProductSellerCard"
 import { ProductDescription } from "./components/ProductDescription"
 import type { Metadata } from "next"
 import { buildMetadata } from "@/lib/seo/metadata"
-import { JsonLd } from "@/lib/seo/JsonLd"
+import { JsonLd } from "@/lib/seo/JsonLdComponent"
 import { productSchema, breadcrumbSchema } from "@/lib/seo/jsonld"
 
 /** Strip HTML tags for a clean meta description. */

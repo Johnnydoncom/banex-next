@@ -5,7 +5,7 @@ import { MallVendorCard } from "@/components/MallVendorCard"
 import { fetchGenericSellers, GenericSeller, fetchGenericCategories } from "@/lib/generic-api"
 import { VendorFilters } from "./components/VendorFilters"
 import { buildMetadata } from "@/lib/seo/metadata"
-import { JsonLd } from "@/lib/seo/JsonLd"
+import { JsonLd } from "@/lib/seo/JsonLdComponent"
 import { itemListSchema, breadcrumbSchema } from "@/lib/seo/jsonld"
 
 export const metadata = buildMetadata({

@@ -1,6 +1,6 @@
 import { PageShell } from "@/components/PageShell"
 import { buildMetadata } from "@/lib/seo/metadata"
-import { JsonLd } from "@/lib/seo/JsonLd"
+import { JsonLd } from "@/lib/seo/JsonLdComponent"
 import { webPageSchema, breadcrumbSchema } from "@/lib/seo/jsonld"
 import { BecomeSellerForm } from "./BecomeSellerForm"
 

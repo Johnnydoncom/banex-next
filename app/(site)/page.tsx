@@ -25,7 +25,7 @@ import { MallVendorCard } from "@/components/MallVendorCard"
 import { ApiProductCard } from "@/components/ApiProductCard"
 import { fetchGenericHome, GenericCategory, GenericSeller } from "@/lib/generic-api"
 import { buildMetadata } from "@/lib/seo/metadata"
-import { JsonLd } from "@/lib/seo/JsonLd"
+import { JsonLd } from "@/lib/seo/JsonLdComponent"
 import { itemListSchema } from "@/lib/seo/jsonld"
 
 // ─── SEO ─────────────────────────────────────────────────────────────────────
