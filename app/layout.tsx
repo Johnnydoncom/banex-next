@@ -78,6 +78,10 @@ export default function RootLayout({
       suppressHydrationWarning
       className={`${inter.variable} ${plusJakartaSans.variable}`}
     >
+      <head>
+        <meta name="apple-mobile-web-app-title" content="Banex Marketplace" />
+      </head>
+
       <body className="antialiased">
         <JsonLd schema={[organizationSchema(), websiteSchema()]} />
         <Providers>{children}</Providers>
