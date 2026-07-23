@@ -5,6 +5,7 @@ import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "
 import { useCart } from "@/components/CartContext"
 import { formatNaira } from "@/lib/products"
 import { ImageOff, Minus, Plus, ShieldCheck, ShoppingBag, Trash2 } from "lucide-react"
+import { Button } from "@/components/ui/button"
 
 export function CartSheet() {
   const { isOpen, setOpen, items, setQty, remove, subtotal, count, close } = useCart()
@@ -58,32 +59,32 @@ export function CartSheet() {
                     <p className="text-[11px] text-muted-foreground">Sold by {it.sellerName}</p>
                     <div className="mt-auto flex items-center justify-between">
                       <div className="inline-flex items-center rounded-full border border-border">
-                        <button
+                        <Button variant="ghost" type="button"
                           aria-label="Decrease"
                           onClick={() => setQty(it.id, it.qty - 1)}
                           className="px-2 py-1 text-muted-foreground hover:text-foreground"
                         >
                           <Minus className="h-3 w-3" />
-                        </button>
+                        </Button>
                         <span className="min-w-6 text-center text-xs font-semibold">{it.qty}</span>
-                        <button
+                        <Button variant="ghost" type="button"
                           aria-label="Increase"
                           onClick={() => setQty(it.id, it.qty + 1)}
                           className="px-2 py-1 text-muted-foreground hover:text-foreground"
                         >
                           <Plus className="h-3 w-3" />
-                        </button>
+                        </Button>
                       </div>
                       <p className="font-display text-sm font-bold">{formatNaira(it.qty * it.price)}</p>
                     </div>
                   </div>
-                  <button
+                  <Button variant="ghost" type="button"
                     aria-label="Remove"
                     onClick={() => remove(it.id)}
                     className="self-start text-muted-foreground hover:text-destructive"
                   >
                     <Trash2 className="h-4 w-4" />
-                  </button>
+                  </Button>
                 </li>
               ))}
             </ul>

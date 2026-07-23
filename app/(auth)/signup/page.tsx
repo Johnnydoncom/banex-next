@@ -8,6 +8,9 @@ import { toast } from "sonner"
 import { z } from "zod"
 import { signIn } from "next-auth/react"
 import { AuthShell } from "@/components/AuthShell"
+import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
 
 const schema = z.object({
   fullName: z.string().trim().min(2, "Enter your full name").max(80),
@@ -104,15 +107,16 @@ export default function SignupPage() {
         </>
       }
     >
-      <button
+      <Button
         type="button"
+        variant="outline"
         onClick={handleGoogle}
         disabled={oauthLoading}
-        className="flex w-full items-center justify-center gap-3 rounded-full border border-border bg-card px-4 py-2.5 text-sm font-semibold transition-colors hover:border-brand disabled:opacity-60"
+        className="h-auto w-full gap-3 rounded-full bg-card px-4 py-2.5 text-sm font-semibold hover:border-brand"
       >
         {oauthLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <GoogleIcon />}
         Continue with Google
-      </button>
+      </Button>
 
       <div className="my-5 flex items-center gap-3 text-[11px] uppercase tracking-widest text-muted-foreground">
         <span className="h-px flex-1 bg-border" />
@@ -122,66 +126,68 @@ export default function SignupPage() {
 
       <form onSubmit={handleSubmit} className="space-y-4">
         <div>
-          <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+          <Label className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-muted-foreground">
             Full name
-          </label>
-          <input
+          </Label>
+          <Input
             value={fullName}
             onChange={(e) => setFullName(e.target.value)}
             placeholder="Ada Okafor"
             autoComplete="name"
-            className="h-11 w-full rounded-xl border border-border bg-background px-4 text-sm outline-none focus:border-brand"
+            className="h-11 rounded-xl px-4 focus-visible:border-brand"
             required
           />
         </div>
         <div>
-          <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+          <Label className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-muted-foreground">
             Email
-          </label>
-          <input
+          </Label>
+          <Input
             type="email"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             placeholder="you@example.com"
             autoComplete="email"
-            className="h-11 w-full rounded-xl border border-border bg-background px-4 text-sm outline-none focus:border-brand"
+            className="h-11 rounded-xl px-4 focus-visible:border-brand"
             required
           />
         </div>
         <div>
-          <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+          <Label className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-muted-foreground">
             Password
-          </label>
+          </Label>
           <div className="relative">
-            <input
+            <Input
               type={show ? "text" : "password"}
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               placeholder="At least 8 characters"
               autoComplete="new-password"
-              className="h-11 w-full rounded-xl border border-border bg-background px-4 pr-11 text-sm outline-none focus:border-brand"
+              className="h-11 rounded-xl px-4 pr-11 focus-visible:border-brand"
               required
             />
-            <button
+            <Button
               type="button"
+              variant="ghost"
+              size="icon"
               onClick={() => setShow((s) => !s)}
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+              className="absolute right-3 top-1/2 h-auto w-auto -translate-y-1/2 p-0 text-muted-foreground hover:bg-transparent hover:text-foreground"
               aria-label={show ? "Hide password" : "Show password"}
             >
               {show ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-            </button>
+            </Button>
           </div>
         </div>
         <p className="text-[11px] leading-relaxed text-muted-foreground">
           By continuing you agree to our terms and privacy policy.
         </p>
-        <button
+        <Button
           type="submit"
           disabled={loading}
-          className="flex h-11 w-full items-center justify-center rounded-full bg-gradient-brand text-sm font-semibold text-primary-foreground shadow-soft transition-opacity hover:opacity-95 disabled:opacity-60"
+          className="h-11 w-full rounded-full bg-gradient-brand text-sm font-semibold text-primary-foreground shadow-soft hover:opacity-95"
         >
           {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : "Create account"}
-        </button>
+        </Button>
       </form>
     </AuthShell>
   )

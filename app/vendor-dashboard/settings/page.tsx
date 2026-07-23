@@ -4,6 +4,7 @@ import { useEffect, useState } from "react"
 import { useAuth } from "@/hooks/use-auth"
 import { toast } from "sonner"
 import { Checkbox } from "@/components/ui/checkbox"
+import { Button } from "@/components/ui/button"
 export default function VendorSettingsPage() {
   const { user } = useAuth()
   const [form, setForm] = useState({
@@ -63,13 +64,14 @@ export default function VendorSettingsPage() {
         </div>
       </section>
 
-      <button
+      <Button
+        type="button"
         onClick={save}
         disabled={saving}
-        className="rounded-full bg-emerald-600 px-6 py-2.5 text-sm font-semibold text-white disabled:opacity-60 hover:bg-emerald-700 transition-colors"
+        className="h-auto rounded-full bg-emerald-600 px-6 py-2.5 text-sm font-semibold text-white hover:bg-emerald-700"
       >
         {saving ? "Saving…" : "Save Settings"}
-      </button>
+      </Button>
     </div>
   )
 }

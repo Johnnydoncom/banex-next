@@ -2,6 +2,7 @@
 
 import { useState } from "react"
 import { motion } from "framer-motion"
+import { Button } from "@/components/ui/button"
 
 interface ProductImageGalleryProps {
   images: { url: string; sort_order: number; is_primary: boolean }[]
@@ -54,7 +55,7 @@ export function ProductImageGallery({ images, name }: ProductImageGalleryProps) 
       {sortedImages.length > 1 && (
         <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
           {sortedImages.map((img, idx) => (
-            <button
+            <Button variant="ghost" type="button"
               key={img.url}
               onClick={() => setActiveIdx(idx)}
               className={`relative h-20 w-20 shrink-0 overflow-hidden rounded-lg border-2 transition-all ${
@@ -62,7 +63,7 @@ export function ProductImageGallery({ images, name }: ProductImageGalleryProps) 
               }`}
             >
               <img src={img.url} alt={`${name} thumbnail ${idx + 1}`} className="h-full w-full object-cover" />
-            </button>
+            </Button>
           ))}
         </div>
       )}

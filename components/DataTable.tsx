@@ -2,6 +2,8 @@
 
 import { useState, useMemo } from "react"
 import { Search, ChevronLeft, ChevronRight, ChevronDown, ChevronUp, ChevronsUpDown } from "lucide-react"
+import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
 
 /* ------------------------------------------------------------------ */
 /*  Types                                                              */
@@ -104,7 +106,7 @@ export function DataTable<T>({
       {searchFilter && (
         <div className="relative">
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-          <input
+          <Input
             id="data-table-search"
             type="text"
             value={query}
@@ -133,14 +135,13 @@ export function DataTable<T>({
                       className={`px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground ${col.className ?? ""}`}
                     >
                       {col.sortable ? (
-                        <button
-                          type="button"
+                        <Button variant="ghost" type="button"
                           onClick={() => toggleSort(col.key)}
                           className="inline-flex items-center hover:text-foreground"
                         >
                           {col.label}
                           <SortIcon col={col.key} />
-                        </button>
+                        </Button>
                       ) : (
                         col.label
                       )}
@@ -188,25 +189,23 @@ export function DataTable<T>({
                 {sorted.length}
               </p>
               <div className="flex items-center gap-1">
-                <button
-                  type="button"
+                <Button variant="ghost" type="button"
                   disabled={page === 0}
                   onClick={() => setPage((p) => p - 1)}
                   className="rounded-lg border border-border p-1.5 text-muted-foreground transition-colors hover:bg-surface disabled:opacity-40"
                 >
                   <ChevronLeft className="h-4 w-4" />
-                </button>
+                </Button>
                 <span className="px-3 text-xs font-medium">
                   {page + 1} / {totalPages}
                 </span>
-                <button
-                  type="button"
+                <Button variant="ghost" type="button"
                   disabled={page >= totalPages - 1}
                   onClick={() => setPage((p) => p + 1)}
                   className="rounded-lg border border-border p-1.5 text-muted-foreground transition-colors hover:bg-surface disabled:opacity-40"
                 >
                   <ChevronRight className="h-4 w-4" />
-                </button>
+                </Button>
               </div>
             </div>
           )}

@@ -7,6 +7,9 @@ import { toast } from "sonner"
 import { useRouter } from "next/navigation"
 import { useCart } from "@/components/CartContext"
 import type { GenericProduct } from "@/lib/generic-api"
+import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
+import { Textarea } from "@/components/ui/textarea"
 
 // Helper formatter
 const formatNaira = (amount: number) => {
@@ -111,18 +114,18 @@ export function ProductSellerCard({ product, sellerProduct, isBestPrice, index }
         <div className="flex flex-col items-start md:items-end">
           <p className="font-display text-2xl font-bold text-foreground">{formatNaira(sellerProduct.price)}</p>
           <div className="mt-3 flex flex-wrap gap-2">
-            <button
+            <Button variant="ghost" type="button"
               onClick={buyNow}
               className="inline-flex items-center gap-1.5 rounded-full bg-gradient-brand px-4 py-2 text-xs font-semibold text-primary-foreground"
             >
               <Lock className="h-3.5 w-3.5" /> Buy (escrow)
-            </button>
-            <button
+            </Button>
+            <Button variant="ghost" type="button"
               onClick={addToCart}
               className="inline-flex items-center gap-1.5 rounded-full border border-border bg-background px-3 py-2 text-xs font-medium hover:border-brand hover:text-brand"
             >
               <ShoppingBag className="h-3.5 w-3.5" /> Add
-            </button>
+            </Button>
             <a
               href={`tel:${phone.replace(/\s/g, "")}`}
               className="inline-flex items-center gap-1.5 rounded-full border border-border bg-background px-3 py-2 text-xs font-medium hover:border-brand hover:text-brand"
@@ -137,7 +140,7 @@ export function ProductSellerCard({ product, sellerProduct, isBestPrice, index }
             >
               <MessageCircle className="h-3.5 w-3.5" /> Chat
             </a>
-            <button
+            <Button variant="ghost" type="button"
               onClick={() => {
                 setQuoteOpen(!quoteOpen)
                 setBidOpen(false)
@@ -145,8 +148,8 @@ export function ProductSellerCard({ product, sellerProduct, isBestPrice, index }
               className="inline-flex items-center gap-1.5 rounded-full border border-border bg-background px-3 py-2 text-xs font-medium hover:border-brand hover:text-brand"
             >
               <FileText className="h-3.5 w-3.5" /> Quote
-            </button>
-            <button
+            </Button>
+            <Button variant="ghost" type="button"
               onClick={() => {
                 setBidOpen(!bidOpen)
                 setBidAmount(Math.round(sellerProduct.price * 0.9))
@@ -155,7 +158,7 @@ export function ProductSellerCard({ product, sellerProduct, isBestPrice, index }
               className="inline-flex items-center gap-1.5 rounded-full border border-border bg-background px-3 py-2 text-xs font-medium hover:border-brand hover:text-brand"
             >
               <Gavel className="h-3.5 w-3.5" /> Make offer
-            </button>
+            </Button>
           </div>
         </div>
       </div>
@@ -173,7 +176,7 @@ export function ProductSellerCard({ product, sellerProduct, isBestPrice, index }
             <span className="text-[11px] font-semibold uppercase tracking-widest text-brand-deep">
               Your offer
             </span>
-            <input
+            <Input
               type="number"
               min={1000}
               value={bidAmount}
@@ -181,12 +184,12 @@ export function ProductSellerCard({ product, sellerProduct, isBestPrice, index }
               className="mt-1 h-11 w-full rounded-full border border-border bg-background px-4 text-sm outline-none focus:border-brand"
             />
           </label>
-          <button
+          <Button variant="ghost"
             type="submit"
             className="self-end rounded-full bg-gradient-brand px-5 py-3 text-sm font-semibold text-primary-foreground"
           >
             Send offer
-          </button>
+          </Button>
         </form>
       )}
 
@@ -204,7 +207,7 @@ export function ProductSellerCard({ product, sellerProduct, isBestPrice, index }
             <span className="text-[11px] font-semibold uppercase tracking-widest text-brand-deep">
               Request a quote
             </span>
-            <textarea
+            <Textarea
               value={quoteText}
               onChange={(e) => setQuoteText(e.target.value)}
               placeholder="Quantity, customisation, delivery date…"
@@ -212,12 +215,12 @@ export function ProductSellerCard({ product, sellerProduct, isBestPrice, index }
               className="mt-1 w-full rounded-2xl border border-border bg-background p-3 text-sm outline-none focus:border-brand"
             />
           </label>
-          <button
+          <Button variant="ghost"
             type="submit"
             className="self-start rounded-full bg-gradient-brand px-5 py-3 text-sm font-semibold text-primary-foreground"
           >
             Send request
-          </button>
+          </Button>
         </form>
       )}
     </motion.div>

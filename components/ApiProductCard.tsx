@@ -45,7 +45,7 @@ export function ApiProductCard({ product }: { product: GenericProduct }) {
         {product.brand && (
           <p className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">{product.brand}</p>
         )}
-        <h3 className="mt-0.5 line-clamp-1 font-display text-base font-semibold text-foreground">
+        <h3 className="mt-0.5 line-clamp-2 font-display text-base font-semibold text-foreground">
           {product.name}
         </h3>
 

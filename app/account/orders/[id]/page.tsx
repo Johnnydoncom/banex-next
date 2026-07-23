@@ -7,6 +7,8 @@ import {
   ChevronLeft, Printer, AlertTriangle, Truck, MapPin,
   Loader2, CreditCard, CheckCircle2, Clock, XCircle, RefreshCw
 } from "lucide-react"
+import { Button } from "@/components/ui/button"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { useAuth } from "@/hooks/use-auth"
 import {
   userFetchOrder, userInitializeOrderPayment, userCheckoutVerifyPayment,
@@ -162,25 +164,30 @@ function PaymentSection({
           <div className="flex flex-col items-center sm:items-end flex-none">
             <div className="flex flex-col sm:flex-row items-center gap-3">
               {activeMethods.length > 0 && state !== "success" && (
-                <select
+                <Select
                   value={selectedMethodId}
-                  onChange={e => setSelectedMethodId(e.target.value)}
+                  onValueChange={setSelectedMethodId}
                   disabled={state !== "idle" && state !== "error"}
-                  className="h-11 rounded-xl border border-amber-300/50 bg-white/60 px-4 text-sm font-semibold text-amber-950 outline-none backdrop-blur-sm transition-colors focus:border-amber-500 focus:bg-white dark:border-amber-700/50 dark:bg-amber-950/40 dark:text-amber-100 dark:focus:border-amber-500 dark:focus:bg-amber-950/60"
                 >
-                  {activeMethods.map(m => (
-                    <option key={m.id} value={m.id}>{m.name}</option>
-                  ))}
-                </select>
+                  <SelectTrigger className="h-11 rounded-xl border-amber-300/50 bg-white/60 px-4 text-sm font-semibold text-amber-950 backdrop-blur-sm focus:border-amber-500 dark:border-amber-700/50 dark:bg-amber-950/40 dark:text-amber-100">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {activeMethods.map(m => (
+                      <SelectItem key={m.id} value={m.id}>{m.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               )}
               {!isManualSelected && (
-                <button
+                <Button
+                  type="button"
                   onClick={handlePaystackPay}
                   disabled={state === "loading" || state === "redirecting" || state === "verifying" || state === "success"}
-                  className={`relative inline-flex min-w-[160px] items-center justify-center gap-2 overflow-hidden rounded-xl px-6 py-3 text-sm font-bold shadow-lg transition-all duration-200 ${
+                  className={`relative h-auto min-w-[160px] gap-2 overflow-hidden rounded-xl px-6 py-3 text-sm font-bold shadow-lg ${
                     state === "success"
                       ? "bg-emerald-500 text-white"
-                      : "bg-gradient-to-r from-amber-500 to-orange-500 text-white hover:from-amber-600 hover:to-orange-600 hover:shadow-amber-500/30 active:scale-95 disabled:opacity-70"
+                      : "bg-gradient-to-r from-amber-500 to-orange-500 text-white hover:from-amber-600 hover:to-orange-600 hover:shadow-amber-500/30 active:scale-95"
                   }`}
                 >
                   {state === "loading" && <Loader2 className="h-4 w-4 animate-spin" />}
@@ -196,7 +203,7 @@ function PaymentSection({
                     {state === "success" && "Paid!"}
                     {state === "error" && `Retry Payment`}
                   </span>
-                </button>
+                </Button>
               )}
             </div>
             {!isManualSelected && (
@@ -275,12 +282,13 @@ export default function OrderDetailsPage() {
         <AlertTriangle className="h-10 w-10 text-rose-500" />
         <p className="mt-4 font-semibold">Could not load order</p>
         <p className="mt-2 text-sm text-muted-foreground">{error || "Order not found"}</p>
-        <button
+        <Button
+          type="button"
           onClick={() => router.back()}
-          className="mt-6 rounded-full bg-gradient-brand px-6 py-2.5 text-sm font-semibold text-primary-foreground"
+          className="mt-6 h-auto rounded-full bg-gradient-brand px-6 py-2.5 text-sm font-semibold text-primary-foreground"
         >
           Go Back
-        </button>
+        </Button>
       </div>
     )
   }
@@ -302,12 +310,14 @@ export default function OrderDetailsPage() {
           <ChevronLeft className="h-4 w-4" /> Back to orders
         </Link>
         {!isUnpaid && (
-          <button
+          <Button
+            type="button"
+            variant="outline"
             onClick={() => window.print()}
-            className="inline-flex items-center gap-2 rounded-full border border-border bg-card px-4 py-2 text-sm font-semibold transition-colors hover:border-brand hover:text-brand"
+            className="h-auto gap-2 rounded-full bg-card px-4 py-2 text-sm font-semibold hover:border-brand hover:text-brand"
           >
             <Printer className="h-4 w-4" /> Download Receipt
-          </button>
+          </Button>
         )}
       </div>
 

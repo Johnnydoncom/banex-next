@@ -2,6 +2,7 @@
 
 import Link from "next/link"
 import { Heart, Trash2, ShoppingBag } from "lucide-react"
+import { Button } from "@/components/ui/button"
 import { useCart } from "@/components/CartContext"
 import { useWishlist, type WishlistItem } from "@/components/WishlistContext"
 import { toast } from "sonner"
@@ -57,19 +58,23 @@ export default function WishlistPage() {
                 <p className="truncate text-sm font-semibold">{i.productName}</p>
                 <p className="mt-0.5 text-sm font-bold text-brand-deep">₦{Number(i.price).toLocaleString()}</p>
                 <div className="mt-3 flex gap-2">
-                  <button
+                  <Button
+                    type="button"
                     onClick={() => moveToCart(i)}
-                    className="inline-flex flex-1 items-center justify-center gap-1.5 rounded-full bg-gradient-brand px-3 py-2 text-xs font-semibold text-primary-foreground"
+                    className="h-auto flex-1 gap-1.5 rounded-full bg-gradient-brand px-3 py-2 text-xs font-semibold text-primary-foreground"
                   >
                     <ShoppingBag className="h-3.5 w-3.5" /> Add to cart
-                  </button>
-                  <button
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="icon"
                     onClick={() => handleRemove(i.productId)}
                     aria-label="Remove"
-                    className="rounded-full border border-border bg-card p-2 text-muted-foreground hover:border-rose-500 hover:text-rose-500"
+                    className="h-auto w-auto rounded-full bg-card p-2 text-muted-foreground hover:border-rose-500 hover:text-rose-500"
                   >
                     <Trash2 className="h-3.5 w-3.5" />
-                  </button>
+                  </Button>
                 </div>
               </div>
             </li>

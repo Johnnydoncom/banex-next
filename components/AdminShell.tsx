@@ -17,6 +17,8 @@ import { useEffect, useState, type ReactNode } from "react"
 import { useAuth, signOut } from "@/hooks/use-auth"
 import { toast } from "sonner"
 import Image from "next/image"
+import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
 
 export type NavItem = {
   to: string
@@ -198,7 +200,7 @@ export function AdminShell({ title, subtitle, nav, accent, children, guard }: Pr
 
         {/* Collapse toggle + Sign out */}
         <div className="border-t border-border px-3 py-3 space-y-1">
-          <button
+          <Button variant="ghost" type="button"
             onClick={() => setCollapsed(!collapsed)}
             className="flex w-full items-center gap-3 rounded-xl px-3 py-2 text-[13px] font-medium text-muted-foreground hover:bg-surface hover:text-foreground"
             title={collapsed ? "Expand sidebar" : "Collapse sidebar"}
@@ -211,15 +213,15 @@ export function AdminShell({ title, subtitle, nav, accent, children, guard }: Pr
                 <span>Collapse</span>
               </>
             )}
-          </button>
-          <button
+          </Button>
+          <Button variant="ghost" type="button"
             onClick={handleSignOut}
             className={`flex w-full items-center gap-3 rounded-xl px-3 py-2 text-[13px] font-medium text-muted-foreground hover:bg-surface hover:text-foreground ${collapsed ? "justify-center" : ""}`}
             title="Sign out"
           >
             <LogOut className="h-[18px] w-[18px] text-brand flex-shrink-0" />
             {!collapsed && <span>Sign out</span>}
-          </button>
+          </Button>
         </div>
       </aside>
 
@@ -232,9 +234,9 @@ export function AdminShell({ title, subtitle, nav, accent, children, guard }: Pr
               <Link href="/" onClick={() => setMobileOpen(false)}>
                 <Image src="/assets/banex-mall-logo.png" alt="Banex" width={100} height={32} className="h-8 w-auto" />
               </Link>
-              <button onClick={() => setMobileOpen(false)} className="rounded-lg p-1.5 text-muted-foreground hover:bg-surface">
+              <Button variant="ghost" type="button" onClick={() => setMobileOpen(false)} className="rounded-lg p-1.5 text-muted-foreground hover:bg-surface">
                 <X className="h-5 w-5" />
-              </button>
+              </Button>
             </div>
             <div className="border-b border-border px-4 py-3">
               <p className="font-display text-sm font-semibold">{title}</p>
@@ -244,12 +246,12 @@ export function AdminShell({ title, subtitle, nav, accent, children, guard }: Pr
               <SidebarNav showLabels />
             </div>
             <div className="border-t border-border px-3 py-3">
-              <button
+              <Button variant="ghost" type="button"
                 onClick={handleSignOut}
                 className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-[13px] font-medium text-muted-foreground hover:bg-surface hover:text-foreground"
               >
                 <LogOut className="h-[18px] w-[18px] text-brand" /> Sign out
-              </button>
+              </Button>
             </div>
           </aside>
         </div>
@@ -260,13 +262,13 @@ export function AdminShell({ title, subtitle, nav, accent, children, guard }: Pr
         {/* ── Top Header Bar ──────────────────────────────────────── */}
         <header className="sticky top-0 z-30 flex h-14 items-center gap-3 border-b border-border bg-card/95 px-4 backdrop-blur md:px-6">
           {/* Mobile hamburger */}
-          <button
+          <Button variant="ghost" type="button"
             onClick={() => setMobileOpen(true)}
             className="rounded-lg border border-border p-2 text-muted-foreground lg:hidden"
             aria-label="Open menu"
           >
             <Menu className="h-4 w-4" />
-          </button>
+          </Button>
 
           {/* Breadcrumb */}
           <div className="hidden items-center gap-1.5 text-sm lg:flex">
@@ -290,16 +292,16 @@ export function AdminShell({ title, subtitle, nav, accent, children, guard }: Pr
           {/* Search */}
           <div className="hidden items-center gap-2 rounded-full border border-border bg-surface/60 px-3 py-1.5 md:flex">
             <Search className="h-3.5 w-3.5 text-muted-foreground" />
-            <input
+            <Input
               placeholder="Search…"
               className="w-40 bg-transparent text-xs outline-none placeholder:text-muted-foreground/60 lg:w-56"
             />
           </div>
 
           {/* Notifications */}
-          <button className="relative rounded-lg border border-border p-2 text-muted-foreground hover:bg-surface hover:text-foreground">
+          <Button variant="ghost" type="button" className="relative rounded-lg border border-border p-2 text-muted-foreground hover:bg-surface hover:text-foreground">
             <Bell className="h-4 w-4" />
-          </button>
+          </Button>
 
           {/* User avatar */}
           <div className="flex items-center gap-2">

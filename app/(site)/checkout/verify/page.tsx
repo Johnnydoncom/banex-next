@@ -6,6 +6,7 @@ import Link from "next/link"
 import { CheckCircle2, XCircle, Loader2 } from "lucide-react"
 import { toast } from "sonner"
 import { userCheckoutVerifyPayment } from "@/lib/user-api"
+import { Button } from "@/components/ui/button"
 
 type VerifyState = "verifying" | "success" | "error"
 
@@ -74,12 +75,12 @@ function VerifyContent() {
           >
             View Orders
           </Link>
-          <button
+          <Button variant="ghost" type="button"
             onClick={() => router.push("/checkout")}
             className="rounded-full border border-border bg-card px-5 py-3 text-sm font-semibold hover:border-brand hover:text-brand"
           >
             Back to Checkout
-          </button>
+          </Button>
         </div>
       </section>
     )

@@ -5,6 +5,7 @@ import { Star, MapPin, Heart } from "lucide-react"
 import { motion } from "framer-motion"
 import { GenericProduct } from "@/lib/generic-api"
 import { useWishlist } from "@/components/WishlistContext"
+import { Button } from "@/components/ui/button"
 
 export function ProductCard({ product, index = 0 }: { product: GenericProduct; index?: number }) {
   const { isInWishlist, toggle } = useWishlist()
@@ -48,7 +49,7 @@ export function ProductCard({ product, index = 0 }: { product: GenericProduct; i
           <span className="absolute left-3 top-3 rounded-full bg-card/90 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wider text-brand-deep backdrop-blur">
             {categoryName}
           </span>
-          <button
+          <Button variant="ghost" type="button"
             aria-label="Save"
             onClick={(e) => {
               e.preventDefault()
@@ -57,7 +58,7 @@ export function ProductCard({ product, index = 0 }: { product: GenericProduct; i
             className="absolute right-3 top-3 flex h-8 w-8 items-center justify-center rounded-full bg-card/90 text-muted-foreground backdrop-blur transition-colors hover:text-brand"
           >
             <Heart className={`h-4 w-4 ${isInWishlist(product.id) ? "fill-brand text-brand" : ""}`} />
-          </button>
+          </Button>
         </div>
         <div className="p-4">
           <p className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">{product.brand || "Brand"}</p>

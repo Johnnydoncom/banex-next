@@ -13,6 +13,7 @@ import { useSellerProducts, useCategories } from "@/hooks/use-swr-data"
 import { formatNaira } from "@/lib/products"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
+import { Button } from "@/components/ui/button"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Switch } from "@/components/ui/switch"
 type ProductForm = {
@@ -309,12 +310,12 @@ export default function VendorProductsPage() {
               className="h-9 w-52 rounded-full bg-card pl-9 pr-3 text-xs"
             />
           </label>
-          <button
+          <Button variant="ghost" type="button"
             onClick={openAdd}
             className="inline-flex items-center gap-2 rounded-full bg-emerald-600 px-4 py-2 text-xs font-semibold text-white hover:bg-emerald-700 transition-colors"
           >
             <Plus className="h-3.5 w-3.5" /> Add product
-          </button>
+          </Button>
         </div>
       </div>
 
@@ -327,9 +328,9 @@ export default function VendorProductsPage() {
           <PackageOpen className="mx-auto h-10 w-10 text-muted-foreground/40" />
           <p className="mt-3 font-display font-semibold">No products yet</p>
           <p className="mt-1 text-xs text-muted-foreground">Add your first product listing to start selling.</p>
-          <button onClick={openAdd} className="mt-4 inline-flex items-center gap-2 rounded-full bg-emerald-600 px-4 py-2 text-xs font-semibold text-white">
+          <Button variant="ghost" type="button" onClick={openAdd} className="mt-4 inline-flex items-center gap-2 rounded-full bg-emerald-600 px-4 py-2 text-xs font-semibold text-white">
             <Plus className="h-3.5 w-3.5" /> Add first product
-          </button>
+          </Button>
         </div>
       ) : (
         <div className="rounded-2xl border border-border bg-card overflow-hidden">
@@ -376,17 +377,17 @@ export default function VendorProductsPage() {
                               autoFocus
                               onKeyDown={(e) => { if (e.key === "Enter") handleStockSave(p.id); if (e.key === "Escape") setStockEditId(null) }}
                             />
-                            <button onClick={() => handleStockSave(p.id)} className="text-emerald-600 hover:underline text-xs font-medium">Save</button>
-                            <button onClick={() => setStockEditId(null)} className="text-muted-foreground hover:text-foreground text-xs">Cancel</button>
+                            <Button variant="ghost" type="button" onClick={() => handleStockSave(p.id)} className="text-emerald-600 hover:underline text-xs font-medium">Save</Button>
+                            <Button variant="ghost" type="button" onClick={() => setStockEditId(null)} className="text-muted-foreground hover:text-foreground text-xs">Cancel</Button>
                           </div>
                         ) : (
-                          <button
+                          <Button variant="ghost" type="button"
                             onClick={() => { setStockEditId(p.id); setStockVal(String(p.stock_quantity ?? 0)) }}
                             className="flex items-center gap-1 group text-sm hover:text-emerald-600"
                           >
                             {p.stock_quantity ?? 0}
                             <Edit2 className="h-3 w-3 opacity-0 group-hover:opacity-100 transition-opacity" />
-                          </button>
+                          </Button>
                         )}
                       </td>
                       <td className="px-5 py-3">
@@ -401,25 +402,25 @@ export default function VendorProductsPage() {
                       </td>
                       <td className="px-5 py-3 text-right">
                         <div className="flex items-center justify-end gap-1">
-                          <button
+                          <Button variant="ghost" type="button"
                             onClick={() => openStockModal(p)}
                             title="Manage stock"
                             className="rounded-lg p-1.5 text-muted-foreground hover:bg-blue-500/10 hover:text-blue-600 transition-colors"
                           >
                             <Package2 className="h-4 w-4" />
-                          </button>
-                          <button
+                          </Button>
+                          <Button variant="ghost" type="button"
                             onClick={() => openEdit(p)}
                             className="rounded-lg p-1.5 text-muted-foreground hover:bg-emerald-500/10 hover:text-emerald-600 transition-colors"
                           >
                             <Edit2 className="h-4 w-4" />
-                          </button>
-                          <button
+                          </Button>
+                          <Button variant="ghost" type="button"
                             onClick={() => setDeleteId(p.id)}
                             className="rounded-lg p-1.5 text-muted-foreground hover:bg-rose-500/10 hover:text-rose-600 transition-colors"
                           >
                             <Trash2 className="h-4 w-4" />
-                          </button>
+                          </Button>
                         </div>
                       </td>
                     </tr>
@@ -444,9 +445,9 @@ export default function VendorProductsPage() {
                 <h2 className="font-display text-lg font-bold">{editProduct ? "Edit Product" : "Add Product"}</h2>
                 <p className="text-xs text-muted-foreground">Fill in the details below</p>
               </div>
-              <button onClick={() => setShowModal(false)} className="rounded-lg p-1.5 text-muted-foreground hover:bg-surface hover:text-foreground">
+              <Button variant="ghost" type="button" onClick={() => setShowModal(false)} className="rounded-lg p-1.5 text-muted-foreground hover:bg-surface hover:text-foreground">
                 <X className="h-5 w-5" />
-              </button>
+              </Button>
             </div>
 
             {/* Form body */}
@@ -465,24 +466,22 @@ export default function VendorProductsPage() {
                       {form.primary_image_index === i && (
                         <span className="absolute bottom-0 left-0 right-0 bg-emerald-600 text-center text-[9px] font-bold text-white py-0.5">PRIMARY</span>
                       )}
-                      <button
-                        type="button"
+                      <Button variant="ghost" type="button"
                         onClick={(e) => removeImage(i, e)}
                         className="absolute right-1 top-1 rounded-full bg-black/60 p-1 text-white opacity-0 transition-opacity hover:bg-rose-500 group-hover:opacity-100"
                       >
                         <X className="h-3 w-3" />
-                      </button>
+                      </Button>
                     </div>
                   ))}
-                  <button
-                    type="button"
+                  <Button variant="ghost" type="button"
                     onClick={() => fileInputRef.current?.click()}
                     className="flex h-20 w-20 flex-col items-center justify-center gap-1 rounded-lg border border-dashed border-border text-muted-foreground hover:border-emerald-500 hover:text-emerald-600 transition-colors"
                   >
                     <Plus className="h-5 w-5" />
                     <span className="text-[9px] font-semibold">Add photo</span>
-                  </button>
-                  <input ref={fileInputRef} type="file" accept="image/*" multiple className="hidden" onChange={handleImageChange} />
+                  </Button>
+                  <Input ref={fileInputRef} type="file" accept="image/*" multiple className="hidden" onChange={handleImageChange} />
                 </div>
                 <p className="mt-1 text-[10px] text-muted-foreground">Click an image to set it as primary.</p>
               </div>
@@ -578,23 +577,21 @@ export default function VendorProductsPage() {
                         placeholder={`Spec ${i + 1} (e.g. RAM: 8GB)`}
                       />
                       {form.specifications.length > 1 && (
-                        <button
-                          type="button"
+                        <Button variant="ghost" type="button"
                           onClick={() => setForm((f) => ({ ...f, specifications: f.specifications.filter((_, j) => j !== i) }))}
                           className="rounded-lg border border-border p-1.5 text-muted-foreground hover:border-rose-500 hover:text-rose-600"
                         >
                           <X className="h-4 w-4" />
-                        </button>
+                        </Button>
                       )}
                     </div>
                   ))}
-                  <button
-                    type="button"
+                  <Button variant="ghost" type="button"
                     onClick={() => setForm((f) => ({ ...f, specifications: [...f.specifications, ""] }))}
                     className="flex items-center gap-1.5 text-xs font-medium text-emerald-600 hover:underline"
                   >
                     <Plus className="h-3.5 w-3.5" /> Add specification
-                  </button>
+                  </Button>
                 </div>
               </div>
 
@@ -615,19 +612,19 @@ export default function VendorProductsPage() {
 
             {/* Footer */}
             <div className="flex items-center gap-3 border-t border-border px-6 py-4">
-              <button
+              <Button variant="ghost" type="button"
                 onClick={handleSave}
                 disabled={saving}
                 className="flex-1 rounded-full bg-emerald-600 py-2.5 text-sm font-semibold text-white disabled:opacity-60 hover:bg-emerald-700 transition-colors"
               >
                 {saving ? "Saving…" : editProduct ? "Update Product" : "Create Product"}
-              </button>
-              <button
+              </Button>
+              <Button variant="ghost" type="button"
                 onClick={() => setShowModal(false)}
                 className="rounded-full border border-border bg-card px-5 py-2.5 text-sm font-semibold hover:border-foreground/30 transition-colors"
               >
                 Cancel
-              </button>
+              </Button>
             </div>
           </div>
         </div>
@@ -664,19 +661,19 @@ export default function VendorProductsPage() {
             </F>
 
             <div className="mt-5 flex gap-3">
-              <button
+              <Button variant="ghost" type="button"
                 onClick={handleStockModalSave}
                 disabled={savingStock}
                 className="flex-1 rounded-full bg-blue-600 py-2.5 text-sm font-semibold text-white disabled:opacity-60 hover:bg-blue-700 transition-colors"
               >
                 {savingStock ? "Updating…" : "Update Stock"}
-              </button>
-              <button
+              </Button>
+              <Button variant="ghost" type="button"
                 onClick={() => setStockModalProduct(null)}
                 className="flex-1 rounded-full border border-border bg-card py-2.5 text-sm font-semibold hover:border-foreground/30 transition-colors"
               >
                 Cancel
-              </button>
+              </Button>
             </div>
           </div>
         </div>
@@ -692,18 +689,18 @@ export default function VendorProductsPage() {
             <h3 className="mt-4 font-display text-lg font-bold">Delete Product?</h3>
             <p className="mt-1 text-sm text-muted-foreground">This action cannot be undone. The listing will be permanently removed.</p>
             <div className="mt-5 flex gap-3">
-              <button
+              <Button variant="ghost" type="button"
                 onClick={() => handleDelete(deleteId)}
                 className="flex-1 rounded-full bg-rose-600 py-2.5 text-sm font-semibold text-white hover:bg-rose-700 transition-colors"
               >
                 Delete
-              </button>
-              <button
+              </Button>
+              <Button variant="ghost" type="button"
                 onClick={() => setDeleteId(null)}
                 className="flex-1 rounded-full border border-border bg-card py-2.5 text-sm font-semibold hover:border-foreground/30 transition-colors"
               >
                 Cancel
-              </button>
+              </Button>
             </div>
           </div>
         </div>

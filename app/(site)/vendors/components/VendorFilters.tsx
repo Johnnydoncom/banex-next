@@ -4,6 +4,8 @@ import { useRouter, useSearchParams } from "next/navigation"
 import { useDebouncedCallback } from "use-debounce"
 import { Search } from "lucide-react"
 import { GenericCategory } from "@/lib/generic-api"
+import { Input } from "@/components/ui/input"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 
 export function VendorFilters({ categories }: { categories: GenericCategory[] }) {
   const router = useRouter()
@@ -30,21 +32,22 @@ export function VendorFilters({ categories }: { categories: GenericCategory[] })
     <div className="grid gap-4 md:grid-cols-[1fr_auto]">
       <label className="relative block">
         <Search className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-        <input
+        <Input
           defaultValue={q}
           onChange={(e) => handleSearch(e.target.value)}
           placeholder="Search vendor or description…"
           className="h-11 w-full rounded-full border border-border bg-card pl-11 pr-4 text-sm outline-none focus:border-brand"
         />
       </label>
-      <select 
-        value={cat} 
-        onChange={(e) => router.push(`/vendors?${createQueryString("cat", e.target.value)}`)} 
-        className="h-11 rounded-full border border-border bg-card px-4 text-sm outline-none focus:border-brand"
-      >
-        <option value="all">All categories</option>
-        {categories.map((c) => <option key={c.slug} value={c.slug}>{c.name}</option>)}
-      </select>
+      <Select value={cat} onValueChange={(value) => router.push(`/vendors?${createQueryString("cat", value)}`)}>
+        <SelectTrigger className="h-11 rounded-full bg-card px-4 focus:border-brand">
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value="all">All categories</SelectItem>
+          {categories.map((c) => <SelectItem key={c.slug} value={c.slug}>{c.name}</SelectItem>)}
+        </SelectContent>
+      </Select>
     </div>
   )
 }

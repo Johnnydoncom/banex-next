@@ -4,6 +4,9 @@ import Link from "next/link"
 import { Star, MapPin, Bike, Store, Search } from "lucide-react"
 import { useMemo, useState } from "react"
 import { GenericSeller } from "@/lib/generic-api"
+import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
+import Image from "next/image"
 
 type Props = {
   sellers: GenericSeller[]
@@ -39,7 +42,7 @@ export function VendorSidebar({ sellers, selectedSlug, onSelect, filterCategory 
       <div className="border-b border-border px-3 py-2.5">
         <label className="relative block">
           <Search className="pointer-events-none absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
-          <input
+          <Input
             value={q}
             onChange={(e) => setQ(e.target.value)}
             placeholder="Search vendors…"
@@ -50,28 +53,26 @@ export function VendorSidebar({ sellers, selectedSlug, onSelect, filterCategory 
 
       <ul className="max-h-[640px] overflow-y-auto p-2">
         <li>
-          <button
+          <Button variant="ghost" type="button"
             onClick={() => onSelect?.(undefined)}
-            className={`flex w-full items-center justify-between rounded-lg px-3 py-2 text-left text-xs transition-colors ${
-              !selectedSlug ? "bg-brand-soft/30 font-medium text-brand-deep" : "text-muted-foreground hover:bg-surface"
-            }`}
+            className={`flex w-full items-center justify-between rounded-lg px-3 py-2 text-left text-xs transition-colors ${!selectedSlug ? "bg-brand-soft/30 font-medium text-brand-deep" : "text-muted-foreground hover:bg-surface"
+              }`}
           >
             <span>All vendors</span>
             <span className="text-[10px]">{list.length}</span>
-          </button>
+          </Button>
         </li>
         {list.map((v) => {
           const active = selectedSlug === v.slug
           return (
             <li key={v.id}>
-              <button
+              <button type="button"
                 onClick={() => onSelect?.(v.slug)}
-                className={`mt-1 flex w-full items-start gap-3 rounded-xl border p-2.5 text-left transition-colors ${
-                  active ? "border-brand bg-brand-soft/20" : "border-transparent hover:border-border hover:bg-surface/60"
-                }`}
+                className={`mt-1 h-full flex w-full items-start gap-3 rounded-xl border p-2.5 text-left transition-colors ${active ? "border-brand bg-brand-soft/20" : "border-transparent hover:border-border hover:bg-surface/60"
+                  }`}
               >
                 <div className="relative h-11 w-11 flex-none overflow-hidden rounded-lg">
-                  <img src={v.cover_image_url || "/assets/placeholder.jpg"} alt={v.shop_name} className="h-full w-full object-cover" loading="lazy" />
+                  <Image src={v.cover_image_url || "/assets/placeholder.jpg"} alt={v.shop_name} className="h-full w-full object-cover" loading="lazy" width={200} height={100} />
                   {v.tier === "premium" && (
                     <span className="absolute -right-1 -top-1 rounded-full bg-gradient-brand px-1 text-[8px] font-bold text-primary-foreground">★</span>
                   )}
@@ -88,8 +89,8 @@ export function VendorSidebar({ sellers, selectedSlug, onSelect, filterCategory 
                       </span>
                     )}
                     {v.location && (
-                      <span className="inline-flex items-center gap-0.5">
-                        <MapPin className="h-2.5 w-2.5" /> {v.location}
+                      <span className="inline-flex items-center gap-0.5 line-clamp-1">
+                        <MapPin className="h-2.5 w-2.5" /> <span className="!max-w-[93%] line-clamp-1">{v.location}</span>
                       </span>
                     )}
                     {v.delivery_estimate_minutes && (

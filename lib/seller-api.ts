@@ -316,8 +316,8 @@ export async function sellerDeclineOrderItem(orderId: string, itemId: string, re
 export type SellerWallet = {
   balance: number
   currency: string
-  total_earned: number
-  total_withdrawn: number
+  total_earned?: number
+  total_withdrawn?: number
 }
 
 export type SellerTransaction = {
@@ -331,24 +331,33 @@ export type SellerTransaction = {
   created_at: { item: string }
 }
 
+// Shape verified live 2026-07-23 against GET /seller/finance/earnings/summary.
 export type SellerEarningsSummary = {
-  total_earned: number
-  commission_paid: number
-  net_earnings: number
-  pending_payout: number
   currency: string
+  pending_total: number
+  payable_total: number
+  paid_out_total: number
+  lifetime_total: number
+  line_counts: { pending: number; payable: number; paid_out: number; void: number }
 }
 
+// Settlement lines share the platform-revenue-line shape (line_total / line_platform_fee /
+// line_seller_total / settlement_status); legacy aliases kept optional for safety.
 export type SellerEarningsLine = {
   id: string
   order_id: string
   order_reference: string
-  gross_amount: number
-  commission_amount: number
-  net_amount: number
   commission_percent: number
-  status: "pending" | "settled" | "reversed"
   created_at: { item: string }
+  line_total?: number
+  line_platform_fee?: number
+  line_seller_total?: number
+  settlement_status?: string
+  // legacy aliases
+  gross_amount?: number
+  commission_amount?: number
+  net_amount?: number
+  status?: string
 }
 
 export type SellerFinanceOverview = {
@@ -385,8 +394,8 @@ export async function sellerFetchTransactions(token: string, page = 1) {
 }
 
 export async function sellerFetchEarningsSummary(token: string) {
-  const res = await proxyFetch<{ summary: SellerEarningsSummary }>("/seller/finance/earnings/summary", token)
-  return res.data?.summary ?? null
+  const res = await proxyFetch<{ earnings: SellerEarningsSummary }>("/seller/finance/earnings/summary", token)
+  return res.data?.earnings ?? null
 }
 
 export async function sellerFetchEarningsLines(token: string, page = 1) {
@@ -398,8 +407,8 @@ export async function sellerFetchEarningsLines(token: string, page = 1) {
 }
 
 export async function sellerFetchFinanceOverview(token: string) {
-  const res = await proxyFetch<{ wallet: SellerWallet; earnings: SellerEarningsSummary }>("/seller/finance/overview", token)
-  return res.data ?? null
+  const res = await proxyFetch<{ finance: { wallet: SellerWallet; earnings: SellerEarningsSummary } }>("/seller/finance/overview", token)
+  return res.data?.finance ?? null
 }
 
 export async function sellerFetchWithdrawals(token: string, page = 1) {

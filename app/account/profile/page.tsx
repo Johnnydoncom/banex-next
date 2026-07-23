@@ -6,6 +6,8 @@ import { Store, UserCircle } from "lucide-react"
 import { useAuth } from "@/hooks/use-auth"
 import { useRoles, requestVendorRole } from "@/hooks/use-roles"
 import { toast } from "sonner"
+import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
 
 export default function ProfilePage() {
   const { user, session } = useAuth()
@@ -93,10 +95,10 @@ export default function ProfilePage() {
             <span className="text-xs font-semibold text-foreground">Full Name</span>
             <div className="relative">
               <UserCircle className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <input
+              <Input
                 value={profile.full_name}
                 onChange={(e) => setProfile({ ...profile, full_name: e.target.value })}
-                className="h-11 w-full rounded-xl border border-border bg-background pl-10 pr-4 text-sm outline-none transition-colors focus:border-brand focus:ring-1 focus:ring-brand/30"
+                className="h-11 rounded-xl pl-10 pr-4 focus-visible:border-brand focus-visible:ring-brand/30"
                 placeholder="Enter your full name"
               />
             </div>
@@ -106,10 +108,10 @@ export default function ProfilePage() {
             <span className="text-xs font-semibold text-foreground">Phone Number</span>
             <div className="relative">
               <span className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground font-medium text-xs flex items-center justify-center">+</span>
-              <input
+              <Input
                 value={profile.phone}
                 onChange={(e) => setProfile({ ...profile, phone: e.target.value })}
-                className="h-11 w-full rounded-xl border border-border bg-background pl-10 pr-4 text-sm outline-none transition-colors focus:border-brand focus:ring-1 focus:ring-brand/30"
+                className="h-11 rounded-xl pl-10 pr-4 focus-visible:border-brand focus-visible:ring-brand/30"
                 placeholder="e.g. 2348000000000"
               />
             </div>
@@ -117,23 +119,24 @@ export default function ProfilePage() {
           
           <label className="space-y-1.5 md:col-span-2">
             <span className="text-xs font-semibold text-foreground">Email Address</span>
-            <input 
-              value={user?.email ?? ""} 
-              disabled 
-              className="h-11 w-full rounded-xl border border-border bg-surface px-4 text-sm text-muted-foreground cursor-not-allowed opacity-70" 
+            <Input
+              value={user?.email ?? ""}
+              disabled
+              className="h-11 rounded-xl bg-surface px-4 text-muted-foreground opacity-70"
             />
             <p className="text-[10px] text-muted-foreground mt-1">Email address cannot be changed.</p>
           </label>
         </div>
 
         <div className="mt-8 flex justify-end">
-          <button
+          <Button
+            type="button"
             onClick={save}
             disabled={saving}
-            className="rounded-xl bg-gradient-brand px-6 py-2.5 text-sm font-semibold text-primary-foreground shadow-sm hover:shadow transition-all disabled:opacity-60 disabled:cursor-not-allowed"
+            className="h-auto rounded-xl bg-gradient-brand px-6 py-2.5 text-sm font-semibold text-primary-foreground shadow-sm hover:shadow"
           >
             {saving ? "Saving Changes..." : "Save Changes"}
-          </button>
+          </Button>
         </div>
       </section>
 
@@ -163,12 +166,13 @@ export default function ProfilePage() {
               Go to Dashboard
             </Link>
           ) : (
-            <button 
-              onClick={becomeVendor} 
-              className="flex-shrink-0 rounded-xl bg-emerald-600 px-5 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-emerald-700 transition-colors"
+            <Button
+              type="button"
+              onClick={becomeVendor}
+              className="h-auto flex-shrink-0 rounded-xl bg-emerald-600 px-5 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-emerald-700"
             >
               Become a Vendor
-            </button>
+            </Button>
           )}
         </div>
       </section>

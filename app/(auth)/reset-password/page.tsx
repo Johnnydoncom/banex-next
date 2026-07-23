@@ -7,6 +7,9 @@ import { Eye, EyeOff, Loader2 } from "lucide-react"
 import { toast } from "sonner"
 import { z } from "zod"
 import { AuthShell } from "@/components/AuthShell"
+import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
 
 import { Suspense } from "react"
 
@@ -95,49 +98,51 @@ function ResetPasswordForm() {
       ) : (
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+            <Label className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-muted-foreground">
               New password
-            </label>
+            </Label>
             <div className="relative">
-              <input
+              <Input
                 type={show ? "text" : "password"}
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="At least 8 characters"
                 autoComplete="new-password"
-                className="h-11 w-full rounded-xl border border-border bg-background px-4 pr-11 text-sm outline-none focus:border-brand"
+                className="h-11 rounded-xl px-4 pr-11 focus-visible:border-brand"
                 required
               />
-              <button
+              <Button
                 type="button"
+                variant="ghost"
+                size="icon"
                 onClick={() => setShow((s) => !s)}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                className="absolute right-3 top-1/2 h-auto w-auto -translate-y-1/2 p-0 text-muted-foreground hover:bg-transparent hover:text-foreground"
                 aria-label={show ? "Hide password" : "Show password"}
               >
                 {show ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-              </button>
+              </Button>
             </div>
           </div>
           <div>
-            <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+            <Label className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-muted-foreground">
               Confirm password
-            </label>
-            <input
+            </Label>
+            <Input
               type={show ? "text" : "password"}
               value={confirm}
               onChange={(e) => setConfirm(e.target.value)}
               autoComplete="new-password"
-              className="h-11 w-full rounded-xl border border-border bg-background px-4 text-sm outline-none focus:border-brand"
+              className="h-11 rounded-xl px-4 focus-visible:border-brand"
               required
             />
           </div>
-          <button
+          <Button
             type="submit"
             disabled={loading}
-            className="flex h-11 w-full items-center justify-center rounded-full bg-gradient-brand text-sm font-semibold text-primary-foreground shadow-soft transition-opacity hover:opacity-95 disabled:opacity-60"
+            className="h-11 w-full rounded-full bg-gradient-brand text-sm font-semibold text-primary-foreground shadow-soft hover:opacity-95"
           >
             {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : "Update password"}
-          </button>
+          </Button>
         </form>
       )}
     </AuthShell>

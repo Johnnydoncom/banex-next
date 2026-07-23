@@ -5,6 +5,8 @@ import { Upload, Loader2, AlertTriangle, FileImage, X, CheckCircle2, Landmark, C
 import { toast } from "sonner"
 import { formatNaira } from "@/lib/products"
 import { userUploadPaymentProof, type OrderData } from "@/lib/user-api"
+import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
 
 export function BankTransferUploadScreen({
   order,
@@ -73,7 +75,7 @@ export function BankTransferUploadScreen({
         <p className="mt-2 text-sm text-muted-foreground">Your bank transfer payment has been approved.</p>
         <div className="mt-4 flex justify-center">
           {onSkip && (
-            <button onClick={onSkip} className="rounded-full bg-surface px-6 py-2 text-sm font-semibold hover:bg-muted">Continue</button>
+            <Button variant="ghost" type="button" onClick={onSkip} className="rounded-full bg-surface px-6 py-2 text-sm font-semibold hover:bg-muted">Continue</Button>
           )}
         </div>
       </section>
@@ -94,14 +96,14 @@ export function BankTransferUploadScreen({
         </p>
         <div className="mt-6 flex flex-col sm:flex-row justify-center gap-3">
           {onSkip && (
-            <button onClick={onSkip} className="rounded-full border border-border bg-card px-6 py-3 text-sm font-semibold hover:border-foreground hover:text-foreground">
+            <Button variant="ghost" type="button" onClick={onSkip} className="rounded-full border border-border bg-card px-6 py-3 text-sm font-semibold hover:border-foreground hover:text-foreground">
               Go Back
-            </button>
+            </Button>
           )}
-          <button onClick={() => fileInputRef.current?.click()} className="rounded-full border border-brand/50 bg-brand-soft/10 px-6 py-3 text-sm font-semibold text-brand hover:bg-brand-soft/20">
+          <Button variant="ghost" type="button" onClick={() => fileInputRef.current?.click()} className="rounded-full border border-brand/50 bg-brand-soft/10 px-6 py-3 text-sm font-semibold text-brand hover:bg-brand-soft/20">
             Re-upload Receipt
-          </button>
-          <input type="file" ref={fileInputRef} onChange={handleFileChange} accept="image/*" className="hidden" />
+          </Button>
+          <Input type="file" ref={fileInputRef} onChange={handleFileChange} accept="image/*" className="hidden" />
         </div>
       </section>
     )
@@ -175,16 +177,16 @@ export function BankTransferUploadScreen({
                 <p className="text-xs text-muted-foreground">{(file.size / 1024 / 1024).toFixed(2)} MB</p>
               </div>
             </div>
-            <button 
+            <Button variant="ghost" type="button" 
               onClick={() => setFile(null)}
               disabled={submitting}
               className="rounded-full p-2 text-muted-foreground hover:bg-background hover:text-foreground disabled:opacity-50"
             >
               <X className="h-4 w-4" />
-            </button>
+            </Button>
           </div>
         )}
-        <input 
+        <Input 
           type="file" 
           ref={fileInputRef} 
           onChange={handleFileChange} 
@@ -195,22 +197,22 @@ export function BankTransferUploadScreen({
 
       <div className={`${compact ? "mt-5" : "mt-8"} flex flex-col sm:flex-row justify-center gap-3`}>
         {onSkip && (
-          <button
+          <Button variant="ghost" type="button"
             onClick={onSkip}
             disabled={submitting}
             className="rounded-full border border-border bg-card px-6 py-3 text-sm font-semibold hover:border-foreground hover:text-foreground disabled:opacity-50"
           >
             Upload later
-          </button>
+          </Button>
         )}
-        <button
+        <Button variant="ghost" type="button"
           onClick={handleUpload}
           disabled={!file || submitting}
           className="relative inline-flex items-center justify-center gap-2 rounded-full bg-gradient-brand px-8 py-3 text-sm font-bold text-primary-foreground disabled:opacity-50 disabled:cursor-not-allowed"
         >
           {submitting && <Loader2 className="h-4 w-4 animate-spin" />}
           {submitting ? "Uploading..." : "Submit Receipt"}
-        </button>
+        </Button>
       </div>
     </section>
   )

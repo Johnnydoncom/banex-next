@@ -6,6 +6,9 @@ import { Loader2 } from "lucide-react"
 import { toast } from "sonner"
 import { z } from "zod"
 import { AuthShell } from "@/components/AuthShell"
+import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
 
 const schema = z.object({
   code: z.string().length(6, "OTP must be 6 characters"),
@@ -100,41 +103,42 @@ function OTPForm() {
       footer={
         <>
           Didn't receive the code?{" "}
-          <button
+          <Button
             type="button"
+            variant="link"
             onClick={handleResend}
             disabled={resending}
-            className="font-semibold text-brand hover:underline disabled:opacity-60"
+            className="h-auto p-0 font-semibold text-brand hover:underline"
           >
             {resending ? "Resending..." : "Resend code"}
-          </button>
+          </Button>
         </>
       }
     >
       <form onSubmit={handleSubmit} className="space-y-4">
         <div>
-          <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-muted-foreground text-center">
+          <Label className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-muted-foreground text-center">
             Verification Code
-          </label>
-          <input
+          </Label>
+          <Input
             type="text"
             value={code}
             onChange={(e) => setCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
             placeholder="000000"
-            className="h-14 w-full rounded-xl border border-border bg-background px-4 text-center text-2xl tracking-widest outline-none transition-colors focus:border-brand"
+            className="h-14 rounded-xl px-4 text-center text-2xl tracking-widest focus-visible:border-brand"
             required
             maxLength={6}
             autoComplete="one-time-code"
           />
         </div>
 
-        <button
+        <Button
           type="submit"
           disabled={loading || code.length !== 6}
-          className="flex h-11 w-full items-center justify-center rounded-full bg-gradient-brand text-sm font-semibold text-primary-foreground shadow-soft transition-opacity hover:opacity-95 disabled:opacity-60"
+          className="h-11 w-full rounded-full bg-gradient-brand text-sm font-semibold text-primary-foreground shadow-soft hover:opacity-95"
         >
           {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : "Verify Account"}
-        </button>
+        </Button>
       </form>
     </AuthShell>
   )

@@ -8,6 +8,7 @@ import { sellerUpdateProfile, type SellerProfile } from "@/lib/seller-api"
 import { useSellerApplication, useCategories } from "@/hooks/use-swr-data"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
+import { Button } from "@/components/ui/button"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 function statusBanner(profile: SellerProfile) {
   if (profile.status === "approved") {
@@ -179,23 +180,25 @@ export default function VendorStorePage() {
             <Upload className="h-6 w-6 text-white opacity-0 hover:opacity-100" />
           </div>
         </div>
-        <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handleCoverChange} />
+        <Input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handleCoverChange} />
         <div className="flex gap-2">
-          <button
+          <Button
             type="button"
+            variant="outline"
             onClick={() => fileInputRef.current?.click()}
-            className="rounded-full border border-border bg-card px-4 py-1.5 text-xs font-semibold hover:border-emerald-500 hover:text-emerald-600 transition-colors"
+            className="h-auto rounded-full bg-card px-4 py-1.5 text-xs font-semibold hover:border-emerald-500 hover:text-emerald-600"
           >
             {coverPreview ? "Change image" : "Upload image"}
-          </button>
+          </Button>
           {coverPreview && (
-            <button
+            <Button
               type="button"
+              variant="outline"
               onClick={() => { setCoverPreview(null); setCoverImageFile(null); setRemoveCover(true) }}
-              className="rounded-full border border-rose-500/30 bg-rose-500/10 px-4 py-1.5 text-xs font-semibold text-rose-600 hover:bg-rose-500/20 transition-colors"
+              className="h-auto rounded-full border-rose-500/30 bg-rose-500/10 px-4 py-1.5 text-xs font-semibold text-rose-600 hover:bg-rose-500/20"
             >
               Remove
-            </button>
+            </Button>
           )}
         </div>
       </section>
@@ -259,13 +262,14 @@ export default function VendorStorePage() {
         </div>
       </section>
 
-      <button
+      <Button
+        type="button"
         onClick={save}
         disabled={saving}
-        className="rounded-full bg-emerald-600 px-6 py-2.5 text-sm font-semibold text-white disabled:opacity-60 hover:bg-emerald-700 transition-colors"
+        className="h-auto rounded-full bg-emerald-600 px-6 py-2.5 text-sm font-semibold text-white hover:bg-emerald-700"
       >
         {saving ? "Saving…" : "Save Store Profile"}
-      </button>
+      </Button>
     </div>
   )
 }

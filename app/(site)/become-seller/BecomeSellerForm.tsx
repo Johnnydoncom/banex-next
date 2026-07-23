@@ -2,9 +2,15 @@
 
 import { useState } from "react"
 import { toast } from "sonner"
+import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
+import { Textarea } from "@/components/ui/textarea"
+import { Label } from "@/components/ui/label"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 
 export function BecomeSellerForm() {
   const [submitting, setSubmitting] = useState(false)
+  const [category, setCategory] = useState("")
 
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
@@ -29,23 +35,27 @@ export function BecomeSellerForm() {
       </div>
 
       <div>
-        <label className="text-sm font-medium">Primary category</label>
-        <select name="category" required className="mt-2 h-11 w-full rounded-xl border border-border bg-background px-3 text-sm outline-none focus:border-brand">
-          <option value="">Select a category</option>
-          {["Vehicles","Property","Phones & Tablets","Electronics","Fashion","Home & Furniture","Health & Beauty","Babies & Kids","Sports & Hobbies","Animals & Pets","Food, Agriculture","Services"].map((c)=>(
-            <option key={c} value={c}>{c}</option>
-          ))}
-        </select>
+        <Label className="text-sm font-medium">Primary category</Label>
+        <Select value={category} onValueChange={setCategory}>
+          <SelectTrigger className="mt-2 h-11 rounded-xl px-3 focus:border-brand">
+            <SelectValue placeholder="Select a category" />
+          </SelectTrigger>
+          <SelectContent>
+            {["Vehicles","Property","Phones & Tablets","Electronics","Fashion","Home & Furniture","Health & Beauty","Babies & Kids","Sports & Hobbies","Animals & Pets","Food, Agriculture","Services"].map((c)=>(
+              <SelectItem key={c} value={c}>{c}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
       </div>
 
       <div>
         <label className="text-sm font-medium">Tell us about what you sell</label>
-        <textarea name="about" rows={4} className="mt-2 w-full rounded-xl border border-border bg-background p-3 text-sm outline-none focus:border-brand" placeholder="e.g. New & used iPhones, with warranty and same-day Lagos delivery." />
+        <Textarea name="about" rows={4} className="mt-2 w-full rounded-xl border border-border bg-background p-3 text-sm outline-none focus:border-brand" placeholder="e.g. New & used iPhones, with warranty and same-day Lagos delivery." />
       </div>
 
-      <button disabled={submitting} type="submit" className="mt-2 inline-flex h-12 items-center justify-center rounded-full bg-gradient-brand px-8 text-sm font-semibold text-primary-foreground disabled:opacity-60">
+      <Button type="submit" disabled={submitting} className="mt-2 h-12 rounded-full bg-gradient-brand px-8 text-sm font-semibold text-primary-foreground">
         {submitting ? "Submitting…" : "Submit application"}
-      </button>
+      </Button>
     </form>
   )
 }
@@ -54,7 +64,7 @@ function Field({ label, name, type = "text", required }: { label: string; name: 
   return (
     <div>
       <label className="text-sm font-medium">{label}</label>
-      <input
+      <Input
         name={name}
         type={type}
         required={required}

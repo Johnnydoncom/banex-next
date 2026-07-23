@@ -2,6 +2,11 @@
 
 import { useState, useEffect } from "react"
 import { Store, Upload, CheckCircle2, X, Loader2, ImageIcon, Clock, Truck, MapPin, Phone, Mail, Tag, Info } from "lucide-react"
+import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
+import { Textarea } from "@/components/ui/textarea"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { toast } from "sonner"
 import { useSession } from "next-auth/react"
 import { fetchGenericCategories, GenericCategory } from "@/lib/generic-api"
@@ -263,10 +268,10 @@ export default function BecomeVendorPage() {
 
           {/* Shop Name */}
           <div>
-            <label className="mb-1.5 block text-xs font-semibold text-foreground">
+            <Label className="mb-1.5 block text-xs font-semibold text-foreground">
               Shop Name <span className="text-rose-500">*</span>
-            </label>
-            <input
+            </Label>
+            <Input
               type="text"
               required
               value={form.shop_name}
@@ -278,31 +283,30 @@ export default function BecomeVendorPage() {
 
           {/* Category */}
           <div>
-            <label className="mb-1.5 block text-xs font-semibold text-foreground">
+            <Label className="mb-1.5 block text-xs font-semibold text-foreground">
               Business Category <span className="text-rose-500">*</span>
-            </label>
+            </Label>
             <div className="relative">
               <Tag className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
-              <select
-                required
-                value={form.category_id}
-                onChange={(e) => update("category_id", e.target.value)}
-                className="w-full appearance-none rounded-xl border border-border bg-background pl-9 pr-4 py-2.5 text-sm focus:border-brand focus:outline-none focus:ring-1 focus:ring-brand"
-              >
-                <option value="">{loadingCats ? "Loading categories..." : "Select a category"}</option>
-                {categories.map((c) => (
-                  <option key={c.id} value={c.id}>{c.name}</option>
-                ))}
-              </select>
+              <Select value={form.category_id} onValueChange={(v) => update("category_id", v)}>
+                <SelectTrigger className="h-auto rounded-xl pl-9 pr-4 py-2.5">
+                  <SelectValue placeholder={loadingCats ? "Loading categories..." : "Select a category"} />
+                </SelectTrigger>
+                <SelectContent>
+                  {categories.map((c) => (
+                    <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
           </div>
 
           {/* Description */}
           <div>
-            <label className="mb-1.5 block text-xs font-semibold text-foreground">
+            <Label className="mb-1.5 block text-xs font-semibold text-foreground">
               Store Description <span className="text-xs font-normal text-muted-foreground">(Optional)</span>
-            </label>
-            <textarea
+            </Label>
+            <Textarea
               value={form.description}
               onChange={(e) => update("description", e.target.value)}
               rows={3}
@@ -324,12 +328,12 @@ export default function BecomeVendorPage() {
           <div className="grid gap-4 sm:grid-cols-2">
             {/* Email */}
             <div>
-              <label className="mb-1.5 block text-xs font-semibold text-foreground">
+              <Label className="mb-1.5 block text-xs font-semibold text-foreground">
                 Email Address <span className="text-rose-500">*</span>
-              </label>
+              </Label>
               <div className="relative">
                 <Mail className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
-                <input
+                <Input
                   type="email"
                   required
                   value={form.email}
@@ -342,12 +346,12 @@ export default function BecomeVendorPage() {
 
             {/* Phone */}
             <div>
-              <label className="mb-1.5 block text-xs font-semibold text-foreground">
+              <Label className="mb-1.5 block text-xs font-semibold text-foreground">
                 Phone Number <span className="text-rose-500">*</span>
-              </label>
+              </Label>
               <div className="relative">
                 <Phone className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
-                <input
+                <Input
                   type="tel"
                   required
                   value={form.phone}
@@ -371,12 +375,12 @@ export default function BecomeVendorPage() {
 
           {/* Location (Plot) */}
           <div>
-            <label className="mb-1.5 block text-xs font-semibold text-foreground">
+            <Label className="mb-1.5 block text-xs font-semibold text-foreground">
               Mall Location <span className="text-rose-500">*</span>
-            </label>
+            </Label>
             <div className="relative">
               <MapPin className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
-              <input
+              <Input
                 type="text"
                 required
                 value={form.location}
@@ -390,10 +394,10 @@ export default function BecomeVendorPage() {
           <div className="grid gap-4 sm:grid-cols-2">
             {/* Floor */}
             <div>
-              <label className="mb-1.5 block text-xs font-semibold text-foreground">
+              <Label className="mb-1.5 block text-xs font-semibold text-foreground">
                 Floor <span className="text-rose-500">*</span>
-              </label>
-              <input
+              </Label>
+              <Input
                 type="text"
                 required
                 value={form.floor}
@@ -405,10 +409,10 @@ export default function BecomeVendorPage() {
 
             {/* Shop No */}
             <div>
-              <label className="mb-1.5 block text-xs font-semibold text-foreground">
+              <Label className="mb-1.5 block text-xs font-semibold text-foreground">
                 Shop Number <span className="text-rose-500">*</span>
-              </label>
-              <input
+              </Label>
+              <Input
                 type="text"
                 required
                 value={form.shop_no}
@@ -421,12 +425,12 @@ export default function BecomeVendorPage() {
 
           {/* Operating Hours */}
           <div>
-            <label className="mb-1.5 block text-xs font-semibold text-foreground">
+            <Label className="mb-1.5 block text-xs font-semibold text-foreground">
               Operating Hours <span className="text-xs font-normal text-muted-foreground">(Optional)</span>
-            </label>
+            </Label>
             <div className="relative">
               <Clock className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
-              <input
+              <Input
                 type="text"
                 value={form.operating_hours}
                 onChange={(e) => update("operating_hours", e.target.value)}
@@ -450,8 +454,8 @@ export default function BecomeVendorPage() {
           <div className="grid gap-4 sm:grid-cols-2">
             {/* Delivery Estimate */}
             <div>
-              <label className="mb-1.5 block text-xs font-semibold text-foreground">Delivery Time (minutes)</label>
-              <input
+              <Label className="mb-1.5 block text-xs font-semibold text-foreground">Delivery Time (minutes)</Label>
+              <Input
                 type="number"
                 min={1}
                 value={form.delivery_estimate_minutes}
@@ -464,8 +468,8 @@ export default function BecomeVendorPage() {
 
             {/* Delivery Fee */}
             <div>
-              <label className="mb-1.5 block text-xs font-semibold text-foreground">Delivery Fee (NGN)</label>
-              <input
+              <Label className="mb-1.5 block text-xs font-semibold text-foreground">Delivery Fee (NGN)</Label>
+              <Input
                 type="number"
                 min={0}
                 value={form.delivery_fee}
@@ -491,19 +495,21 @@ export default function BecomeVendorPage() {
           {coverImage ? (
             <div className="relative overflow-hidden rounded-xl border border-border">
               <img src={coverImage.preview} alt="Cover preview" className="h-44 w-full object-cover" />
-              <button
+              <Button
                 type="button"
+                variant="ghost"
+                size="icon"
                 onClick={() => setCoverImage(null)}
-                className="absolute right-2 top-2 flex h-7 w-7 items-center justify-center rounded-full bg-black/50 text-white backdrop-blur-sm hover:bg-black/70"
+                className="absolute right-2 top-2 h-7 w-7 rounded-full bg-black/50 text-white backdrop-blur-sm hover:bg-black/70"
               >
                 <X className="h-3.5 w-3.5" />
-              </button>
+              </Button>
               <div className="absolute bottom-2 left-2 rounded-lg bg-black/50 px-2.5 py-1 text-xs font-medium text-white backdrop-blur-sm">
                 {coverImage.file.name}
               </div>
             </div>
           ) : (
-            <label className="flex cursor-pointer flex-col items-center justify-center gap-3 rounded-2xl border-2 border-dashed border-border p-10 text-center transition-all hover:border-brand hover:bg-brand/5">
+            <Label className="flex cursor-pointer flex-col items-center justify-center gap-3 rounded-2xl border-2 border-dashed border-border p-10 text-center transition-all hover:border-brand hover:bg-brand/5">
               <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-surface">
                 <Upload className="h-5 w-5 text-muted-foreground" />
               </div>
@@ -511,8 +517,8 @@ export default function BecomeVendorPage() {
                 <p className="text-sm font-medium">Click to upload a cover image</p>
                 <p className="mt-0.5 text-xs text-muted-foreground">PNG, JPG or WEBP · Max 5MB · Recommended 1200×400</p>
               </div>
-              <input type="file" className="hidden" accept="image/*" onChange={handleImageChange} />
-            </label>
+              <Input type="file" className="hidden" accept="image/*" onChange={handleImageChange} />
+            </Label>
           )}
         </section>
 
@@ -525,10 +531,10 @@ export default function BecomeVendorPage() {
         </div>
 
         {/* ── Submit ───────────────────────────────────────────────────── */}
-        <button
+        <Button
           type="submit"
           disabled={submitting}
-          className="flex w-full items-center justify-center gap-2.5 rounded-2xl bg-gradient-to-r from-brand to-brand-deep py-3.5 text-sm font-bold text-white shadow-lg shadow-brand/25 transition-all hover:opacity-90 hover:shadow-xl disabled:opacity-50"
+          className="h-auto w-full gap-2.5 rounded-2xl bg-gradient-to-r from-brand to-brand-deep py-3.5 text-sm font-bold text-white shadow-lg shadow-brand/25 hover:opacity-90 hover:shadow-xl"
         >
           {submitting ? (
             <>
@@ -541,7 +547,7 @@ export default function BecomeVendorPage() {
               Submit Vendor Application
             </>
           )}
-        </button>
+        </Button>
       </form>
     </div>
   )

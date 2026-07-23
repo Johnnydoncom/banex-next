@@ -5,6 +5,10 @@ import { MapPin, Plus, Trash2, Star } from "lucide-react"
 import { useAuth } from "@/hooks/use-auth"
 import { toast } from "sonner"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog"
+import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
+import { Checkbox } from "@/components/ui/checkbox"
 import { userFetchAddresses, userCreateAddress, userUpdateAddress, userDeleteAddress, type AddressData } from "@/lib/user-api"
 
 export default function AddressesPage() {
@@ -91,9 +95,9 @@ export default function AddressesPage() {
         </div>
         <Dialog open={open} onOpenChange={setOpen}>
           <DialogTrigger asChild>
-            <button className="inline-flex items-center gap-2 rounded-full bg-gradient-brand px-4 py-2 text-xs font-semibold text-primary-foreground">
+            <Button type="button" className="h-auto gap-2 rounded-full bg-gradient-brand px-4 py-2 text-xs font-semibold text-primary-foreground">
               <Plus className="h-3.5 w-3.5" /> Add address
-            </button>
+            </Button>
           </DialogTrigger>
           <DialogContent className="max-w-md">
             <DialogHeader>
@@ -109,32 +113,32 @@ export default function AddressesPage() {
                 ["city", "City"],
                 ["state", "State"],
               ].map(([k, label]) => (
-                <label key={k} className="block">
+                <Label key={k} className="block">
                   <span className="text-[11px] font-medium text-muted-foreground">{label}</span>
-                  <input
+                  <Input
                     value={(form as never)[k]}
                     onChange={(e) => setForm({ ...form, [k]: e.target.value })}
-                    className="mt-1 h-9 w-full rounded-lg border border-border bg-background px-3 text-sm outline-none focus:border-brand"
+                    className="mt-1 h-9 rounded-lg px-3 focus-visible:border-brand"
                   />
-                </label>
+                </Label>
               ))}
-              <label className="flex items-center gap-2 text-xs">
-                <input
-                  type="checkbox"
+              <Label className="flex items-center gap-2 text-xs">
+                <Checkbox
                   checked={form.is_default}
-                  onChange={(e) => setForm({ ...form, is_default: e.target.checked })}
+                  onCheckedChange={(v) => setForm({ ...form, is_default: v === true })}
                 />
                 Set as default
-              </label>
+              </Label>
             </div>
             <DialogFooter>
-              <button
+              <Button
+                type="button"
                 onClick={save}
                 disabled={saving}
-                className="rounded-full bg-gradient-brand px-4 py-2 text-xs font-semibold text-primary-foreground disabled:opacity-60"
+                className="h-auto rounded-full bg-gradient-brand px-4 py-2 text-xs font-semibold text-primary-foreground"
               >
                 {saving ? "Saving..." : "Save address"}
-              </button>
+              </Button>
             </DialogFooter>
           </DialogContent>
         </Dialog>
@@ -163,13 +167,13 @@ export default function AddressesPage() {
               </p>
               <div className="mt-4 flex gap-2">
                 {!a.is_default && (
-                  <button onClick={() => setDefault(a.id)} className="rounded-full border border-border bg-card px-3 py-1.5 text-[11px] font-medium hover:border-brand hover:text-brand">
+                  <Button type="button" variant="outline" onClick={() => setDefault(a.id)} className="h-auto rounded-full bg-card px-3 py-1.5 text-[11px] font-medium hover:border-brand hover:text-brand">
                     Set default
-                  </button>
+                  </Button>
                 )}
-                <button onClick={() => remove(a.id)} className="ml-auto inline-flex items-center gap-1 rounded-full border border-border bg-card px-3 py-1.5 text-[11px] font-medium text-rose-600 hover:border-rose-500">
+                <Button type="button" variant="outline" onClick={() => remove(a.id)} className="ml-auto h-auto gap-1 rounded-full bg-card px-3 py-1.5 text-[11px] font-medium text-rose-600 hover:border-rose-500">
                   <Trash2 className="h-3 w-3" /> Remove
-                </button>
+                </Button>
               </div>
             </li>
           ))}

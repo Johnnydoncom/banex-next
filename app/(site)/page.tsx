@@ -27,6 +27,8 @@ import { fetchGenericHome, GenericCategory, GenericSeller } from "@/lib/generic-
 import { buildMetadata } from "@/lib/seo/metadata"
 import { JsonLd } from "@/lib/seo/JsonLdComponent"
 import { itemListSchema } from "@/lib/seo/jsonld"
+import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
 
 // ─── SEO ─────────────────────────────────────────────────────────────────────
 
@@ -119,7 +121,7 @@ export default async function Home() {
   let data;
   try {
     data = await fetchGenericHome()
-  } catch(e) {
+  } catch (e) {
     console.error("[homepage] Failed to fetch /generic/home:", e)
   }
 
@@ -132,23 +134,23 @@ export default async function Home() {
   const homeJsonLd = [
     ...(categories.length
       ? [
-          itemListSchema(
-            "Shop by category",
-            categories.map((c: GenericCategory) => ({ name: c.name, path: `/shop/${c.slug}` })),
-          ),
-        ]
+        itemListSchema(
+          "Shop by category",
+          categories.map((c: GenericCategory) => ({ name: c.name, path: `/shop/${c.slug}` })),
+        ),
+      ]
       : []),
     ...(featuredListings.length
       ? [
-          itemListSchema(
-            "Featured listings",
-            featuredListings.slice(0, 12).map((p) => ({
-              name: p.name,
-              path: `/product/${p.slug}`,
-              image: p.images?.find((i) => i.is_primary)?.url || p.images?.[0]?.url,
-            })),
-          ),
-        ]
+        itemListSchema(
+          "Featured listings",
+          featuredListings.slice(0, 12).map((p) => ({
+            name: p.name,
+            path: `/product/${p.slug}`,
+            image: p.images?.find((i) => i.is_primary)?.url || p.images?.[0]?.url,
+          })),
+        ),
+      ]
       : []),
   ]
 
@@ -181,17 +183,17 @@ export default async function Home() {
                 <div className="flex items-center pl-5 text-muted-foreground">
                   <Search className="h-5 w-5" />
                 </div>
-                <input
+                <Input
                   name="q"
                   placeholder="Search shops, products, brands…"
-                  className="h-14 flex-1 bg-transparent px-3 text-sm outline-none placeholder:text-muted-foreground"
+                  className="h-14 flex-1 bg-transparent px-3 text-sm outline-none placeholder:text-muted-foreground focus:ring-0 focus:outline-none focus:border-none focus-visible:ring-0 focus-visible:border-none border-none shadow-none"
                 />
-                <button
+                <Button variant="ghost"
                   type="submit"
-                  className="m-1.5 inline-flex items-center gap-2 rounded-full bg-gradient-brand px-6 text-sm font-semibold text-primary-foreground"
+                  className="m-1.5 inline-flex items-center gap-2 rounded-full bg-gradient-brand px-6 text-sm font-semibold text-primary-foreground h-auto"
                 >
                   Search <ArrowRight className="h-4 w-4" />
-                </button>
+                </Button>
               </div>
               <div className="mt-3 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
                 <span>Popular:</span>

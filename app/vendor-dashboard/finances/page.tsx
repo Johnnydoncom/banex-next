@@ -16,6 +16,7 @@ import { sellerCreateWithdrawal } from "@/lib/seller-api"
 import { formatNaira } from "@/lib/products"
 import { Input } from "@/components/ui/input"
 import { Checkbox } from "@/components/ui/checkbox"
+import { Button } from "@/components/ui/button"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import {
   useSellerWallet,
@@ -41,8 +42,11 @@ function withdrawStatus(status: string) {
 
 function earningsStatus(status: string) {
   switch (status) {
-    case "settled": return { l: "Settled", c: "bg-emerald-500/15 text-emerald-700" }
-    case "reversed": return { l: "Reversed", c: "bg-rose-500/15 text-rose-700" }
+    case "paid_out":
+    case "settled": return { l: "Paid Out", c: "bg-emerald-500/15 text-emerald-700" }
+    case "payable": return { l: "Payable", c: "bg-blue-500/15 text-blue-700" }
+    case "void":
+    case "reversed": return { l: "Void", c: "bg-rose-500/15 text-rose-700" }
     default: return { l: "Pending", c: "bg-amber-500/15 text-amber-700" }
   }
 }
@@ -168,13 +172,13 @@ export default function VendorFinancesPage() {
           <h1 className="font-display text-2xl font-bold">Finances</h1>
           <p className="text-sm text-muted-foreground">Earnings, wallet balance, transactions, and withdrawals.</p>
         </div>
-        <button
+        <Button variant="ghost" type="button"
           onClick={() => setShowWithdrawModal(true)}
           disabled={!balance || balance <= 0 || bankAccounts.length === 0}
           className="inline-flex items-center gap-2 rounded-full bg-emerald-600 px-5 py-2.5 text-sm font-semibold text-white hover:bg-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
         >
           <ArrowUpRight className="h-4 w-4" /> Withdraw Funds
-        </button>
+        </Button>
       </div>
 
       {/* Top stats */}
@@ -187,36 +191,36 @@ export default function VendorFinancesPage() {
           </p>
           <p className="mt-1 text-xs text-emerald-100/60">{wallet?.currency ?? "NGN"}</p>
         </div>
-        {/* Total earned */}
+        {/* Lifetime earned */}
         <div className="rounded-2xl border border-border bg-card p-5">
-          <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">Total Earned</p>
+          <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">Lifetime Earnings</p>
           <p className="mt-2 font-display text-2xl font-bold">
-            {earningsLoading ? "..." : earnings?.total_earned !== undefined ? formatNaira(earnings.total_earned) : "—"}
+            {earningsLoading ? "..." : earnings?.lifetime_total !== undefined ? formatNaira(earnings.lifetime_total) : "—"}
           </p>
-          <p className="mt-1 text-xs text-muted-foreground">Gross revenue</p>
+          <p className="mt-1 text-xs text-muted-foreground">Net of commission</p>
         </div>
-        {/* Commission paid */}
+        {/* Payable */}
         <div className="rounded-2xl border border-border bg-card p-5">
-          <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">Commission Paid</p>
-          <p className="mt-2 font-display text-2xl font-bold text-rose-600">
-            {earningsLoading ? "..." : earnings?.commission_paid !== undefined ? formatNaira(earnings.commission_paid) : "—"}
-          </p>
-          <p className="mt-1 text-xs text-muted-foreground">Platform fee</p>
-        </div>
-        {/* Net earnings */}
-        <div className="rounded-2xl border border-border bg-card p-5">
-          <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">Net Earnings</p>
+          <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">Available to Withdraw</p>
           <p className="mt-2 font-display text-2xl font-bold text-emerald-600">
-            {earningsLoading ? "..." : earnings?.net_earnings !== undefined ? formatNaira(earnings.net_earnings) : "—"}
+            {earningsLoading ? "..." : earnings?.payable_total !== undefined ? formatNaira(earnings.payable_total) : "—"}
           </p>
-          <p className="mt-1 text-xs text-muted-foreground">After commission</p>
+          <p className="mt-1 text-xs text-muted-foreground">Cleared for payout</p>
+        </div>
+        {/* Pending */}
+        <div className="rounded-2xl border border-border bg-card p-5">
+          <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">Pending</p>
+          <p className="mt-2 font-display text-2xl font-bold text-amber-600">
+            {earningsLoading ? "..." : earnings?.pending_total !== undefined ? formatNaira(earnings.pending_total) : "—"}
+          </p>
+          <p className="mt-1 text-xs text-muted-foreground">Awaiting clearance</p>
         </div>
       </div>
 
       {/* Tabs */}
       <div className="flex gap-1 rounded-xl border border-border bg-card p-1">
         {TABS.map(t => (
-          <button
+          <Button variant="ghost" type="button"
             key={t.id}
             onClick={() => setTab(t.id)}
             className={`flex flex-1 items-center justify-center gap-2 rounded-lg px-3 py-2 text-xs font-semibold transition-all ${
@@ -227,7 +231,7 @@ export default function VendorFinancesPage() {
           >
             <t.Icon className="h-3.5 w-3.5" />
             <span className="hidden sm:inline">{t.label}</span>
-          </button>
+          </Button>
         ))}
       </div>
 
@@ -239,9 +243,9 @@ export default function VendorFinancesPage() {
             <section className="rounded-2xl border border-border bg-card">
               <div className="flex items-center justify-between border-b border-border px-5 py-4">
                 <p className="font-display text-sm font-semibold">Bank Accounts</p>
-                <button onClick={openAddBank} className="rounded-full bg-emerald-500/10 p-1.5 text-emerald-600 hover:bg-emerald-500/20 transition-colors">
+                <Button variant="ghost" type="button" onClick={openAddBank} className="rounded-full bg-emerald-500/10 p-1.5 text-emerald-600 hover:bg-emerald-500/20 transition-colors">
                   <Plus className="h-4 w-4" />
-                </button>
+                </Button>
               </div>
               {banksLoading ? (
                 <div className="p-6 text-center text-sm text-muted-foreground animate-pulse">Loading...</div>
@@ -250,7 +254,7 @@ export default function VendorFinancesPage() {
                   <CreditCard className="mx-auto h-8 w-8 text-muted-foreground/30" />
                   <p className="mt-2 text-sm font-medium">No bank accounts</p>
                   <p className="text-xs text-muted-foreground mt-1">Add a bank account to withdraw funds.</p>
-                  <button onClick={openAddBank} className="mt-3 text-xs font-semibold text-emerald-600 hover:underline">+ Add account</button>
+                  <Button variant="ghost" type="button" onClick={openAddBank} className="mt-3 text-xs font-semibold text-emerald-600 hover:underline">+ Add account</Button>
                 </div>
               ) : (
                 <ul className="divide-y divide-border">
@@ -264,8 +268,8 @@ export default function VendorFinancesPage() {
                         <p className="text-xs text-muted-foreground">{b.account_number} · {b.account_name}</p>
                       </div>
                       <div className="flex items-center gap-2">
-                        <button onClick={() => openEditBank(b)} className="text-muted-foreground hover:text-emerald-600"><Edit2 className="h-3.5 w-3.5" /></button>
-                        <button onClick={() => handleDeleteBank(b.id)} className="text-muted-foreground hover:text-rose-600"><Trash2 className="h-3.5 w-3.5" /></button>
+                        <Button variant="ghost" type="button" onClick={() => openEditBank(b)} className="text-muted-foreground hover:text-emerald-600"><Edit2 className="h-3.5 w-3.5" /></Button>
+                        <Button variant="ghost" type="button" onClick={() => handleDeleteBank(b.id)} className="text-muted-foreground hover:text-rose-600"><Trash2 className="h-3.5 w-3.5" /></Button>
                       </div>
                     </li>
                   ))}
@@ -279,7 +283,7 @@ export default function VendorFinancesPage() {
             <section className="rounded-2xl border border-border bg-card">
               <div className="flex items-center justify-between border-b border-border px-5 py-4">
                 <p className="font-display text-sm font-semibold">Recent Withdrawals</p>
-                <button onClick={() => setTab("withdrawals")} className="text-xs font-medium text-emerald-600 hover:underline">View all</button>
+                <Button variant="ghost" type="button" onClick={() => setTab("withdrawals")} className="text-xs font-medium text-emerald-600 hover:underline">View all</Button>
               </div>
               {withdrawLoading ? (
                 <div className="p-6 text-center animate-pulse text-sm text-muted-foreground">Loading...</div>
@@ -335,16 +339,16 @@ export default function VendorFinancesPage() {
           {earnings && (
             <div className="grid gap-4 sm:grid-cols-3">
               <div className="rounded-2xl border border-border bg-card p-5">
-                <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">Gross Revenue</p>
-                <p className="mt-2 font-display text-2xl font-bold">{formatNaira(earnings.total_earned)}</p>
-              </div>
-              <div className="rounded-2xl border border-rose-500/10 bg-card p-5">
-                <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">Commission Paid</p>
-                <p className="mt-2 font-display text-2xl font-bold text-rose-600">{formatNaira(earnings.commission_paid)}</p>
+                <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">Lifetime Earnings</p>
+                <p className="mt-2 font-display text-2xl font-bold">{formatNaira(earnings.lifetime_total)}</p>
               </div>
               <div className="rounded-2xl border border-emerald-500/10 bg-card p-5">
+                <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">Paid Out</p>
+                <p className="mt-2 font-display text-2xl font-bold text-emerald-600">{formatNaira(earnings.paid_out_total)}</p>
+              </div>
+              <div className="rounded-2xl border border-amber-500/10 bg-card p-5">
                 <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">Pending Payout</p>
-                <p className="mt-2 font-display text-2xl font-bold text-amber-600">{formatNaira(earnings.pending_payout)}</p>
+                <p className="mt-2 font-display text-2xl font-bold text-amber-600">{formatNaira(earnings.pending_total)}</p>
               </div>
             </div>
           )}
@@ -378,19 +382,19 @@ export default function VendorFinancesPage() {
                     </thead>
                     <tbody className="divide-y divide-border">
                       {lines.map(l => {
-                        const st = earningsStatus(l.status)
+                        const st = earningsStatus(l.settlement_status ?? l.status ?? "")
                         return (
                           <tr key={l.id} className="hover:bg-surface/20 transition-colors">
                             <td className="px-5 py-3">
                               <p className="font-semibold font-display">{l.order_reference}</p>
                               <p className="text-[10px] text-muted-foreground">{fmtDate(l.created_at)}</p>
                             </td>
-                            <td className="px-5 py-3 text-right">{formatNaira(l.gross_amount)}</td>
+                            <td className="px-5 py-3 text-right">{formatNaira(l.line_total ?? l.gross_amount ?? 0)}</td>
                             <td className="px-5 py-3 text-right text-rose-600">
-                              -{formatNaira(l.commission_amount)}
+                              -{formatNaira(l.line_platform_fee ?? l.commission_amount ?? 0)}
                               <span className="ml-1 text-[10px] text-muted-foreground">({l.commission_percent}%)</span>
                             </td>
-                            <td className="px-5 py-3 text-right font-bold text-emerald-600">{formatNaira(l.net_amount)}</td>
+                            <td className="px-5 py-3 text-right font-bold text-emerald-600">{formatNaira(l.line_seller_total ?? l.net_amount ?? 0)}</td>
                             <td className="px-5 py-3 text-right">
                               <span className={`rounded-full px-2.5 py-1 text-[10px] font-bold uppercase ${st.c}`}>{st.l}</span>
                             </td>
@@ -405,8 +409,8 @@ export default function VendorFinancesPage() {
                   <div className="flex items-center justify-between border-t border-border px-5 py-3 text-xs text-muted-foreground">
                     <span>Page {linesPag.current_page} of {linesPag.last_page}</span>
                     <div className="flex gap-2">
-                      <button disabled={earningsPage <= 1} onClick={() => setEarningsPage(p => p - 1)} className="rounded-lg border border-border px-3 py-1 disabled:opacity-40 hover:bg-surface"><ChevronLeft className="h-3.5 w-3.5" /></button>
-                      <button disabled={earningsPage >= linesPag.last_page} onClick={() => setEarningsPage(p => p + 1)} className="rounded-lg border border-border px-3 py-1 disabled:opacity-40 hover:bg-surface"><ChevronRight className="h-3.5 w-3.5" /></button>
+                      <Button variant="ghost" type="button" disabled={earningsPage <= 1} onClick={() => setEarningsPage(p => p - 1)} className="rounded-lg border border-border px-3 py-1 disabled:opacity-40 hover:bg-surface"><ChevronLeft className="h-3.5 w-3.5" /></Button>
+                      <Button variant="ghost" type="button" disabled={earningsPage >= linesPag.last_page} onClick={() => setEarningsPage(p => p + 1)} className="rounded-lg border border-border px-3 py-1 disabled:opacity-40 hover:bg-surface"><ChevronRight className="h-3.5 w-3.5" /></Button>
                     </div>
                   </div>
                 )}
@@ -458,8 +462,8 @@ export default function VendorFinancesPage() {
                 <div className="flex items-center justify-between border-t border-border px-5 py-3 text-xs text-muted-foreground">
                   <span>Page {txPag.current_page} of {txPag.last_page} · {txPag.total} total</span>
                   <div className="flex gap-2">
-                    <button disabled={txPage <= 1} onClick={() => setTxPage(p => p - 1)} className="rounded-lg border border-border px-3 py-1 disabled:opacity-40 hover:bg-surface"><ChevronLeft className="h-3.5 w-3.5" /></button>
-                    <button disabled={txPage >= txPag.last_page} onClick={() => setTxPage(p => p + 1)} className="rounded-lg border border-border px-3 py-1 disabled:opacity-40 hover:bg-surface"><ChevronRight className="h-3.5 w-3.5" /></button>
+                    <Button variant="ghost" type="button" disabled={txPage <= 1} onClick={() => setTxPage(p => p - 1)} className="rounded-lg border border-border px-3 py-1 disabled:opacity-40 hover:bg-surface"><ChevronLeft className="h-3.5 w-3.5" /></Button>
+                    <Button variant="ghost" type="button" disabled={txPage >= txPag.last_page} onClick={() => setTxPage(p => p + 1)} className="rounded-lg border border-border px-3 py-1 disabled:opacity-40 hover:bg-surface"><ChevronRight className="h-3.5 w-3.5" /></Button>
                   </div>
                 </div>
               )}
@@ -476,13 +480,13 @@ export default function VendorFinancesPage() {
               <p className="font-display text-sm font-semibold">Withdrawal History</p>
               <p className="text-xs text-muted-foreground mt-0.5">All withdrawal requests from your seller wallet</p>
             </div>
-            <button
+            <Button variant="ghost" type="button"
               onClick={() => setShowWithdrawModal(true)}
               disabled={!balance || balance <= 0 || bankAccounts.length === 0}
               className="inline-flex items-center gap-1.5 rounded-full bg-emerald-600 px-4 py-2 text-xs font-semibold text-white hover:bg-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <Plus className="h-3.5 w-3.5" /> New Withdrawal
-            </button>
+            </Button>
           </div>
           {withdrawLoading ? (
             <div className="p-10 text-center animate-pulse text-sm text-muted-foreground">Loading...</div>
@@ -532,8 +536,8 @@ export default function VendorFinancesPage() {
                 <div className="flex items-center justify-between border-t border-border px-5 py-3 text-xs text-muted-foreground">
                   <span>Page {wdPag.current_page} of {wdPag.last_page} · {wdPag.total} total</span>
                   <div className="flex gap-2">
-                    <button disabled={withdrawPage <= 1} onClick={() => setWithdrawPage(p => p - 1)} className="rounded-lg border border-border px-3 py-1 disabled:opacity-40 hover:bg-surface"><ChevronLeft className="h-3.5 w-3.5" /></button>
-                    <button disabled={withdrawPage >= wdPag.last_page} onClick={() => setWithdrawPage(p => p + 1)} className="rounded-lg border border-border px-3 py-1 disabled:opacity-40 hover:bg-surface"><ChevronRight className="h-3.5 w-3.5" /></button>
+                    <Button variant="ghost" type="button" disabled={withdrawPage <= 1} onClick={() => setWithdrawPage(p => p - 1)} className="rounded-lg border border-border px-3 py-1 disabled:opacity-40 hover:bg-surface"><ChevronLeft className="h-3.5 w-3.5" /></Button>
+                    <Button variant="ghost" type="button" disabled={withdrawPage >= wdPag.last_page} onClick={() => setWithdrawPage(p => p + 1)} className="rounded-lg border border-border px-3 py-1 disabled:opacity-40 hover:bg-surface"><ChevronRight className="h-3.5 w-3.5" /></Button>
                   </div>
                 </div>
               )}
@@ -566,12 +570,12 @@ export default function VendorFinancesPage() {
               </label>
             </div>
             <div className="mt-6 flex gap-3">
-              <button onClick={handleSaveBank} disabled={savingBank || !bankForm.bank_name || !bankForm.account_number} className="flex-1 rounded-full bg-emerald-600 py-2.5 text-sm font-semibold text-white disabled:opacity-60 hover:bg-emerald-700">
+              <Button variant="ghost" type="button" onClick={handleSaveBank} disabled={savingBank || !bankForm.bank_name || !bankForm.account_number} className="flex-1 rounded-full bg-emerald-600 py-2.5 text-sm font-semibold text-white disabled:opacity-60 hover:bg-emerald-700">
                 {savingBank ? "Saving..." : "Save"}
-              </button>
-              <button onClick={() => setShowBankModal(false)} className="flex-1 rounded-full border border-border bg-card py-2.5 text-sm font-semibold hover:border-foreground/30">
+              </Button>
+              <Button variant="ghost" type="button" onClick={() => setShowBankModal(false)} className="flex-1 rounded-full border border-border bg-card py-2.5 text-sm font-semibold hover:border-foreground/30">
                 Cancel
-              </button>
+              </Button>
             </div>
           </div>
         </div>
@@ -607,12 +611,12 @@ export default function VendorFinancesPage() {
             </div>
 
             <div className="mt-6 flex gap-3">
-              <button onClick={handleWithdraw} disabled={savingWithdraw || !withdrawForm.amount || !withdrawForm.bank_account_id} className="flex-1 rounded-full bg-emerald-600 py-2.5 text-sm font-semibold text-white disabled:opacity-60 hover:bg-emerald-700">
+              <Button variant="ghost" type="button" onClick={handleWithdraw} disabled={savingWithdraw || !withdrawForm.amount || !withdrawForm.bank_account_id} className="flex-1 rounded-full bg-emerald-600 py-2.5 text-sm font-semibold text-white disabled:opacity-60 hover:bg-emerald-700">
                 {savingWithdraw ? "Processing..." : "Withdraw"}
-              </button>
-              <button onClick={() => setShowWithdrawModal(false)} className="flex-1 rounded-full border border-border bg-card py-2.5 text-sm font-semibold hover:border-foreground/30">
+              </Button>
+              <Button variant="ghost" type="button" onClick={() => setShowWithdrawModal(false)} className="flex-1 rounded-full border border-border bg-card py-2.5 text-sm font-semibold hover:border-foreground/30">
                 Cancel
-              </button>
+              </Button>
             </div>
           </div>
         </div>

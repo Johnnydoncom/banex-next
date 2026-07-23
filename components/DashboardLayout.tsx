@@ -8,6 +8,7 @@ import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet"
 import { useAuth, signOut } from "@/hooks/use-auth"
 import { toast } from "sonner"
 import Image from "next/image"
+import { Button } from "@/components/ui/button"
 
 export type NavItem = {
   to: string
@@ -96,12 +97,12 @@ export function DashboardLayout({ title, subtitle, nav, accent, children, guard 
       <header className="sticky top-0 z-30 flex h-14 items-center gap-3 border-b border-border bg-background px-4 lg:hidden">
         <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
           <SheetTrigger asChild>
-            <button
+            <Button variant="ghost" type="button"
               aria-label="Open menu"
               className="rounded-lg border border-border p-2 text-muted-foreground"
             >
               <Menu className="h-4 w-4" />
-            </button>
+            </Button>
           </SheetTrigger>
           <SheetContent side="left" className="w-72 p-0">
             <div className="border-b border-border p-4">
@@ -113,12 +114,12 @@ export function DashboardLayout({ title, subtitle, nav, accent, children, guard 
             </div>
             <div className="p-3">{NavList}</div>
             <div className="border-t border-border p-3">
-              <button
+              <Button variant="ghost" type="button"
                 onClick={handleSignOut}
                 className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-muted-foreground hover:bg-surface hover:text-foreground"
               >
                 <LogOut className="h-4 w-4 text-brand" /> Sign out
-              </button>
+              </Button>
             </div>
           </SheetContent>
         </Sheet>
@@ -138,12 +139,12 @@ export function DashboardLayout({ title, subtitle, nav, accent, children, guard 
           </div>
           <div className="mt-4 flex-1 overflow-y-auto">{NavList}</div>
           <div className="mt-3 border-t border-border pt-3">
-            <button
+            <Button variant="ghost" type="button"
               onClick={handleSignOut}
               className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-muted-foreground hover:bg-surface hover:text-foreground"
             >
               <LogOut className="h-4 w-4 text-brand" /> Sign out
-            </button>
+            </Button>
           </div>
         </aside>
 

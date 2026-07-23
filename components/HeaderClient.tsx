@@ -21,6 +21,8 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { GenericCategory } from "@/lib/generic-api"
+import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
 
 export function HeaderClient({ categories }: { categories: GenericCategory[] }) {
   const { count, open } = useCart()
@@ -71,17 +73,17 @@ export function HeaderClient({ categories }: { categories: GenericCategory[] }) 
         {/* Search */}
         <form action="/shop" className="hidden flex-1 items-center md:flex" role="search">
           <div className="flex w-full items-stretch overflow-hidden rounded-full border border-border bg-card shadow-soft focus-within:border-brand">
-            <input
+            <Input
               name="q"
               placeholder="Find phones, brands, sellers…"
-              className="h-11 flex-1 bg-transparent px-5 text-sm outline-none placeholder:text-muted-foreground"
+              className="h-11 flex-1 bg-transparent px-5 text-sm outline-none placeholder:text-muted-foreground border-0 shadow-none focus:outline-none focus:border-none focus:ring-0 focus-visible:outline-none focus-visible:border-none focus-visible:ring-0"
             />
-            <button
+            <Button variant="ghost"
               type="submit"
-              className="flex items-center gap-2 bg-gradient-brand px-6 text-sm font-semibold text-primary-foreground"
+              className="flex items-center gap-2 bg-gradient-brand px-6 text-sm font-semibold text-primary-foreground rounded-r-full rounded-l-none h-auto"
             >
               <Search className="h-4 w-4" /> Search
-            </button>
+            </Button>
           </div>
         </form>
 
@@ -96,7 +98,7 @@ export function HeaderClient({ categories }: { categories: GenericCategory[] }) 
 
           <Popover>
             <PopoverTrigger asChild>
-              <button
+              <Button variant="ghost" type="button"
                 aria-label="Saved items"
                 className="relative rounded-full border border-border bg-card p-2.5 text-muted-foreground transition-colors hover:border-brand hover:text-brand inline-flex"
               >
@@ -106,7 +108,7 @@ export function HeaderClient({ categories }: { categories: GenericCategory[] }) 
                     {wishlist.count}
                   </span>
                 )}
-              </button>
+              </Button>
             </PopoverTrigger>
             <PopoverContent align="end" className="w-72 p-0">
               <div className="border-b border-border px-4 py-3">
@@ -169,12 +171,12 @@ export function HeaderClient({ categories }: { categories: GenericCategory[] }) 
 
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <button
+              <Button variant="ghost" type="button"
                 aria-label="Account"
                 className="rounded-full border border-border bg-card p-2.5 text-muted-foreground transition-colors hover:border-brand hover:text-brand"
               >
                 <User className="h-4 w-4" />
-              </button>
+              </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-60">
               {user ? (
@@ -229,7 +231,7 @@ export function HeaderClient({ categories }: { categories: GenericCategory[] }) 
             </DropdownMenuContent>
           </DropdownMenu>
 
-          <button
+          <Button variant="ghost" type="button"
             aria-label="Cart"
             onClick={open}
             className="relative rounded-full border border-border bg-card p-2.5 text-muted-foreground transition-colors hover:border-brand hover:text-brand"
@@ -238,7 +240,7 @@ export function HeaderClient({ categories }: { categories: GenericCategory[] }) 
             <span className="absolute -right-1 -top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-gradient-brand px-1 text-[10px] font-bold text-primary-foreground">
               {count}
             </span>
-          </button>
+          </Button>
         </div>
       </div>
 

@@ -6,6 +6,7 @@ import { useCart } from "@/components/CartContext"
 import { useWishlist } from "@/components/WishlistContext"
 import { toast } from "sonner"
 import type { GenericProduct } from "@/lib/generic-api"
+import { Button } from "@/components/ui/button"
 
 interface ProductActionButtonsProps {
   product: GenericProduct
@@ -54,19 +55,19 @@ export function ProductActionButtons({ product }: ProductActionButtonsProps) {
 
   return (
     <div className="mt-6 flex flex-wrap gap-2">
-      <button
+      <Button variant="ghost" type="button"
         onClick={buyNow}
         className="inline-flex items-center gap-2 rounded-full bg-gradient-brand px-5 py-3 text-sm font-semibold text-primary-foreground"
       >
         <Lock className="h-4 w-4" /> Buy with escrow
-      </button>
-      <button
+      </Button>
+      <Button variant="ghost" type="button"
         onClick={addToCart}
         className="inline-flex items-center gap-2 rounded-full border border-border bg-card px-5 py-3 text-sm font-semibold hover:border-brand hover:text-brand"
       >
         <ShoppingBag className="h-4 w-4" /> Add to cart
-      </button>
-      <button
+      </Button>
+      <Button variant="ghost" type="button"
         onClick={() => toggle(product)}
         className={`inline-flex items-center gap-2 rounded-full border px-5 py-3 text-sm font-semibold transition-colors ${
           saved
@@ -76,7 +77,7 @@ export function ProductActionButtons({ product }: ProductActionButtonsProps) {
       >
         <Heart className={`h-4 w-4 ${saved ? "fill-brand" : ""}`} />
         {saved ? "Saved to wishlist" : "Save to wishlist"}
-      </button>
+      </Button>
     </div>
   )
 }

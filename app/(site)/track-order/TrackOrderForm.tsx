@@ -2,6 +2,8 @@
 
 import { useState } from "react"
 import { CheckCircle2, Circle, Package, Truck, Home } from "lucide-react"
+import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
 
 const steps = [
   { icon: CheckCircle2, label: "Order placed", time: "Today, 9:12 AM" },
@@ -23,15 +25,15 @@ export function TrackOrderForm() {
         }}
         className="flex flex-col gap-3 rounded-2xl border border-border bg-card p-5 shadow-soft sm:flex-row"
       >
-        <input
+        <Input
           value={orderId}
           onChange={(e) => setOrderId(e.target.value)}
           placeholder="e.g. BNX-2026-04823"
           className="h-12 flex-1 rounded-xl border border-border bg-background px-4 text-sm outline-none focus:border-brand"
         />
-        <button type="submit" className="inline-flex h-12 items-center justify-center rounded-full bg-gradient-brand px-8 text-sm font-semibold text-primary-foreground">
+        <Button variant="ghost" type="submit" className="inline-flex h-12 items-center justify-center rounded-full bg-gradient-brand px-8 text-sm font-semibold text-primary-foreground">
           Track
-        </button>
+        </Button>
       </form>
 
       {shown && (

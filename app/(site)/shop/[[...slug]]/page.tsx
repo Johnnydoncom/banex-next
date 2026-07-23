@@ -116,15 +116,15 @@ export default async function ShopPage({
     ]),
     ...(filteredProducts.length
       ? [
-          itemListSchema(
-            activeCategory ? `${activeCategory.name} listings` : "Marketplace listings",
-            filteredProducts.slice(0, 40).map((p: GenericProduct) => ({
-              name: p.name,
-              path: `/product/${p.slug}`,
-              image: p.images?.find((i) => i.is_primary)?.url || p.images?.[0]?.url,
-            })),
-          ),
-        ]
+        itemListSchema(
+          activeCategory ? `${activeCategory.name} listings` : "Marketplace listings",
+          filteredProducts.slice(0, 40).map((p: GenericProduct) => ({
+            name: p.name,
+            path: `/product/${p.slug}`,
+            image: p.images?.find((i) => i.is_primary)?.url || p.images?.[0]?.url,
+          })),
+        ),
+      ]
       : []),
   ]
 
@@ -210,7 +210,7 @@ export default async function ShopPage({
                 <p className="mt-2 text-sm text-muted-foreground">Try a different search or widen your filters.</p>
               </div>
             ) : (
-              <div className="grid grid-cols-2 gap-5 md:grid-cols-3 xl:grid-cols-4">
+              <div className="grid grid-cols-2 gap-5 lg:grid-cols-3 ">
                 {filteredProducts.map((p: GenericProduct) => (
                   <ApiProductCard key={p.id} product={p as any} />
                 ))}

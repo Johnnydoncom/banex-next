@@ -16,6 +16,7 @@ import {
   Redo,
   Link as LinkIcon,
 } from "lucide-react"
+import { Button } from "@/components/ui/button"
 
 interface RichTextEditorProps {
   value: string
@@ -113,7 +114,7 @@ const MenuBar = ({ editor }: { editor: any }) => {
   return (
     <div className="flex flex-wrap items-center gap-1 border-b border-border bg-surface p-2">
       {buttons.map((btn, idx) => (
-        <button
+        <Button variant="ghost"
           key={idx}
           type="button"
           onClick={btn.onClick}
@@ -124,7 +125,7 @@ const MenuBar = ({ editor }: { editor: any }) => {
           } ${btn.disabled ? "cursor-not-allowed opacity-50" : ""}`}
         >
           {btn.icon}
-        </button>
+        </Button>
       ))}
     </div>
   )

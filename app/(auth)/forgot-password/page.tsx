@@ -6,6 +6,9 @@ import { Loader2, MailCheck } from "lucide-react"
 import { toast } from "sonner"
 import { z } from "zod"
 import { AuthShell } from "@/components/AuthShell"
+import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
 
 const schema = z.string().trim().email("Enter a valid email").max(255)
 
@@ -89,26 +92,26 @@ export default function ForgotPasswordPage() {
     >
       <form onSubmit={handleSubmit} className="space-y-4">
         <div>
-          <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+          <Label className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-muted-foreground">
             Email
-          </label>
-          <input
+          </Label>
+          <Input
             type="email"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             placeholder="you@example.com"
             autoComplete="email"
-            className="h-11 w-full rounded-xl border border-border bg-background px-4 text-sm outline-none focus:border-brand"
+            className="h-11 rounded-xl px-4 focus-visible:border-brand"
             required
           />
         </div>
-        <button
+        <Button
           type="submit"
           disabled={loading}
-          className="flex h-11 w-full items-center justify-center rounded-full bg-gradient-brand text-sm font-semibold text-primary-foreground shadow-soft transition-opacity hover:opacity-95 disabled:opacity-60"
+          className="h-11 w-full rounded-full bg-gradient-brand text-sm font-semibold text-primary-foreground shadow-soft hover:opacity-95"
         >
           {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : "Send reset link"}
-        </button>
+        </Button>
       </form>
     </AuthShell>
   )

@@ -11,6 +11,7 @@ import {
 import { formatNaira } from "@/lib/products"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
+import { Button } from "@/components/ui/button"
 import { useSellerOrders } from "@/hooks/use-swr-data"
 
 const ORDER_STATUSES = ["all", "paid", "accepted", "declined", "delivered"] as const
@@ -109,7 +110,7 @@ export default function VendorOrdersPage() {
       {/* Status filters */}
       <div className="flex flex-wrap gap-2">
         {ORDER_STATUSES.map((s) => (
-          <button
+          <Button variant="ghost"
             key={s}
             onClick={() => setFilter(s)}
             className={`rounded-full px-3.5 py-1.5 text-xs font-semibold capitalize transition-colors ${filter === s
@@ -118,7 +119,7 @@ export default function VendorOrdersPage() {
               }`}
           >
             {s === "paid" ? "Pending Action" : s}
-          </button>
+          </Button>
         ))}
       </div>
 
@@ -139,7 +140,7 @@ export default function VendorOrdersPage() {
             return (
               <div key={o.id} className="rounded-2xl border border-border bg-card overflow-hidden">
                 {/* Order header */}
-                <button
+                <Button variant="ghost"
                   onClick={() => setExpanded(isExpanded ? null : o.id)}
                   className="flex w-full items-center justify-between px-5 py-4 text-left hover:bg-surface/20 transition-colors"
                 >
@@ -163,7 +164,7 @@ export default function VendorOrdersPage() {
                     <p className="font-display font-bold text-sm">{formatNaira(o.lines_summary?.subtotal ?? 0)}</p>
                     {isExpanded ? <ChevronUp className="h-4 w-4 text-muted-foreground" /> : <ChevronDown className="h-4 w-4 text-muted-foreground" />}
                   </div>
-                </button>
+                </Button>
 
                 {/* Expanded: order items */}
                 {isExpanded && (
@@ -212,22 +213,22 @@ export default function VendorOrdersPage() {
                             </span>
                             {item.status === "paid" && (
                               <div className="flex gap-2">
-                                <button
+                                <Button variant="ghost"
                                   onClick={() => handleAccept(o.id, item.id)}
                                   disabled={actionLoading === item.id}
                                   className="inline-flex items-center gap-1 rounded-full bg-emerald-600 px-3 py-1 text-[11px] font-semibold text-white hover:bg-emerald-700 disabled:opacity-60 transition-colors"
                                 >
                                   <CheckCircle2 className="h-3 w-3" />
                                   {actionLoading === item.id ? "…" : "Accept"}
-                                </button>
-                                <button
+                                </Button>
+                                <Button variant="ghost"
                                   onClick={() => { setDeclineState({ orderId: o.id, itemId: item.id }); setDeclineReason("") }}
                                   disabled={actionLoading === item.id}
                                   className="inline-flex items-center gap-1 rounded-full border border-rose-500/40 bg-rose-500/10 px-3 py-1 text-[11px] font-semibold text-rose-600 hover:bg-rose-500/20 disabled:opacity-60 transition-colors"
                                 >
                                   <XCircle className="h-3 w-3" />
                                   Decline
-                                </button>
+                                </Button>
                               </div>
                             )}
                           </div>
@@ -245,21 +246,21 @@ export default function VendorOrdersPage() {
       {/* Pagination */}
       {totalPages > 1 && (
         <div className="flex items-center justify-center gap-2">
-          <button
+          <Button variant="ghost"
             onClick={() => setPage((p) => Math.max(1, p - 1))}
             disabled={page === 1}
             className="rounded-full border border-border bg-card px-4 py-1.5 text-xs font-semibold disabled:opacity-40 hover:border-emerald-500 transition-colors"
           >
             Previous
-          </button>
+          </Button>
           <span className="text-xs text-muted-foreground">Page {page} of {totalPages}</span>
-          <button
+          <Button variant="ghost"
             onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
             disabled={page === totalPages}
             className="rounded-full border border-border bg-card px-4 py-1.5 text-xs font-semibold disabled:opacity-40 hover:border-emerald-500 transition-colors"
           >
             Next
-          </button>
+          </Button>
         </div>
       )}
 
@@ -280,19 +281,19 @@ export default function VendorOrdersPage() {
               placeholder="e.g. Item is out of stock"
             />
             <div className="mt-4 flex gap-3">
-              <button
+              <Button variant="ghost"
                 onClick={handleDecline}
                 disabled={!!actionLoading}
                 className="flex-1 rounded-full bg-rose-600 py-2.5 text-sm font-semibold text-white hover:bg-rose-700 disabled:opacity-60 transition-colors"
               >
                 {actionLoading ? "Declining…" : "Decline Item"}
-              </button>
-              <button
+              </Button>
+              <Button variant="ghost"
                 onClick={() => { setDeclineState(null); setDeclineReason("") }}
                 className="flex-1 rounded-full border border-border bg-card py-2.5 text-sm font-semibold hover:border-foreground/30 transition-colors"
               >
                 Cancel
-              </button>
+              </Button>
             </div>
           </div>
         </div>

@@ -4,13 +4,14 @@ import { Heart } from "lucide-react"
 import { useWishlist } from "./WishlistContext"
 import type { GenericProduct } from "@/lib/generic-api"
 import { cn } from "@/lib/utils"
+import { Button } from "@/components/ui/button"
 
 export function WishlistButton({ product, className }: { product: GenericProduct, className?: string }) {
   const { isInWishlist, toggle } = useWishlist()
   const active = isInWishlist(product.id)
 
   return (
-    <button
+    <Button variant="ghost" type="button"
       aria-label="Save to Wishlist"
       onClick={(e) => {
         e.preventDefault()
@@ -23,6 +24,6 @@ export function WishlistButton({ product, className }: { product: GenericProduct
       )}
     >
       <Heart className={`h-4 w-4 ${active ? "fill-brand" : ""}`} />
-    </button>
+    </Button>
   )
 }

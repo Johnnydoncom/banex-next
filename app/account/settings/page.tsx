@@ -4,6 +4,9 @@ import { useState } from "react"
 import { Save } from "lucide-react"
 import { toast } from "sonner"
 import { useAuth } from "@/hooks/use-auth"
+import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
 
 export default function AccountSettingsPage() {
   const { session } = useAuth()
@@ -62,22 +65,22 @@ export default function AccountSettingsPage() {
         <h2 className="font-display text-lg font-semibold mb-4">Change Password</h2>
         <form onSubmit={handlePasswordChange} className="space-y-4">
           <div>
-            <label className="mb-1.5 block text-xs font-medium text-muted-foreground">Current Password</label>
-            <input type="password" value={form.currentPassword} onChange={(e) => setForm(f => ({ ...f, currentPassword: e.target.value }))} required className="w-full rounded-xl border border-border bg-background px-4 py-2.5 text-sm" />
+            <Label className="mb-1.5 block text-xs text-muted-foreground">Current Password</Label>
+            <Input type="password" value={form.currentPassword} onChange={(e) => setForm(f => ({ ...f, currentPassword: e.target.value }))} required className="rounded-xl px-4 py-2.5" />
           </div>
           <div>
-            <label className="mb-1.5 block text-xs font-medium text-muted-foreground">New Password</label>
-            <input type="password" value={form.newPassword} onChange={(e) => setForm(f => ({ ...f, newPassword: e.target.value }))} required className="w-full rounded-xl border border-border bg-background px-4 py-2.5 text-sm" />
+            <Label className="mb-1.5 block text-xs text-muted-foreground">New Password</Label>
+            <Input type="password" value={form.newPassword} onChange={(e) => setForm(f => ({ ...f, newPassword: e.target.value }))} required className="rounded-xl px-4 py-2.5" />
           </div>
           <div>
-            <label className="mb-1.5 block text-xs font-medium text-muted-foreground">Confirm New Password</label>
-            <input type="password" value={form.confirmPassword} onChange={(e) => setForm(f => ({ ...f, confirmPassword: e.target.value }))} required className="w-full rounded-xl border border-border bg-background px-4 py-2.5 text-sm" />
+            <Label className="mb-1.5 block text-xs text-muted-foreground">Confirm New Password</Label>
+            <Input type="password" value={form.confirmPassword} onChange={(e) => setForm(f => ({ ...f, confirmPassword: e.target.value }))} required className="rounded-xl px-4 py-2.5" />
           </div>
 
           <div className="pt-2">
-            <button type="submit" disabled={saving || !form.currentPassword || !form.newPassword} className="inline-flex items-center gap-2 rounded-xl bg-gradient-brand px-6 py-2.5 text-sm font-semibold text-primary-foreground shadow-brand disabled:opacity-60">
+            <Button type="submit" disabled={saving || !form.currentPassword || !form.newPassword} className="h-auto gap-2 rounded-xl bg-gradient-brand px-6 py-2.5 text-sm font-semibold text-primary-foreground shadow-brand">
               <Save className="h-4 w-4" /> {saving ? "Updating..." : "Update Password"}
-            </button>
+            </Button>
           </div>
         </form>
       </div>
@@ -85,9 +88,9 @@ export default function AccountSettingsPage() {
       <div className="rounded-2xl border border-rose-200 bg-rose-50/50 p-6">
         <h2 className="font-display text-lg font-semibold text-rose-600 mb-2">Danger Zone</h2>
         <p className="text-sm text-muted-foreground mb-4">Once you delete your account, there is no going back. Please be certain.</p>
-        <button className="rounded-xl border border-rose-300 bg-white px-4 py-2 text-sm font-semibold text-rose-600 hover:bg-rose-50">
+        <Button type="button" variant="outline" className="h-auto rounded-xl border-rose-300 bg-white px-4 py-2 text-sm font-semibold text-rose-600 hover:bg-rose-50">
           Delete Account
-        </button>
+        </Button>
       </div>
     </div>
   )

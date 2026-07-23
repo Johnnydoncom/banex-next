@@ -2,6 +2,7 @@
 
 import type { LucideIcon } from "lucide-react"
 import Link from "next/link"
+import { Button } from "@/components/ui/button"
 
 type EmptyStateProps = {
   icon: LucideIcon
@@ -28,12 +29,13 @@ export function EmptyState({ icon: Icon, title, description, actionLabel, action
           {actionLabel}
         </Link>
       ) : onAction ? (
-        <button
+        <Button
+          type="button"
           onClick={onAction}
-          className="mt-5 inline-flex items-center gap-2 rounded-full bg-gradient-brand px-5 py-2.5 text-xs font-semibold text-primary-foreground shadow-brand transition-transform hover:scale-[1.02]"
+          className="mt-5 h-auto gap-2 rounded-full bg-gradient-brand px-5 py-2.5 text-xs font-semibold text-primary-foreground shadow-brand transition-transform hover:scale-[1.02]"
         >
           {actionLabel}
-        </button>
+        </Button>
       ) : null)}
     </div>
   )

@@ -3,6 +3,8 @@
 import Link from "next/link"
 import { useEffect, useState } from "react"
 import { Package, Search, ChevronLeft, ChevronRight } from "lucide-react"
+import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
 import { useAuth } from "@/hooks/use-auth"
 import { userFetchOrders, type OrderData, type OrderPagination } from "@/lib/user-api"
 import { formatNaira } from "@/lib/products"
@@ -58,11 +60,11 @@ export default function OrdersPage() {
         </div>
         <label className="relative">
           <Search className="pointer-events-none absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
-          <input
+          <Input
             value={q}
             onChange={(e) => setQ(e.target.value)}
             placeholder="Search order #"
-            className="h-9 w-56 rounded-full border border-border bg-card pl-9 pr-3 text-xs outline-none focus:border-brand"
+            className="h-9 w-56 rounded-full bg-card pl-9 pr-3 text-xs focus-visible:border-brand"
           />
         </label>
       </div>
@@ -70,17 +72,19 @@ export default function OrdersPage() {
       {/* Status filters */}
       <div className="flex flex-wrap gap-2">
         {STATUSES.map((s) => (
-          <button
+          <Button
+            type="button"
+            variant={filter === s ? "default" : "outline"}
             key={s}
             onClick={() => { setFilter(s); setPage(1) }}
-            className={`rounded-full px-3.5 py-1.5 text-xs font-semibold capitalize transition-colors ${
+            className={`h-auto rounded-full px-3.5 py-1.5 text-xs font-semibold capitalize ${
               filter === s
                 ? "bg-gradient-brand text-primary-foreground"
-                : "border border-border bg-card text-muted-foreground hover:text-foreground"
+                : "bg-card text-muted-foreground hover:text-foreground"
             }`}
           >
             {s}
-          </button>
+          </Button>
         ))}
       </div>
 
@@ -177,23 +181,29 @@ export default function OrdersPage() {
       {/* Pagination */}
       {pagination && pagination.last_page > 1 && (
         <div className="flex items-center justify-center gap-3 pt-2">
-          <button
+          <Button
+            type="button"
+            variant="outline"
+            size="icon"
             onClick={() => setPage((p) => Math.max(1, p - 1))}
             disabled={page === 1}
-            className="flex h-8 w-8 items-center justify-center rounded-full border border-border bg-card text-muted-foreground transition-colors hover:border-brand hover:text-brand disabled:opacity-40 disabled:cursor-not-allowed"
+            className="h-8 w-8 rounded-full bg-card text-muted-foreground hover:border-brand hover:text-brand"
           >
             <ChevronLeft className="h-4 w-4" />
-          </button>
+          </Button>
           <span className="text-xs text-muted-foreground">
             Page {pagination.current_page} of {pagination.last_page}
           </span>
-          <button
+          <Button
+            type="button"
+            variant="outline"
+            size="icon"
             onClick={() => setPage((p) => Math.min(pagination.last_page, p + 1))}
             disabled={page === pagination.last_page}
-            className="flex h-8 w-8 items-center justify-center rounded-full border border-border bg-card text-muted-foreground transition-colors hover:border-brand hover:text-brand disabled:opacity-40 disabled:cursor-not-allowed"
+            className="h-8 w-8 rounded-full bg-card text-muted-foreground hover:border-brand hover:text-brand"
           >
             <ChevronRight className="h-4 w-4" />
-          </button>
+          </Button>
         </div>
       )}
     </div>

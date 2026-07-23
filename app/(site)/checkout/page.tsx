@@ -44,6 +44,8 @@ import {
   type PaymentMethodData,
   type WalletData
 } from "@/lib/user-api"
+import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
 
 type Fulfilment = "delivery" | "pickup"
 
@@ -296,12 +298,12 @@ export default function CheckoutPage() {
           >
             Track Order
           </Link>
-          <button
+          <Button variant="ghost" type="button"
             onClick={() => router.push("/")}
             className="rounded-full border border-border bg-card px-5 py-3 text-sm font-semibold hover:border-brand hover:text-brand"
           >
             Back to home
-          </button>
+          </Button>
         </div>
       </section>
     )
@@ -368,7 +370,7 @@ export default function CheckoutPage() {
                   {!showNewAddress && addresses.length > 0 ? (
                     <div className="grid gap-3 sm:grid-cols-2">
                       {addresses.map(addr => (
-                        <button
+                        <Button variant="ghost"
                           key={addr.id}
                           type="button"
                           onClick={() => setSelectedAddressId(addr.id)}
@@ -379,16 +381,15 @@ export default function CheckoutPage() {
                           <span className="mt-1 text-xs text-muted-foreground line-clamp-1">{addr.street}</span>
                           <span className="text-xs text-muted-foreground">{addr.city}, {addr.state}</span>
                           <span className="mt-2 text-[11px] font-medium text-foreground">{addr.phone}</span>
-                        </button>
+                        </Button>
                       ))}
-                      <button
-                        type="button"
+                      <Button variant="ghost" type="button"
                         onClick={() => setShowNewAddress(true)}
                         className="flex flex-col items-center justify-center gap-2 rounded-xl border border-dashed border-border p-4 text-muted-foreground hover:border-brand hover:text-brand"
                       >
                         <Plus className="h-5 w-5" />
                         <span className="text-sm font-medium">Add New Address</span>
-                      </button>
+                      </Button>
                     </div>
                   ) : (
                     <div className="grid gap-3 sm:grid-cols-2">
@@ -401,18 +402,17 @@ export default function CheckoutPage() {
 
                       <div className="sm:col-span-2 flex items-center justify-between mt-2">
                         {addresses.length > 0 && (
-                          <button type="button" onClick={() => setShowNewAddress(false)} className="text-sm font-medium text-muted-foreground hover:text-foreground">
+                          <Button variant="ghost" type="button" onClick={() => setShowNewAddress(false)} className="text-sm font-medium text-muted-foreground hover:text-foreground">
                             Cancel
-                          </button>
+                          </Button>
                         )}
-                        <button
-                          type="button"
+                        <Button variant="ghost" type="button"
                           onClick={handleCreateAddress}
                           disabled={submitting}
                           className="rounded-full bg-card border border-border px-4 py-2 text-xs font-semibold hover:border-brand hover:text-brand ml-auto"
                         >
                           {submitting ? "Saving..." : "Save Address"}
-                        </button>
+                        </Button>
                       </div>
                     </div>
                   )}
@@ -426,7 +426,7 @@ export default function CheckoutPage() {
                 <legend className="px-1 font-display text-base font-semibold">Shipping Method</legend>
                 <div className="mt-3 grid gap-3 sm:grid-cols-2">
                   {shippingRates.map((rate) => (
-                    <button
+                    <Button variant="ghost"
                       key={rate.id}
                       type="button"
                       onClick={() => setSelectedRateId(rate.id)}
@@ -436,7 +436,7 @@ export default function CheckoutPage() {
                       <span className="font-semibold text-sm">{rate.name}</span>
                       <span className="mt-1 text-xs text-muted-foreground">{rate.delivery_window}</span>
                       <span className="mt-2 text-sm font-semibold text-brand">{formatNaira(rate.fee)}</span>
-                    </button>
+                    </Button>
                   ))}
                 </div>
               </fieldset>
@@ -569,14 +569,14 @@ export default function CheckoutPage() {
                 </div>
               </dl>
 
-              <button
-                disabled={submitting || !breakdown}
+              <Button
                 type="submit"
-                className="mt-5 inline-flex w-full items-center justify-center gap-2 rounded-full bg-gradient-brand py-3.5 text-sm font-semibold text-primary-foreground disabled:opacity-70 disabled:cursor-not-allowed"
+                disabled={submitting || !breakdown}
+                className="mt-5 h-auto w-full gap-2 rounded-full bg-gradient-brand py-3.5 text-sm font-semibold text-primary-foreground"
               >
                 <Lock className="h-4 w-4" />
                 {submitting ? "Processing…" : `Pay ${breakdown?.summary ? formatNaira(breakdown.summary.total) : "..."} to escrow`}
-              </button>
+              </Button>
               <p className="mt-2 text-center text-[11px] text-muted-foreground">
                 By paying, you agree to Banex Mall's escrow terms.
               </p>
@@ -596,7 +596,7 @@ function Field({
   return (
     <label className={`block ${className}`}>
       <span className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground">{label}</span>
-      <input
+      <Input
         {...props}
         className="mt-1 h-11 w-full rounded-xl border border-border bg-background px-4 text-sm outline-none focus:border-brand"
       />
@@ -636,8 +636,7 @@ function PayOption({
   const isWallet = slug === "wallet"
 
   return (
-    <button
-      type="button"
+    <Button variant="ghost" type="button"
       onClick={onClick}
       disabled={disabled}
       className={`group relative flex items-center gap-3 rounded-xl border p-3 text-left transition-all duration-200 ${
@@ -692,7 +691,7 @@ function PayOption({
           <div className="h-1.5 w-1.5 rounded-full bg-white" />
         )}
       </div>
-    </button>
+    </Button>
   )
 }
 
