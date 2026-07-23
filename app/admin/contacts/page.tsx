@@ -7,6 +7,10 @@ import { ConfirmDialog } from "@/components/ConfirmDialog"
 import { toast } from "sonner"
 import { useAuth } from "@/hooks/use-auth"
 import { fetchAdminWhatsAppContacts, storeAdminWhatsAppContact, updateAdminWhatsAppContact, deleteAdminWhatsAppContact, type AdminWhatsAppContact } from "@/lib/admin-api"
+import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
+import { Checkbox } from "@/components/ui/checkbox"
 
 /* ------------------------------------------------------------------ */
 /*  Types & Mock Data                                                  */
@@ -121,12 +125,12 @@ export default function AdminContactsPage() {
       className: "text-right",
       render: (c) => (
         <div className="flex items-center justify-end gap-1">
-          <button onClick={() => handleOpenModal(c)} className="rounded-lg p-1.5 text-muted-foreground hover:bg-surface hover:text-foreground">
+          <Button type="button" variant="ghost" size="icon" onClick={() => handleOpenModal(c)} className="h-auto w-auto rounded-lg p-1.5 text-muted-foreground hover:bg-surface hover:text-foreground">
             <Edit2 className="h-3.5 w-3.5" />
-          </button>
-          <button onClick={() => setDeleteId(c.id)} className="rounded-lg p-1.5 text-muted-foreground hover:bg-rose-500/15 hover:text-rose-600">
+          </Button>
+          <Button type="button" variant="ghost" size="icon" onClick={() => setDeleteId(c.id)} className="h-auto w-auto rounded-lg p-1.5 text-muted-foreground hover:bg-rose-500/15 hover:text-rose-600">
             <Trash2 className="h-3.5 w-3.5" />
-          </button>
+          </Button>
         </div>
       ),
     },
@@ -139,9 +143,9 @@ export default function AdminContactsPage() {
           <h1 className="font-display text-2xl font-bold">WhatsApp Contacts</h1>
           <p className="mt-1 text-sm text-muted-foreground">Manage official support numbers displayed to users.</p>
         </div>
-        <button onClick={() => handleOpenModal()} className="inline-flex items-center gap-2 rounded-full bg-gradient-brand px-5 py-2.5 text-xs font-semibold text-primary-foreground shadow-brand">
+        <Button type="button" onClick={() => handleOpenModal()} className="h-auto gap-2 rounded-full bg-gradient-brand px-5 py-2.5 text-xs font-semibold text-primary-foreground shadow-brand">
           <Plus className="h-3.5 w-3.5" /> Add Contact
-        </button>
+        </Button>
       </div>
 
       <DataTable columns={columns} data={contacts} rowKey={(c) => c.id} emptyState={loading ? <div className="py-12 text-center text-sm text-muted-foreground">Loading contacts...</div> : undefined} />
@@ -153,21 +157,21 @@ export default function AdminContactsPage() {
             <h2 className="font-display text-xl font-bold mb-4">{editingId ? "Edit Contact" : "Add Contact"}</h2>
             <div className="space-y-4">
               <div>
-                <label className="mb-1.5 block text-xs font-medium text-muted-foreground">Label</label>
-                <input type="text" value={form.label} onChange={(e) => setForm(f => ({...f, label: e.target.value}))} className="w-full rounded-xl border border-border bg-background px-4 py-2.5 text-sm" placeholder="e.g. Vendor Support" />
+                <Label className="mb-1.5 block text-xs text-muted-foreground">Label</Label>
+                <Input type="text" value={form.label} onChange={(e) => setForm(f => ({...f, label: e.target.value}))} className="rounded-xl px-4 py-2.5" placeholder="e.g. Vendor Support" />
               </div>
               <div>
-                <label className="mb-1.5 block text-xs font-medium text-muted-foreground">Phone Number</label>
-                <input type="text" value={form.phone_number} onChange={(e) => setForm(f => ({...f, phone_number: e.target.value}))} className="w-full rounded-xl border border-border bg-background px-4 py-2.5 text-sm font-mono" placeholder="+234..." />
+                <Label className="mb-1.5 block text-xs text-muted-foreground">Phone Number</Label>
+                <Input type="text" value={form.phone_number} onChange={(e) => setForm(f => ({...f, phone_number: e.target.value}))} className="rounded-xl px-4 py-2.5 font-mono" placeholder="+234..." />
               </div>
-              <label className="flex items-center gap-2 cursor-pointer mt-2">
-                <input type="checkbox" checked={form.is_active} onChange={(e) => setForm(f => ({...f, is_active: e.target.checked}))} className="rounded border-border text-brand focus:ring-brand" />
+              <Label className="flex items-center gap-2 cursor-pointer mt-2">
+                <Checkbox checked={form.is_active} onCheckedChange={(v) => setForm(f => ({...f, is_active: v === true}))} />
                 <span className="text-sm font-medium">Active (visible to users)</span>
-              </label>
+              </Label>
             </div>
             <div className="mt-6 flex justify-end gap-2 border-t border-border pt-4">
-              <button onClick={() => setModalOpen(false)} className="rounded-xl border border-border px-4 py-2.5 text-sm font-medium">Cancel</button>
-              <button onClick={handleSave} disabled={saving} className="rounded-xl bg-gradient-brand px-6 py-2.5 text-sm font-semibold text-primary-foreground">{saving ? "Saving..." : "Save"}</button>
+              <Button type="button" variant="outline" onClick={() => setModalOpen(false)} className="h-auto rounded-xl px-4 py-2.5 text-sm font-medium">Cancel</Button>
+              <Button type="button" onClick={handleSave} disabled={saving} className="h-auto rounded-xl bg-gradient-brand px-6 py-2.5 text-sm font-semibold text-primary-foreground">{saving ? "Saving..." : "Save"}</Button>
             </div>
           </div>
         </div>

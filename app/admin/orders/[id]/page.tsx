@@ -7,6 +7,9 @@ import { StatusBadge } from "@/components/StatusBadge"
 import { useAuth } from "@/hooks/use-auth"
 import { fetchAdminOrder, updateAdminOrderStatus, cancelAdminOrder, sellerActionAdminOrder, type AdminOrder } from "@/lib/admin-api"
 import { toast } from "sonner"
+import { Button } from "@/components/ui/button"
+import { Textarea } from "@/components/ui/textarea"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 
 export default function AdminOrderDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params)
@@ -29,9 +32,8 @@ export default function AdminOrderDetailPage({ params }: { params: Promise<{ id:
       .finally(() => setLoading(false))
   }, [id, token])
 
-  async function handleStatusChange(e: React.ChangeEvent<HTMLSelectElement>) {
+  async function handleStatusChange(newStatus: string) {
     if (!token || !order) return
-    const newStatus = e.target.value
     setUpdating(true)
     try {
       if (newStatus === "cancelled") {
@@ -41,15 +43,15 @@ export default function AdminOrderDetailPage({ params }: { params: Promise<{ id:
           toast.success("Order cancelled")
         }
       } else if (newStatus === "process") {
-        const res = await updateAdminOrderStatus(id, "process", token)
+        const res = await updateAdminOrderStatus(id, "in-process", token)
         setOrder(res.data?.order ?? null)
         toast.success("Order marked as processing")
       } else if (newStatus === "transit") {
-        const res = await updateAdminOrderStatus(id, "transit", token)
+        const res = await updateAdminOrderStatus(id, "in-transit", token)
         setOrder(res.data?.order ?? null)
         toast.success("Order marked as in transit")
       } else if (newStatus === "deliver") {
-        const res = await updateAdminOrderStatus(id, "deliver", token)
+        const res = await updateAdminOrderStatus(id, "in-delivered", token)
         setOrder(res.data?.order ?? null)
         toast.success("Order marked as delivered")
       }
@@ -105,18 +107,21 @@ export default function AdminOrderDetailPage({ params }: { params: Promise<{ id:
           <ArrowLeft className="h-4 w-4" /> Back to orders
         </Link>
         <div className="flex items-center gap-3">
-          <select 
-            className="rounded-xl border border-border bg-card px-3 py-1.5 text-sm font-medium outline-none disabled:opacity-50"
+          <Select
             value={order.status}
-            onChange={handleStatusChange}
+            onValueChange={handleStatusChange}
             disabled={updating || order.status === "cancelled" || order.status === "delivered"}
           >
-            <option value="pending" disabled>Pending</option>
-            <option value="process">Mark Processing</option>
-            <option value="transit">Mark In Transit</option>
-            <option value="deliver">Mark Delivered</option>
-            <option value="cancelled">Cancel Order</option>
-          </select>
+            <SelectTrigger className="w-[180px] rounded-xl bg-card text-sm font-medium">
+              <SelectValue placeholder="Update status" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="process">Mark Processing</SelectItem>
+              <SelectItem value="transit">Mark In Transit</SelectItem>
+              <SelectItem value="deliver">Mark Delivered</SelectItem>
+              <SelectItem value="cancelled">Cancel Order</SelectItem>
+            </SelectContent>
+          </Select>
         </div>
       </div>
 
@@ -134,46 +139,67 @@ export default function AdminOrderDetailPage({ params }: { params: Promise<{ id:
         {/* Items List */}
         <div className="lg:col-span-2 space-y-6">
           <div className="rounded-2xl border border-border bg-card p-6">
-            <h2 className="font-display text-base font-semibold border-b border-border pb-4">Order Items ({order.items?.length || 0})</h2>
+            <h2 className="font-display text-base font-semibold border-b border-border pb-4">Order Items ({order.items?.length ?? order.item_count ?? 0})</h2>
             <ul className="divide-y divide-border">
               {order.items?.map((item) => (
                 <li key={item.id} className="flex gap-4 py-4">
                   <div className="relative flex h-16 w-16 flex-none items-center justify-center overflow-hidden rounded-xl border border-border bg-surface">
-                    <ImageOff className="h-6 w-6 text-muted-foreground/30" />
+                    {item.primary_image_url ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img src={item.primary_image_url} alt={item.product_name} className="h-full w-full object-cover" />
+                    ) : (
+                      <ImageOff className="h-6 w-6 text-muted-foreground/30" />
+                    )}
                   </div>
                   <div className="flex-1 min-w-0">
                     <p className="font-semibold">{item.product_name}</p>
-                    <p className="text-xs text-muted-foreground">Sold by {item.seller?.shop_name || "Unknown"}</p>
+                    <p className="text-xs text-muted-foreground">Sold by {item.seller_shop_name || "Unknown"}</p>
                     <div className="mt-1 text-sm font-medium">₦{item.unit_price?.toLocaleString()} × {item.quantity}</div>
                     {/* Per-item accept/decline for seller */}
-                    {item.status === "paid" && (
+                    {(item.status === "paid" || item.status === "pending") && (
                       <div className="mt-2 flex gap-2">
-                        <button
+                        <Button
+                          type="button"
+                          variant="ghost"
                           onClick={() => setItemAction({ itemId: item.id, action: "accept" })}
-                          className="rounded-lg bg-emerald-500/10 px-3 py-1 text-xs font-semibold text-emerald-700 hover:bg-emerald-500/20 transition-colors"
+                          className="h-auto rounded-lg bg-emerald-500/10 px-3 py-1 text-xs font-semibold text-emerald-700 hover:bg-emerald-500/20"
                         >
                           Accept for Seller
-                        </button>
-                        <button
+                        </Button>
+                        <Button
+                          type="button"
+                          variant="ghost"
                           onClick={() => setItemAction({ itemId: item.id, action: "decline" })}
-                          className="rounded-lg bg-rose-500/10 px-3 py-1 text-xs font-semibold text-rose-700 hover:bg-rose-500/20 transition-colors"
+                          className="h-auto rounded-lg bg-rose-500/10 px-3 py-1 text-xs font-semibold text-rose-700 hover:bg-rose-500/20"
                         >
                           Decline for Seller
-                        </button>
+                        </Button>
                       </div>
                     )}
                   </div>
                   <div className="text-right font-semibold flex flex-col justify-between">
-                    <span>₦{((item.unit_price || 0) * (item.quantity || 1)).toLocaleString()}</span>
+                    <span>₦{(item.line_total ?? (item.unit_price || 0) * (item.quantity || 1)).toLocaleString()}</span>
                     <span className="text-[10px] uppercase text-muted-foreground">{item.status}</span>
                   </div>
                 </li>
               ))}
             </ul>
             <div className="mt-4 space-y-2 border-t border-border pt-4 text-sm">
+              {order.summary && (
+                <>
+                  <div className="flex justify-between text-muted-foreground">
+                    <span>Subtotal</span>
+                    <span>₦{order.summary.subtotal?.toLocaleString()}</span>
+                  </div>
+                  <div className="flex justify-between text-muted-foreground">
+                    <span>Delivery Fee</span>
+                    <span>₦{order.summary.delivery_fee?.toLocaleString()}</span>
+                  </div>
+                </>
+              )}
               <div className="flex justify-between font-bold text-base mt-2 pt-2">
                 <span>Total</span>
-                <span className="text-brand">₦{order.total_amount?.toLocaleString()}</span>
+                <span className="text-brand">₦{order.summary?.total?.toLocaleString() ?? 0}</span>
               </div>
             </div>
           </div>
@@ -184,8 +210,11 @@ export default function AdminOrderDetailPage({ params }: { params: Promise<{ id:
           <div className="rounded-2xl border border-border bg-card p-6">
             <h2 className="font-display text-base font-semibold mb-4 flex items-center gap-2"><User className="h-4 w-4" /> Customer Details</h2>
             <div className="space-y-3 text-sm">
-              <p className="font-semibold">{order.customer?.full_name || "Unknown Customer"}</p>
-              <p className="text-muted-foreground">{order.customer?.email}</p>
+              <p className="font-semibold">{order.user?.name || "Unknown Customer"}</p>
+              <p className="text-muted-foreground">{order.user?.email}</p>
+              {order.fulfillment_type && (
+                <p className="text-xs text-muted-foreground capitalize">Fulfillment: {order.fulfillment_type.replace(/_/g, " ")}</p>
+              )}
               <Link href={`/admin/users/customers`} className="text-brand hover:underline text-xs font-medium mt-2 block">View all customers</Link>
             </div>
           </div>
@@ -224,30 +253,33 @@ export default function AdminOrderDetailPage({ params }: { params: Promise<{ id:
                 : "Provide a reason for declining this item."}
             </p>
             {itemAction.action === "decline" && (
-              <textarea
+              <Textarea
                 value={declineReason}
                 onChange={e => setDeclineReason(e.target.value)}
                 placeholder="Reason for declining..."
                 rows={3}
-                className="mt-4 w-full rounded-xl border border-border bg-background px-3 py-2 text-sm outline-none focus:border-brand focus:ring-1 focus:ring-brand resize-none"
+                className="mt-4 resize-none rounded-xl px-3 py-2 focus-visible:border-brand focus-visible:ring-brand"
               />
             )}
             <div className="mt-6 flex gap-3">
-              <button
+              <Button
+                type="button"
                 onClick={() => handleItemAction()}
                 disabled={itemActioning || (itemAction.action === "decline" && !declineReason.trim())}
-                className={`flex-1 rounded-full py-2.5 text-sm font-semibold text-white disabled:opacity-60 transition-colors ${
+                className={`h-auto flex-1 rounded-full py-2.5 text-sm font-semibold text-white ${
                   itemAction.action === "accept" ? "bg-emerald-600 hover:bg-emerald-700" : "bg-rose-600 hover:bg-rose-700"
                 }`}
               >
                 {itemActioning ? "Processing..." : itemAction.action === "accept" ? "Confirm Accept" : "Confirm Decline"}
-              </button>
-              <button
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
                 onClick={() => { setItemAction(null); setDeclineReason("") }}
-                className="flex-1 rounded-full border border-border bg-card py-2.5 text-sm font-semibold hover:border-foreground/30"
+                className="h-auto flex-1 rounded-full bg-card py-2.5 text-sm font-semibold"
               >
                 Cancel
-              </button>
+              </Button>
             </div>
           </div>
         </div>

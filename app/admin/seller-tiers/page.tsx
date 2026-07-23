@@ -5,10 +5,12 @@ import { Award, Edit2, Loader2, Save, X } from "lucide-react"
 import { useAuth } from "@/hooks/use-auth"
 import {
   fetchAdminSellerTiers,
-  updateAdminSellerTier,
+  updateAdminSellerTiers,
   type AdminSellerTier,
 } from "@/lib/admin-api"
 import { toast } from "sonner"
+import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
 
 export default function AdminSellerTiersPage() {
   const { session } = useAuth()
@@ -24,17 +26,16 @@ export default function AdminSellerTiersPage() {
     if (!token) return
     setLoading(true)
     fetchAdminSellerTiers(token)
-      .then((res) => setTiers(res.data?.tiers || []))
+      .then((res) => setTiers(res.data?.seller_tiers || []))
       .catch((err) => toast.error(err.message || "Failed to load seller tiers"))
       .finally(() => setLoading(false))
   }, [token])
 
   const startEdit = (tier: AdminSellerTier) => {
-    setEditingId(tier.id)
+    setEditingId(tier.slug)
     setEditForm({
       name: tier.name,
       commission_percent: tier.commission_percent,
-      benefits: tier.benefits,
     })
   }
 
@@ -47,9 +48,26 @@ export default function AdminSellerTiersPage() {
     if (!token) return
     setSaving(true)
     try {
-      const res = await updateAdminSellerTier(tier.id, editForm, token)
-      setTiers((prev) => prev.map((t) => (t.id === tier.id ? (res.data?.tier ?? t) : t)))
-      toast.success(`Tier "${res.data?.tier?.name ?? tier.name}" updated successfully`)
+      // The API updates tiers in bulk; send the full set with this tier's edits applied.
+      const merged = tiers.map((t) =>
+        t.slug === tier.slug
+          ? {
+              id: t.id,
+              slug: t.slug,
+              name: editForm.name ?? t.name,
+              commission_percent: editForm.commission_percent ?? t.commission_percent,
+            }
+          : { id: t.id, slug: t.slug, name: t.name, commission_percent: t.commission_percent }
+      )
+      const res = await updateAdminSellerTiers(merged, token)
+      if (res.data?.seller_tiers?.length) {
+        setTiers(res.data.seller_tiers)
+      } else {
+        setTiers((prev) =>
+          prev.map((t) => (t.slug === tier.slug ? { ...t, name: editForm.name ?? t.name, commission_percent: editForm.commission_percent ?? t.commission_percent } : t))
+        )
+      }
+      toast.success(`Tier "${editForm.name ?? tier.name}" updated successfully`)
       setEditingId(null)
       setEditForm({})
     } catch (err: any) {
@@ -89,13 +107,13 @@ export default function AdminSellerTiersPage() {
       ) : (
         <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
           {tiers.map((tier) => {
-            const isEditing = editingId === tier.id
+            const isEditing = editingId === tier.slug
             const colorClass =
-              tierColors[tier.name?.toLowerCase()] || "bg-brand/10 text-brand border-brand/20"
+              tierColors[tier.slug?.toLowerCase()] || "bg-brand/10 text-brand border-brand/20"
 
             return (
               <div
-                key={tier.id}
+                key={tier.slug}
                 className="rounded-2xl border border-border bg-card p-6 flex flex-col gap-4"
               >
                 {/* Tier Header */}
@@ -103,8 +121,8 @@ export default function AdminSellerTiersPage() {
                   <div className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-sm font-bold capitalize ${colorClass}`}>
                     <Award className="h-3.5 w-3.5" />
                     {isEditing ? (
-                      <input
-                        className="bg-transparent outline-none w-24 font-bold"
+                      <Input
+                        className="h-auto w-24 border-0 bg-transparent p-0 font-bold shadow-none focus-visible:ring-0"
                         value={editForm.name ?? ""}
                         onChange={(e) => setEditForm((f) => ({ ...f, name: e.target.value }))}
                       />
@@ -116,30 +134,39 @@ export default function AdminSellerTiersPage() {
                   <div className="flex items-center gap-1">
                     {isEditing ? (
                       <>
-                        <button
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
                           onClick={() => handleSave(tier)}
                           disabled={saving}
-                          className="rounded-lg p-1.5 text-emerald-600 hover:bg-emerald-50 disabled:opacity-50"
+                          className="h-auto w-auto rounded-lg p-1.5 text-emerald-600 hover:bg-emerald-50"
                           title="Save"
                         >
                           <Save className="h-4 w-4" />
-                        </button>
-                        <button
+                        </Button>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
                           onClick={cancelEdit}
-                          className="rounded-lg p-1.5 text-muted-foreground hover:bg-surface"
+                          className="h-auto w-auto rounded-lg p-1.5 text-muted-foreground hover:bg-surface"
                           title="Cancel"
                         >
                           <X className="h-4 w-4" />
-                        </button>
+                        </Button>
                       </>
                     ) : (
-                      <button
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
                         onClick={() => startEdit(tier)}
-                        className="rounded-lg p-1.5 text-muted-foreground hover:bg-surface hover:text-foreground"
+                        className="h-auto w-auto rounded-lg p-1.5 text-muted-foreground hover:bg-surface hover:text-foreground"
                         title="Edit"
                       >
                         <Edit2 className="h-4 w-4" />
-                      </button>
+                      </Button>
                     )}
                   </div>
                 </div>
@@ -149,12 +176,12 @@ export default function AdminSellerTiersPage() {
                   <p className="text-xs text-muted-foreground mb-1">Commission Rate</p>
                   {isEditing ? (
                     <div className="flex items-center gap-2">
-                      <input
+                      <Input
                         type="number"
                         min={0}
                         max={100}
                         step={0.1}
-                        className="w-24 rounded-lg border border-border bg-background px-3 py-1.5 text-sm font-semibold"
+                        className="h-auto w-24 rounded-lg px-3 py-1.5 text-sm font-semibold"
                         value={editForm.commission_percent ?? ""}
                         onChange={(e) =>
                           setEditForm((f) => ({
@@ -170,39 +197,15 @@ export default function AdminSellerTiersPage() {
                   )}
                 </div>
 
-                {/* Benefits */}
+                {/* Meta */}
                 <div className="flex-1">
-                  <p className="text-xs text-muted-foreground mb-2">Benefits</p>
-                  {isEditing ? (
-                    <textarea
-                      className="w-full rounded-xl border border-border bg-background px-3 py-2 text-xs focus:border-brand focus:outline-none"
-                      rows={4}
-                      placeholder="One benefit per line..."
-                      value={(editForm.benefits || []).join("\n")}
-                      onChange={(e) =>
-                        setEditForm((f) => ({
-                          ...f,
-                          benefits: e.target.value
-                            .split("\n")
-                            .map((b) => b.trim())
-                            .filter(Boolean),
-                        }))
-                      }
-                    />
-                  ) : (
-                    <ul className="space-y-1.5">
-                      {(tier.benefits || []).map((b, i) => (
-                        <li key={i} className="flex items-start gap-2 text-xs">
-                          <span className="mt-0.5 h-1.5 w-1.5 flex-none rounded-full bg-brand" />
-                          {b}
-                        </li>
-                      ))}
-                    </ul>
-                  )}
+                  <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider ${tier.is_active ? "bg-emerald-500/15 text-emerald-700" : "bg-zinc-500/15 text-zinc-600"}`}>
+                    {tier.is_active ? "Active" : "Inactive"}
+                  </span>
                 </div>
 
                 <p className="text-[10px] text-muted-foreground">
-                  Updated {new Date(tier.updated_at?.item).toLocaleDateString()}
+                  Updated {tier.updated_at?.item ? new Date(tier.updated_at.item).toLocaleDateString() : "—"}
                 </p>
               </div>
             )

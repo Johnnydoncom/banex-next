@@ -18,6 +18,7 @@ import {
 } from "lucide-react"
 import { AdminStatCard } from "@/components/AdminShell"
 import { StatusBadge } from "@/components/StatusBadge"
+import { Button } from "@/components/ui/button"
 import { type DashboardData } from "@/lib/admin-api"
 import { useAdminDashboard } from "@/hooks/use-swr-data"
 
@@ -81,12 +82,13 @@ export default function AdminOverview() {
       <div className="flex flex-col items-center justify-center gap-4 rounded-2xl border border-border bg-card p-16">
         <AlertCircle className="h-10 w-10 text-rose-500" />
         <p className="text-sm text-muted-foreground">{error}</p>
-        <button
+        <Button
+          type="button"
           onClick={() => mutate()}
-          className="inline-flex items-center gap-2 rounded-full bg-gradient-brand px-5 py-2.5 text-xs font-semibold text-primary-foreground"
+          className="h-auto gap-2 rounded-full bg-gradient-brand px-5 py-2.5 text-xs font-semibold text-primary-foreground"
         >
           <RefreshCcw className="h-3.5 w-3.5" /> Retry
-        </button>
+        </Button>
       </div>
     )
   }
@@ -131,12 +133,14 @@ export default function AdminOverview() {
               {totalPendingApprovals} pending
             </Link>
           )}
-          <button
+          <Button
+            type="button"
+            variant="outline"
             onClick={() => mutate()}
-            className="inline-flex items-center gap-2 rounded-full border border-border px-4 py-2 text-xs font-semibold text-muted-foreground hover:bg-surface hover:text-foreground"
+            className="h-auto gap-2 rounded-full px-4 py-2 text-xs font-semibold text-muted-foreground hover:bg-surface hover:text-foreground"
           >
             <RefreshCcw className="h-3.5 w-3.5" /> Refresh
-          </button>
+          </Button>
           <Link
             href="/admin/products/new"
             className="inline-flex items-center gap-2 rounded-full bg-gradient-brand px-4 py-2 text-xs font-semibold text-primary-foreground shadow-sm"

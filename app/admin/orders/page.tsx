@@ -2,7 +2,8 @@
 
 import { useEffect, useState } from "react"
 import Link from "next/link"
-import { Eye, Download } from "lucide-react"
+import { Eye } from "lucide-react"
+import { Button } from "@/components/ui/button"
 import { DataTable, type Column } from "@/components/DataTable"
 import { StatusBadge } from "@/components/StatusBadge"
 import { useAuth } from "@/hooks/use-auth"
@@ -10,29 +11,31 @@ import { toast } from "sonner"
 import { type AdminOrder } from "@/lib/admin-api"
 import { useAdminOrders } from "@/hooks/use-swr-data"
 
-type Tab = "all" | "pending" | "processing" | "in_transit" | "delivered" | "cancelled" | "disputed"
+const prettify = (s: string) => s.replace(/[_-]+/g, " ").replace(/\b\w/g, (c) => c.toUpperCase())
 
 export default function AdminOrdersPage() {
   const { session } = useAuth()
   const token = (session as any)?.accessToken as string | undefined
 
-  const [tab, setTab] = useState<Tab>("all")
-  
-  const { orders, loading, mutate } = useAdminOrders(token)
+  const [tab, setTab] = useState<string>("all")
+
+  const { orders, loading } = useAdminOrders(token)
 
   const filtered = orders.filter((o) => {
     if (tab === "all") return true
     return o.status === tab
   })
 
-  const tabs: { key: Tab; label: string; count: number }[] = [
+  // Build status tabs dynamically from the statuses actually present in the data.
+  const statusCounts = orders.reduce<Record<string, number>>((acc, o) => {
+    if (o.status) acc[o.status] = (acc[o.status] || 0) + 1
+    return acc
+  }, {})
+  const tabs: { key: string; label: string; count: number }[] = [
     { key: "all", label: "All", count: orders.length },
-    { key: "pending", label: "Pending", count: orders.filter((o) => o.status === "pending").length },
-    { key: "processing", label: "Processing", count: orders.filter((o) => o.status === "processing").length },
-    { key: "in_transit", label: "In Transit", count: orders.filter((o) => o.status === "in_transit").length },
-    { key: "delivered", label: "Delivered", count: orders.filter((o) => o.status === "delivered").length },
-    { key: "cancelled", label: "Cancelled", count: orders.filter((o) => o.status === "cancelled").length },
-    { key: "disputed", label: "Disputed", count: orders.filter((o) => o.status === "disputed").length },
+    ...Object.keys(statusCounts)
+      .sort()
+      .map((s) => ({ key: s, label: prettify(s), count: statusCounts[s] })),
   ]
 
   const columns: Column<AdminOrder>[] = [
@@ -50,7 +53,12 @@ export default function AdminOrdersPage() {
       key: "customer",
       label: "Customer",
       sortable: true,
-      render: (o) => <span className="text-sm">{o.customer?.full_name || "Unknown"}</span>,
+      render: (o) => (
+        <div>
+          <p className="text-sm">{o.user?.name || "Unknown"}</p>
+          <p className="text-[11px] text-muted-foreground">{o.user?.email}</p>
+        </div>
+      ),
     },
     {
       key: "date",
@@ -67,13 +75,13 @@ export default function AdminOrdersPage() {
       },
     },
     {
-      key: "total_amount",
+      key: "total",
       label: "Total",
       sortable: true,
       render: (o) => (
         <div>
-          <p className="text-sm font-semibold">₦{o.total_amount?.toLocaleString()}</p>
-          <p className="text-[11px] text-muted-foreground">{o.items?.length || 0} items</p>
+          <p className="text-sm font-semibold">₦{o.summary?.total?.toLocaleString() ?? 0}</p>
+          <p className="text-[11px] text-muted-foreground">{o.item_count ?? 0} item{o.item_count === 1 ? "" : "s"}</p>
         </div>
       ),
     },
@@ -104,18 +112,15 @@ export default function AdminOrdersPage() {
           <h1 className="font-display text-2xl font-bold">Orders</h1>
           <p className="mt-1 text-sm text-muted-foreground">Monitor and manage all marketplace orders.</p>
         </div>
-        <button className="inline-flex items-center gap-2 rounded-full border border-border bg-card px-4 py-2 text-xs font-medium hover:bg-surface">
-          <Download className="h-3.5 w-3.5" /> Export CSV
-        </button>
       </div>
 
       {/* Tabs */}
       <div className="flex flex-wrap gap-1 rounded-xl bg-surface/60 p-1">
         {tabs.map((t) => (
-          <button key={t.key} onClick={() => setTab(t.key)} className={`flex-1 min-w-[80px] rounded-lg px-3 py-2 text-xs font-semibold transition-colors ${tab === t.key ? "bg-card text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"}`}>
+          <Button type="button" variant="ghost" key={t.key} onClick={() => setTab(t.key)} className={`h-auto flex-1 min-w-[80px] rounded-lg px-3 py-2 text-xs font-semibold ${tab === t.key ? "bg-card text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"}`}>
             {t.label}
             {t.count > 0 && <span className="ml-1.5 rounded-full bg-border/50 px-1.5 py-0.5 text-[10px] text-foreground">{t.count}</span>}
-          </button>
+          </Button>
         ))}
       </div>
 
@@ -129,7 +134,7 @@ export default function AdminOrdersPage() {
           data={filtered}
           rowKey={(o) => o.id}
           searchPlaceholder="Search by order ref or customer…"
-          searchFilter={(o, q) => o.reference?.toLowerCase().includes(q) || o.customer?.full_name?.toLowerCase().includes(q)}
+          searchFilter={(o, q) => o.reference?.toLowerCase().includes(q) || (o.user?.name || "").toLowerCase().includes(q) || (o.user?.email || "").toLowerCase().includes(q)}
           pageSize={15}
         />
       )}

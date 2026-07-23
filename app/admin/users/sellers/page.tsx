@@ -1,15 +1,15 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState } from "react"
 import Link from "next/link"
-import { Eye, Check, X, Ban, Store, Plus, Edit } from "lucide-react"
+import { Check, Ban, Store, Edit } from "lucide-react"
 import { DataTable, type Column } from "@/components/DataTable"
 import { StatusBadge } from "@/components/StatusBadge"
 import { ConfirmDialog } from "@/components/ConfirmDialog"
-import { RejectSellerModal } from "@/components/RejectSellerModal"
+import { Button } from "@/components/ui/button"
 import { toast } from "sonner"
 import { useSession } from "next-auth/react"
-import { updateAdminSellerStatus, type AdminSeller } from "@/lib/admin-api"
+import { toggleAdminSellerApproval, toggleAdminSellerSuspension, type AdminSeller } from "@/lib/admin-api"
 import { useAdminSellers } from "@/hooks/use-swr-data"
 
 type Tab = "all" | "approved" | "pending" | "suspended"
@@ -21,7 +21,7 @@ export default function AdminSellersPage() {
 
   const { sellers, loading, mutate } = useAdminSellers(token)
 
-  const [confirmAction, setConfirmAction] = useState<{ seller: AdminSeller; action: "approve" | "reject" | "suspend" } | null>(null)
+  const [confirmAction, setConfirmAction] = useState<{ seller: AdminSeller; action: "approval" | "suspension" } | null>(null)
   const [actionLoading, setActionLoading] = useState(false)
 
   const filtered = sellers.filter((s) => {
@@ -31,22 +31,23 @@ export default function AdminSellersPage() {
     return true
   })
 
-  const handleAction = async (reason?: string) => {
+  const handleAction = async () => {
     if (!confirmAction || !session?.accessToken) return
+    const { seller, action } = confirmAction
+    const token = session.accessToken as string
     setActionLoading(true)
 
     try {
-      await updateAdminSellerStatus(confirmAction.seller.id, confirmAction.action, session.accessToken as string, reason)
+      if (action === "approval") {
+        await toggleAdminSellerApproval(seller.id, token)
+        toast.success(seller.status === "approved" ? "Seller approval revoked" : "Seller approved")
+      } else {
+        await toggleAdminSellerSuspension(seller.id, token)
+        toast.success(seller.status === "suspended" ? "Seller unsuspended" : "Seller suspended")
+      }
       mutate()
-      toast.success(
-        confirmAction.action === "approve"
-          ? "Seller approved"
-          : confirmAction.action === "suspend"
-          ? "Seller suspended"
-          : "Seller rejected"
-      )
     } catch (error: any) {
-      toast.error(error.message || `Failed to ${confirmAction.action} seller`)
+      toast.error(error.message || `Failed to update seller ${action}`)
     } finally {
       setActionLoading(false)
       setConfirmAction(null)
@@ -105,32 +106,41 @@ export default function AdminSellersPage() {
           >
             <Edit className="h-3.5 w-3.5" />
           </Link>
-          {s.status === "pending" && (
-            <>
-              <button
-                onClick={() => setConfirmAction({ seller: s, action: "approve" })}
-                className="rounded-lg p-1.5 text-emerald-600 hover:bg-emerald-500/15"
-                title="Approve Application"
-              >
-                <Check className="h-3.5 w-3.5" />
-              </button>
-              <button
-                onClick={() => setConfirmAction({ seller: s, action: "reject" })}
-                className="rounded-lg p-1.5 text-rose-600 hover:bg-rose-500/15"
-                title="Reject Application"
-              >
-                <X className="h-3.5 w-3.5" />
-              </button>
-            </>
+          {(s.status === "pending" || s.status === "rejected") && (
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              onClick={() => setConfirmAction({ seller: s, action: "approval" })}
+              className="h-auto w-auto rounded-lg p-1.5 text-emerald-600 hover:bg-emerald-500/15"
+              title="Approve Seller"
+            >
+              <Check className="h-3.5 w-3.5" />
+            </Button>
           )}
           {s.status === "approved" && (
-            <button
-              onClick={() => setConfirmAction({ seller: s, action: "suspend" })}
-              className="rounded-lg p-1.5 text-muted-foreground hover:bg-rose-500/15 hover:text-rose-600"
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              onClick={() => setConfirmAction({ seller: s, action: "suspension" })}
+              className="h-auto w-auto rounded-lg p-1.5 text-muted-foreground hover:bg-rose-500/15 hover:text-rose-600"
               title="Suspend Seller"
             >
               <Ban className="h-3.5 w-3.5" />
-            </button>
+            </Button>
+          )}
+          {s.status === "suspended" && (
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              onClick={() => setConfirmAction({ seller: s, action: "suspension" })}
+              className="h-auto w-auto rounded-lg p-1.5 text-emerald-600 hover:bg-emerald-500/15"
+              title="Unsuspend Seller"
+            >
+              <Check className="h-3.5 w-3.5" />
+            </Button>
           )}
         </div>
       ),
@@ -144,10 +154,12 @@ export default function AdminSellersPage() {
         <div className="flex gap-1 rounded-xl bg-surface/60 p-1 w-full max-w-lg">
           {tabs.map((t) => (
 
-            <button
+            <Button
+              type="button"
+              variant="ghost"
               key={t.key}
               onClick={() => setTab(t.key)}
-              className={`flex-1 rounded-lg px-3 py-2 text-xs font-semibold transition-colors ${tab === t.key
+              className={`h-auto flex-1 rounded-lg px-3 py-2 text-xs font-semibold ${tab === t.key
                   ? "bg-card text-foreground shadow-sm"
                   : "text-muted-foreground hover:text-foreground"
                 }`}
@@ -158,7 +170,7 @@ export default function AdminSellersPage() {
                   {t.count}
                 </span>
               )}
-            </button>
+            </Button>
           ))}
         </div>
         {/* <Link
@@ -189,36 +201,41 @@ export default function AdminSellersPage() {
         />
       )}
 
-      {/* Modals */}
-      {confirmAction?.action === "reject" ? (
-        <RejectSellerModal
-          isOpen={true}
-          onClose={() => setConfirmAction(null)}
-          onConfirm={(reason) => handleAction(reason)}
-          shopName={confirmAction.seller.shop_name}
-        />
-      ) : (
-        <ConfirmDialog
-          open={!!confirmAction}
-          onOpenChange={(open) => !open && setConfirmAction(null)}
-          title={
-            confirmAction?.action === "approve"
-              ? `Approve ${confirmAction.seller.shop_name}?`
-              : `Suspend ${confirmAction?.seller.shop_name}?`
-          }
-          description={
-            confirmAction?.action === "approve"
-              ? "This vendor will be activated and their products will be visible."
-              : "This seller will be suspended and their listings hidden."
-          }
-          confirmLabel={
-            confirmAction?.action === "approve" ? "Approve" : "Suspend"
-          }
-          destructive={confirmAction?.action !== "approve"}
-          onConfirm={() => handleAction()}
-          loading={actionLoading}
-        />
-      )}
+      {/* Confirm dialog */}
+      {(() => {
+        const seller = confirmAction?.seller
+        const isApproval = confirmAction?.action === "approval"
+        const isApproved = seller?.status === "approved"
+        const isSuspended = seller?.status === "suspended"
+        const title = isApproval
+          ? isApproved
+            ? `Revoke approval for ${seller?.shop_name}?`
+            : `Approve ${seller?.shop_name}?`
+          : isSuspended
+          ? `Unsuspend ${seller?.shop_name}?`
+          : `Suspend ${seller?.shop_name}?`
+        const description = isApproval
+          ? isApproved
+            ? "This vendor will move back to pending and their products will be hidden."
+            : "This vendor will be activated and their products will be visible."
+          : isSuspended
+          ? "This seller will be reactivated and their listings shown again."
+          : "This seller will be suspended and their listings hidden."
+        const confirmLabel = isApproval ? (isApproved ? "Revoke" : "Approve") : isSuspended ? "Unsuspend" : "Suspend"
+        const destructive = isApproval ? isApproved : !isSuspended
+        return (
+          <ConfirmDialog
+            open={!!confirmAction}
+            onOpenChange={(open) => !open && setConfirmAction(null)}
+            title={title}
+            description={description}
+            confirmLabel={confirmLabel}
+            destructive={destructive}
+            onConfirm={() => handleAction()}
+            loading={actionLoading}
+          />
+        )
+      })()}
     </div>
   )
 }

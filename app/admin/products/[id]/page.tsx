@@ -20,6 +20,8 @@ import {
   deactivateAdminProduct,
   type AdminProduct,
 } from "@/lib/admin-api"
+import { Button } from "@/components/ui/button"
+import { Textarea } from "@/components/ui/textarea"
 
 // ─── Reject Reason Modal ──────────────────────────────────────────────────────
 
@@ -57,33 +59,36 @@ function RejectReasonModal({
           Rejection Reason{" "}
           <span className="font-normal text-muted-foreground">(optional)</span>
         </label>
-        <textarea
+        <Textarea
           value={reason}
           onChange={(e) => setReason(e.target.value)}
           placeholder="Explain why this product is being rejected…"
           rows={4}
-          className="w-full rounded-xl border border-border bg-surface px-3.5 py-2.5 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-rose-500/40 resize-none"
+          className="rounded-xl bg-surface px-3.5 py-2.5 resize-none focus-visible:ring-2 focus-visible:ring-rose-500/40"
         />
 
         <div className="mt-4 flex gap-2 justify-end">
-          <button
+          <Button
+            type="button"
+            variant="outline"
             onClick={onCancel}
             disabled={loading}
-            className="rounded-xl border border-border px-4 py-2 text-xs font-semibold text-foreground hover:bg-surface disabled:opacity-60"
+            className="h-auto rounded-xl px-4 py-2 text-xs font-semibold"
           >
             Cancel
-          </button>
-          <button
+          </Button>
+          <Button
+            type="button"
             onClick={() => onConfirm(reason)}
             disabled={loading}
-            className="inline-flex items-center gap-2 rounded-xl bg-rose-600 px-4 py-2 text-xs font-semibold text-white hover:bg-rose-700 disabled:opacity-60"
+            className="h-auto gap-2 rounded-xl bg-rose-600 px-4 py-2 text-xs font-semibold text-white hover:bg-rose-700"
           >
             {loading ? (
               <><Loader2 className="h-3.5 w-3.5 animate-spin" /> Rejecting…</>
             ) : (
               <><Ban className="h-3.5 w-3.5" /> Confirm Rejection</>
             )}
-          </button>
+          </Button>
         </div>
       </div>
     </div>
@@ -120,49 +125,55 @@ function ActionBar({
 
       {/* Pending → Approve */}
       {s === "pending" && (
-        <button
+        <Button
+          type="button"
           onClick={onApprove}
           disabled={loading}
-          className="inline-flex items-center gap-1.5 rounded-xl bg-emerald-600 px-4 py-2 text-xs font-semibold text-white hover:bg-emerald-700 disabled:opacity-60 transition-colors"
+          className="h-auto gap-1.5 rounded-xl bg-emerald-600 px-4 py-2 text-xs font-semibold text-white hover:bg-emerald-700"
         >
           {loading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <ShieldCheck className="h-3.5 w-3.5" />}
           Approve Product
-        </button>
+        </Button>
       )}
 
       {/* Pending → Reject */}
       {s === "pending" && (
-        <button
+        <Button
+          type="button"
+          variant="outline"
           onClick={onReject}
           disabled={loading}
-          className="inline-flex items-center gap-1.5 rounded-xl border border-rose-300 bg-rose-50 dark:bg-rose-500/10 px-4 py-2 text-xs font-semibold text-rose-700 dark:text-rose-400 hover:bg-rose-100 dark:hover:bg-rose-500/20 disabled:opacity-60 transition-colors"
+          className="h-auto gap-1.5 rounded-xl border-rose-300 bg-rose-50 dark:bg-rose-500/10 px-4 py-2 text-xs font-semibold text-rose-700 dark:text-rose-400 hover:bg-rose-100 dark:hover:bg-rose-500/20"
         >
           <Ban className="h-3.5 w-3.5" /> Reject
-        </button>
+        </Button>
       )}
 
       {/* Active → Deactivate */}
       {s === "active" && (
-        <button
+        <Button
+          type="button"
+          variant="outline"
           onClick={onDeactivate}
           disabled={loading}
-          className="inline-flex items-center gap-1.5 rounded-xl border border-amber-300 bg-amber-50 dark:bg-amber-500/10 px-4 py-2 text-xs font-semibold text-amber-700 dark:text-amber-400 hover:bg-amber-100 dark:hover:bg-amber-500/20 disabled:opacity-60 transition-colors"
+          className="h-auto gap-1.5 rounded-xl border-amber-300 bg-amber-50 dark:bg-amber-500/10 px-4 py-2 text-xs font-semibold text-amber-700 dark:text-amber-400 hover:bg-amber-100 dark:hover:bg-amber-500/20"
         >
           {loading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <PowerOff className="h-3.5 w-3.5" />}
           Deactivate
-        </button>
+        </Button>
       )}
 
       {/* Inactive / Rejected / Draft → Activate */}
       {(s === "inactive" || s === "rejected" || s === "draft") && (
-        <button
+        <Button
+          type="button"
           onClick={onActivate}
           disabled={loading}
-          className="inline-flex items-center gap-1.5 rounded-xl bg-emerald-600 px-4 py-2 text-xs font-semibold text-white hover:bg-emerald-700 disabled:opacity-60 transition-colors"
+          className="h-auto gap-1.5 rounded-xl bg-emerald-600 px-4 py-2 text-xs font-semibold text-white hover:bg-emerald-700"
         >
           {loading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Power className="h-3.5 w-3.5" />}
           {s === "rejected" ? "Override & Activate" : "Activate"}
-        </button>
+        </Button>
       )}
     </div>
   )
@@ -330,15 +341,17 @@ export default function AdminProductDetailPage({
           {images.length > 1 && (
             <div className="flex gap-2 overflow-x-auto pb-1">
               {images.map((img, i) => (
-                <button
+                <Button
+                  type="button"
+                  variant="ghost"
                   key={i}
                   onClick={() => setImgIdx(i)}
-                  className={`relative h-16 w-16 flex-none overflow-hidden rounded-xl border-2 transition-colors ${
+                  className={`relative h-16 w-16 flex-none overflow-hidden rounded-xl border-2 p-0 hover:bg-transparent ${
                     i === imgIdx ? "border-brand" : "border-border hover:border-brand/50"
                   }`}
                 >
                   <Image src={img} alt={`${product.name} ${i + 1}`} fill className="object-cover" />
-                </button>
+                </Button>
               ))}
             </div>
           )}

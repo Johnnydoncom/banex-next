@@ -7,6 +7,10 @@ import { ArrowLeft, Save, Loader2 } from "lucide-react"
 import { toast } from "sonner"
 import { useSession } from "next-auth/react"
 import { fetchAdminCategory, createAdminCategory, updateAdminCategory, deleteAdminCategory } from "@/lib/admin-api"
+import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 
 export default function AdminCategoryEditPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params)
@@ -61,20 +65,21 @@ export default function AdminCategoryEditPage({ params }: { params: Promise<{ id
     setSaving(true)
 
     try {
-      const payload = {
-        ...form,
-        sort_order: parseInt(form.sort_order, 10),
-        is_active: form.is_active === "true",
-      }
+      const fd = new FormData()
+      fd.append("name", form.name)
+      if (form.slug) fd.append("slug", form.slug)
+      fd.append("icon", form.icon)
+      fd.append("sort_order", String(parseInt(form.sort_order, 10) || 0))
+      fd.append("is_active", form.is_active === "true" ? "1" : "0")
 
       if (isNew) {
-        await createAdminCategory(payload, session.accessToken)
+        await createAdminCategory(fd, session.accessToken)
         toast.success("Category created successfully.")
       } else {
-        await updateAdminCategory(id, payload, session.accessToken)
+        await updateAdminCategory(id, fd, session.accessToken)
         toast.success("Category updated successfully.")
       }
-      
+
       router.push("/admin/categories")
     } catch (err: any) {
       toast.error(err.message || "Failed to save category")
@@ -116,42 +121,45 @@ export default function AdminCategoryEditPage({ params }: { params: Promise<{ id
       ) : (
         <div className="rounded-2xl border border-border bg-card p-6 space-y-4">
           <div>
-            <label htmlFor="cat-name" className="mb-1.5 block text-xs font-medium text-muted-foreground">Category Name</label>
-            <input id="cat-name" type="text" value={form.name} onChange={(e) => update("name", e.target.value)} className="w-full rounded-xl border border-border bg-background px-4 py-2.5 text-sm outline-none focus:border-brand focus:ring-1 focus:ring-brand" />
+            <Label htmlFor="cat-name" className="mb-1.5 block text-xs text-muted-foreground">Category Name</Label>
+            <Input id="cat-name" type="text" value={form.name} onChange={(e) => update("name", e.target.value)} className="rounded-xl px-4 py-2.5 focus-visible:border-brand focus-visible:ring-brand" />
           </div>
           <div>
-            <label htmlFor="cat-slug" className="mb-1.5 block text-xs font-medium text-muted-foreground">Slug</label>
-            <input id="cat-slug" type="text" value={form.slug} onChange={(e) => update("slug", e.target.value)} className="w-full rounded-xl border border-border bg-background px-4 py-2.5 text-sm outline-none focus:border-brand focus:ring-1 focus:ring-brand" />
+            <Label htmlFor="cat-slug" className="mb-1.5 block text-xs text-muted-foreground">Slug</Label>
+            <Input id="cat-slug" type="text" value={form.slug} onChange={(e) => update("slug", e.target.value)} className="rounded-xl px-4 py-2.5 focus-visible:border-brand focus-visible:ring-brand" />
           </div>
           <div>
-            <label htmlFor="cat-icon" className="mb-1.5 block text-xs font-medium text-muted-foreground">Icon (lucide name)</label>
-            <input id="cat-icon" type="text" value={form.icon} onChange={(e) => update("icon", e.target.value)} className="w-full rounded-xl border border-border bg-background px-4 py-2.5 text-sm outline-none focus:border-brand focus:ring-1 focus:ring-brand" />
+            <Label htmlFor="cat-icon" className="mb-1.5 block text-xs text-muted-foreground">Icon (lucide name)</Label>
+            <Input id="cat-icon" type="text" value={form.icon} onChange={(e) => update("icon", e.target.value)} className="rounded-xl px-4 py-2.5 focus-visible:border-brand focus-visible:ring-brand" />
           </div>
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label htmlFor="cat-sort" className="mb-1.5 block text-xs font-medium text-muted-foreground">Sort Order</label>
-              <input id="cat-sort" type="number" value={form.sort_order} onChange={(e) => update("sort_order", e.target.value)} className="w-full rounded-xl border border-border bg-background px-4 py-2.5 text-sm outline-none focus:border-brand focus:ring-1 focus:ring-brand" />
+              <Label htmlFor="cat-sort" className="mb-1.5 block text-xs text-muted-foreground">Sort Order</Label>
+              <Input id="cat-sort" type="number" value={form.sort_order} onChange={(e) => update("sort_order", e.target.value)} className="rounded-xl px-4 py-2.5 focus-visible:border-brand focus-visible:ring-brand" />
             </div>
             <div>
-              <label htmlFor="cat-status" className="mb-1.5 block text-xs font-medium text-muted-foreground">Status</label>
-              <select id="cat-status" value={form.is_active} onChange={(e) => update("is_active", e.target.value)} className="w-full rounded-xl border border-border bg-background px-4 py-2.5 text-sm outline-none focus:border-brand focus:ring-1 focus:ring-brand">
-                <option value="true">Active</option>
-                <option value="false">Inactive</option>
-              </select>
+              <Label htmlFor="cat-status" className="mb-1.5 block text-xs text-muted-foreground">Status</Label>
+              <Select value={form.is_active} onValueChange={(v) => update("is_active", v)}>
+                <SelectTrigger id="cat-status" className="rounded-xl px-4 py-2.5 h-auto"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="true">Active</SelectItem>
+                  <SelectItem value="false">Inactive</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
           </div>
 
           <div className="mt-6 flex justify-between border-t border-border pt-4">
             {!isNew && (
-              <button onClick={handleDelete} disabled={deleting} className="inline-flex items-center gap-2 rounded-xl border border-rose-500/20 bg-rose-500/5 px-4 py-2 text-xs font-semibold text-rose-600 hover:bg-rose-500/10 disabled:opacity-60">
+              <Button type="button" variant="ghost" onClick={handleDelete} disabled={deleting} className="h-auto gap-2 rounded-xl border border-rose-500/20 bg-rose-500/5 px-4 py-2 text-xs font-semibold text-rose-600 hover:bg-rose-500/10">
                 {deleting ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : null}
                 {deleting ? "Deleting…" : "Delete Category"}
-              </button>
+              </Button>
             )}
-            <button onClick={handleSave} disabled={saving} className="inline-flex items-center gap-2 rounded-xl bg-gradient-brand px-6 py-2.5 text-sm font-semibold text-primary-foreground shadow-brand disabled:opacity-60">
-              {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />} 
+            <Button type="button" onClick={handleSave} disabled={saving} className="h-auto gap-2 rounded-xl bg-gradient-brand px-6 py-2.5 text-sm font-semibold text-primary-foreground shadow-brand">
+              {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
               {saving ? "Saving…" : "Save Category"}
-            </button>
+            </Button>
           </div>
         </div>
       )}

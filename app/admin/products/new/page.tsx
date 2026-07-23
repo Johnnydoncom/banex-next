@@ -15,6 +15,11 @@ import {
 } from "@/lib/admin-api"
 import { RichTextEditor } from "@/components/RichTextEditor"
 import { LocationSelect } from "@/components/LocationSelect"
+import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
+import { Checkbox } from "@/components/ui/checkbox"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 
 export default function AdminNewProductPage() {
   const router = useRouter()
@@ -180,10 +185,12 @@ export default function AdminNewProductPage() {
       {/* Step indicator */}
       <div className="flex items-center gap-2">
         {steps.map((s, i) => (
-          <button
+          <Button
+            type="button"
+            variant="ghost"
             key={s}
             onClick={() => setStep(i)}
-            className={`flex items-center gap-2 rounded-full px-4 py-2 text-xs font-semibold transition-colors ${
+            className={`h-auto flex items-center gap-2 rounded-full px-4 py-2 text-xs font-semibold ${
               i === step
                 ? "bg-gradient-brand text-primary-foreground shadow-brand"
                 : i < step
@@ -195,7 +202,7 @@ export default function AdminNewProductPage() {
               {i < step ? "✓" : i + 1}
             </span>
             <span className="hidden sm:inline">{s}</span>
-          </button>
+          </Button>
         ))}
       </div>
 
@@ -205,16 +212,16 @@ export default function AdminNewProductPage() {
           <div className="space-y-4">
             <div className="grid gap-4 sm:grid-cols-2">
               <div>
-                <label htmlFor="product-name" className="mb-1.5 block text-xs font-medium text-muted-foreground">Product Name</label>
-                <input id="product-name" type="text" value={form.name} onChange={(e) => update("name", e.target.value)} className="w-full rounded-xl border border-border bg-background px-4 py-2.5 text-sm outline-none focus:border-brand focus:ring-1 focus:ring-brand" placeholder="e.g. iPhone 16 Pro Max" />
+                <Label htmlFor="product-name" className="mb-1.5 block text-xs text-muted-foreground">Product Name</Label>
+                <Input id="product-name" type="text" value={form.name} onChange={(e) => update("name", e.target.value)} className="rounded-xl px-4 py-2.5 focus-visible:border-brand focus-visible:ring-brand" placeholder="e.g. iPhone 16 Pro Max" />
               </div>
               <div>
-                <label htmlFor="product-brand" className="mb-1.5 block text-xs font-medium text-muted-foreground">Brand</label>
-                <input id="product-brand" type="text" value={form.brand} onChange={(e) => update("brand", e.target.value)} className="w-full rounded-xl border border-border bg-background px-4 py-2.5 text-sm outline-none focus:border-brand focus:ring-1 focus:ring-brand" placeholder="e.g. Apple" />
+                <Label htmlFor="product-brand" className="mb-1.5 block text-xs text-muted-foreground">Brand</Label>
+                <Input id="product-brand" type="text" value={form.brand} onChange={(e) => update("brand", e.target.value)} className="rounded-xl px-4 py-2.5 focus-visible:border-brand focus-visible:ring-brand" placeholder="e.g. Apple" />
               </div>
             </div>
             <div>
-              <label className="mb-1.5 block text-xs font-medium text-muted-foreground">Description</label>
+              <Label className="mb-1.5 block text-xs text-muted-foreground">Description</Label>
               <RichTextEditor
                 value={form.description}
                 onChange={(val) => update("description", val)}
@@ -223,34 +230,38 @@ export default function AdminNewProductPage() {
             </div>
             <div className="grid gap-4 sm:grid-cols-2">
               <div>
-                <label htmlFor="product-category" className="mb-1.5 block text-xs font-medium text-muted-foreground">Category</label>
-                <select id="product-category" value={form.category_id} onChange={(e) => update("category_id", e.target.value)} className="w-full rounded-xl border border-border bg-background px-4 py-2.5 text-sm outline-none focus:border-brand focus:ring-1 focus:ring-brand">
-                  <option value="">Select category</option>
-                  {categories.map((c) => (
-                    <option key={c.id} value={c.id}>{c.name}</option>
-                  ))}
-                </select>
+                <Label htmlFor="product-category" className="mb-1.5 block text-xs text-muted-foreground">Category</Label>
+                <Select value={form.category_id} onValueChange={(v) => update("category_id", v)}>
+                  <SelectTrigger id="product-category" className="h-auto rounded-xl px-4 py-2.5"><SelectValue placeholder="Select category" /></SelectTrigger>
+                  <SelectContent>
+                    {categories.map((c) => (
+                      <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
               <div>
-                <label htmlFor="product-seller" className="mb-1.5 block text-xs font-medium text-muted-foreground">Seller</label>
-                <select id="product-seller" value={form.seller_id} onChange={(e) => update("seller_id", e.target.value)} className="w-full rounded-xl border border-border bg-background px-4 py-2.5 text-sm outline-none focus:border-brand focus:ring-1 focus:ring-brand">
-                  <option value="">Assign to seller</option>
-                  {sellers.map((s) => (
-                    <option key={s.id} value={s.id}>{s.shop_name}</option>
-                  ))}
-                </select>
+                <Label htmlFor="product-seller" className="mb-1.5 block text-xs text-muted-foreground">Seller</Label>
+                <Select value={form.seller_id} onValueChange={(v) => update("seller_id", v)}>
+                  <SelectTrigger id="product-seller" className="h-auto rounded-xl px-4 py-2.5"><SelectValue placeholder="Assign to seller" /></SelectTrigger>
+                  <SelectContent>
+                    {sellers.map((s) => (
+                      <SelectItem key={s.id} value={s.id}>{s.shop_name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
               <div>
-                <label className="mb-1.5 block text-xs font-medium text-muted-foreground">Location</label>
-                <LocationSelect 
-                  value={form.location} 
-                  onChange={(val) => update("location", val)} 
-                  placeholder="Select state..." 
+                <Label className="mb-1.5 block text-xs text-muted-foreground">Location</Label>
+                <LocationSelect
+                  value={form.location}
+                  onChange={(val) => update("location", val)}
+                  placeholder="Select state..."
                 />
               </div>
               <div>
-                <label htmlFor="product-delivery-estimate" className="mb-1.5 block text-xs font-medium text-muted-foreground">Delivery Estimate</label>
-                <input id="product-delivery-estimate" type="text" value={form.delivery_estimate} onChange={(e) => update("delivery_estimate", e.target.value)} className="w-full rounded-xl border border-border bg-background px-4 py-2.5 text-sm outline-none focus:border-brand focus:ring-1 focus:ring-brand" placeholder="e.g. 3 - 5 days" />
+                <Label htmlFor="product-delivery-estimate" className="mb-1.5 block text-xs text-muted-foreground">Delivery Estimate</Label>
+                <Input id="product-delivery-estimate" type="text" value={form.delivery_estimate} onChange={(e) => update("delivery_estimate", e.target.value)} className="rounded-xl px-4 py-2.5 focus-visible:border-brand focus-visible:ring-brand" placeholder="e.g. 3 - 5 days" />
               </div>
             </div>
           </div>
@@ -265,20 +276,20 @@ export default function AdminNewProductPage() {
                 <div key={i} className={`group relative aspect-square overflow-hidden rounded-xl border-2 ${primaryImageIndex === i ? "border-brand" : "border-border"} bg-muted`}>
                   <img src={img.preview} alt="" className="h-full w-full object-cover" />
                   
-                  <button onClick={() => setPrimaryImageIndex(i)} title="Set as primary" className={`absolute left-1 top-1 rounded-full p-1.5 transition-colors ${primaryImageIndex === i ? "bg-brand text-white" : "bg-black/50 text-white/50 hover:text-white"}`}>
+                  <Button type="button" variant="ghost" size="icon" onClick={() => setPrimaryImageIndex(i)} title="Set as primary" className={`absolute left-1 top-1 h-auto w-auto rounded-full p-1.5 ${primaryImageIndex === i ? "bg-brand text-white hover:bg-brand" : "bg-black/50 text-white/50 hover:text-white hover:bg-black/50"}`}>
                     <Star className="h-3 w-3" fill={primaryImageIndex === i ? "currentColor" : "none"} />
-                  </button>
+                  </Button>
 
-                  <button onClick={() => removeImage(i)} className="absolute right-1 top-1 rounded-full bg-black/50 p-1.5 text-white opacity-0 transition-opacity group-hover:opacity-100">
+                  <Button type="button" variant="ghost" size="icon" onClick={() => removeImage(i)} className="absolute right-1 top-1 h-auto w-auto rounded-full bg-black/50 p-1.5 text-white opacity-0 transition-opacity group-hover:opacity-100 hover:bg-black/50">
                     <X className="h-3 w-3" />
-                  </button>
+                  </Button>
                 </div>
               ))}
               {images.length < 5 && (
                 <label className="flex aspect-square cursor-pointer flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed border-border text-muted-foreground transition-colors hover:border-brand hover:text-brand">
                   <Upload className="h-6 w-6" />
                   <span className="text-[10px] font-medium">Add Image</span>
-                  <input type="file" accept="image/*" multiple className="hidden" onChange={handleFileChange} />
+                  <Input type="file" accept="image/*" multiple className="hidden" onChange={handleFileChange} />
                 </label>
               )}
             </div>
@@ -289,35 +300,35 @@ export default function AdminNewProductPage() {
         {step === 2 && (
           <div className="grid gap-4 sm:grid-cols-2">
             <div>
-              <label htmlFor="product-price" className="mb-1.5 block text-xs font-medium text-muted-foreground">Price (₦)</label>
-              <input id="product-price" type="number" value={form.price} onChange={(e) => update("price", e.target.value)} className="w-full rounded-xl border border-border bg-background px-4 py-2.5 text-sm outline-none focus:border-brand focus:ring-1 focus:ring-brand" placeholder="350000" />
+              <Label htmlFor="product-price" className="mb-1.5 block text-xs text-muted-foreground">Price (₦)</Label>
+              <Input id="product-price" type="number" value={form.price} onChange={(e) => update("price", e.target.value)} className="rounded-xl px-4 py-2.5 focus-visible:border-brand focus-visible:ring-brand" placeholder="350000" />
             </div>
             <div>
-              <label htmlFor="product-stock" className="mb-1.5 block text-xs font-medium text-muted-foreground">Stock Quantity</label>
-              <input id="product-stock" type="number" value={form.stock_quantity} onChange={(e) => update("stock_quantity", e.target.value)} className="w-full rounded-xl border border-border bg-background px-4 py-2.5 text-sm outline-none focus:border-brand focus:ring-1 focus:ring-brand" placeholder="50" />
+              <Label htmlFor="product-stock" className="mb-1.5 block text-xs text-muted-foreground">Stock Quantity</Label>
+              <Input id="product-stock" type="number" value={form.stock_quantity} onChange={(e) => update("stock_quantity", e.target.value)} className="rounded-xl px-4 py-2.5 focus-visible:border-brand focus-visible:ring-brand" placeholder="50" />
             </div>
             <div className="sm:col-span-2">
-              <label htmlFor="product-weight" className="mb-1.5 block text-xs font-medium text-muted-foreground">Weight (kg)</label>
-              <input id="product-weight" type="number" step="0.01" value={form.weight_kg} onChange={(e) => update("weight_kg", e.target.value)} className="w-full rounded-xl border border-border bg-background px-4 py-2.5 text-sm outline-none focus:border-brand focus:ring-1 focus:ring-brand" placeholder="1.5" />
+              <Label htmlFor="product-weight" className="mb-1.5 block text-xs text-muted-foreground">Weight (kg)</Label>
+              <Input id="product-weight" type="number" step="0.01" value={form.weight_kg} onChange={(e) => update("weight_kg", e.target.value)} className="rounded-xl px-4 py-2.5 focus-visible:border-brand focus-visible:ring-brand" placeholder="1.5" />
             </div>
-            
+
             <div className="sm:col-span-2 grid gap-4 sm:grid-cols-2 mt-2 pt-4 border-t border-border">
-              <label className="flex items-center gap-2 text-sm text-muted-foreground cursor-pointer">
-                <input type="checkbox" checked={form.is_nationwide_delivery} onChange={(e) => update("is_nationwide_delivery", e.target.checked)} className="rounded border-border text-brand focus:ring-brand h-4 w-4" />
+              <Label className="flex items-center gap-2 text-sm text-muted-foreground cursor-pointer">
+                <Checkbox checked={form.is_nationwide_delivery} onCheckedChange={(v) => update("is_nationwide_delivery", v === true)} />
                 Nationwide Delivery
-              </label>
-              <label className="flex items-center gap-2 text-sm text-muted-foreground cursor-pointer">
-                <input type="checkbox" checked={form.is_authentic_only} onChange={(e) => update("is_authentic_only", e.target.checked)} className="rounded border-border text-brand focus:ring-brand h-4 w-4" />
+              </Label>
+              <Label className="flex items-center gap-2 text-sm text-muted-foreground cursor-pointer">
+                <Checkbox checked={form.is_authentic_only} onCheckedChange={(v) => update("is_authentic_only", v === true)} />
                 Authentic Only
-              </label>
-              <label className="flex items-center gap-2 text-sm text-muted-foreground cursor-pointer">
-                <input type="checkbox" checked={form.is_featured} onChange={(e) => update("is_featured", e.target.checked)} className="rounded border-border text-brand focus:ring-brand h-4 w-4" />
+              </Label>
+              <Label className="flex items-center gap-2 text-sm text-muted-foreground cursor-pointer">
+                <Checkbox checked={form.is_featured} onCheckedChange={(v) => update("is_featured", v === true)} />
                 Featured Product
-              </label>
-              <label className="flex items-center gap-2 text-sm text-muted-foreground cursor-pointer">
-                <input type="checkbox" checked={form.is_escrow_enabled} onChange={(e) => update("is_escrow_enabled", e.target.checked)} className="rounded border-border text-brand focus:ring-brand h-4 w-4" />
+              </Label>
+              <Label className="flex items-center gap-2 text-sm text-muted-foreground cursor-pointer">
+                <Checkbox checked={form.is_escrow_enabled} onCheckedChange={(v) => update("is_escrow_enabled", v === true)} />
                 Escrow Enabled
-              </label>
+              </Label>
             </div>
           </div>
         )}
@@ -328,16 +339,16 @@ export default function AdminNewProductPage() {
             <p className="text-sm text-muted-foreground">Add key-value specifications for the product (e.g. Storage: 512GB).</p>
             {specifications.map((spec, i) => (
               <div key={i} className="flex items-center gap-2">
-                <input type="text" value={spec.key} onChange={(e) => updateSpecification(i, "key", e.target.value)} placeholder="Key (e.g. Storage)" className="flex-1 rounded-xl border border-border bg-background px-4 py-2.5 text-sm outline-none focus:border-brand focus:ring-1 focus:ring-brand" />
-                <input type="text" value={spec.value} onChange={(e) => updateSpecification(i, "value", e.target.value)} placeholder="Value (e.g. 512GB)" className="flex-1 rounded-xl border border-border bg-background px-4 py-2.5 text-sm outline-none focus:border-brand focus:ring-1 focus:ring-brand" />
-                <button onClick={() => removeSpecification(i)} className="rounded-xl border border-border p-2.5 text-muted-foreground hover:bg-red-500/10 hover:text-red-500 transition-colors">
+                <Input type="text" value={spec.key} onChange={(e) => updateSpecification(i, "key", e.target.value)} placeholder="Key (e.g. Storage)" className="flex-1 rounded-xl px-4 py-2.5 focus-visible:border-brand focus-visible:ring-brand" />
+                <Input type="text" value={spec.value} onChange={(e) => updateSpecification(i, "value", e.target.value)} placeholder="Value (e.g. 512GB)" className="flex-1 rounded-xl px-4 py-2.5 focus-visible:border-brand focus-visible:ring-brand" />
+                <Button type="button" variant="outline" size="icon" onClick={() => removeSpecification(i)} className="h-auto w-auto rounded-xl p-2.5 text-muted-foreground hover:bg-red-500/10 hover:text-red-500">
                   <X className="h-4 w-4" />
-                </button>
+                </Button>
               </div>
             ))}
-            <button onClick={addSpecification} className="text-xs font-medium text-brand hover:underline">
+            <Button type="button" variant="link" onClick={addSpecification} className="h-auto p-0 text-xs font-medium text-brand hover:underline">
               + Add Specification
-            </button>
+            </Button>
           </div>
         )}
 
@@ -364,17 +375,17 @@ export default function AdminNewProductPage() {
 
         {/* Navigation */}
         <div className="mt-6 flex items-center justify-between border-t border-border pt-4">
-          <button onClick={() => setStep((s) => Math.max(0, s - 1))} disabled={step === 0} className="rounded-xl border border-border px-4 py-2 text-xs font-semibold text-muted-foreground transition-colors hover:bg-surface disabled:opacity-40">
+          <Button type="button" variant="outline" onClick={() => setStep((s) => Math.max(0, s - 1))} disabled={step === 0} className="h-auto rounded-xl px-4 py-2 text-xs font-semibold text-muted-foreground hover:bg-surface">
             Previous
-          </button>
+          </Button>
           {step < 4 ? (
-            <button onClick={() => setStep((s) => s + 1)} className="rounded-xl bg-gradient-brand px-5 py-2 text-xs font-semibold text-primary-foreground shadow-brand">
+            <Button type="button" onClick={() => setStep((s) => s + 1)} className="h-auto rounded-xl bg-gradient-brand px-5 py-2 text-xs font-semibold text-primary-foreground shadow-brand">
               Next
-            </button>
+            </Button>
           ) : (
-            <button onClick={handleSubmit} disabled={submitting} className="rounded-xl bg-gradient-brand px-5 py-2 text-xs font-semibold text-primary-foreground shadow-brand disabled:opacity-60">
+            <Button type="button" onClick={handleSubmit} disabled={submitting} className="h-auto rounded-xl bg-gradient-brand px-5 py-2 text-xs font-semibold text-primary-foreground shadow-brand">
               {submitting ? "Creating…" : "Create Product"}
-            </button>
+            </Button>
           )}
         </div>
       </div>

@@ -9,6 +9,7 @@ import { toast } from "sonner"
 import { useSession } from "next-auth/react"
 import { deleteAdminCategory, type AdminCategory } from "@/lib/admin-api"
 import { useAdminCategories } from "@/hooks/use-swr-data"
+import { Button } from "@/components/ui/button"
 
 export default function AdminCategoriesPage() {
   const { data: session } = useSession()
@@ -77,9 +78,9 @@ export default function AdminCategoriesPage() {
           <Link href={`/admin/categories/${c.id}`} className="rounded-lg p-1.5 text-muted-foreground hover:bg-surface hover:text-foreground" title="Edit">
             <Edit2 className="h-3.5 w-3.5" />
           </Link>
-          <button onClick={() => setDeleteId(c.id)} className="rounded-lg p-1.5 text-muted-foreground hover:bg-rose-500/15 hover:text-rose-600" title="Delete">
+          <Button type="button" variant="ghost" size="icon" onClick={() => setDeleteId(c.id)} className="h-auto w-auto rounded-lg p-1.5 text-muted-foreground hover:bg-rose-500/15 hover:text-rose-600" title="Delete">
             <Trash2 className="h-3.5 w-3.5" />
-          </button>
+          </Button>
         </div>
       ),
     },

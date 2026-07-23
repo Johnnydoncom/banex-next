@@ -14,8 +14,8 @@ export default function AdminCustomersPage() {
   const { session } = useAuth()
   const token = (session as any)?.accessToken
   
-  const { users: customers, loading, mutate } = useAdminUsers(token, "customer")
-  const total = customers.length
+  const { users, loading } = useAdminUsers(token, { has_seller: 0 })
+  const customers = users.filter((u) => u.type !== "admin")
 
   const columns: Column<AdminUser>[] = [
     {
@@ -40,7 +40,7 @@ export default function AdminCustomersPage() {
       key: "status",
       label: "Status",
       sortable: true,
-      render: (c) => <StatusBadge status={c.status} />,
+      render: (c) => <StatusBadge status={c.status ?? (c.is_suspended || c.suspended_at ? "suspended" : c.email_verified_at ? "active" : "pending")} />,
     },
     {
       key: "phone",

@@ -2,6 +2,8 @@
 
 import { useEffect, useState } from "react"
 import { Banknote, CheckCircle, XCircle, Ban, Loader2 } from "lucide-react"
+import { Button } from "@/components/ui/button"
+import { Textarea } from "@/components/ui/textarea"
 import { DataTable, type Column } from "@/components/DataTable"
 import { StatusBadge } from "@/components/StatusBadge"
 import { ConfirmDialog } from "@/components/ConfirmDialog"
@@ -71,18 +73,13 @@ export default function AdminWithdrawalsPage() {
 
   const columns: Column<AdminWithdrawal>[] = [
     {
-      key: "reference",
-      label: "Reference",
-      sortable: true,
-      render: (w) => <span className="font-semibold text-brand">{w.reference}</span>,
-    },
-    {
-      key: "seller",
-      label: "Seller",
+      key: "user",
+      label: "Requested By",
       sortable: true,
       render: (w) => (
         <div>
-          <p className="font-medium">{w.seller?.shop_name || "Unknown"}</p>
+          <p className="font-medium">{w.user?.full_name || "Unknown"}</p>
+          <p className="text-[11px] text-muted-foreground">{w.user?.email}</p>
         </div>
       ),
     },
@@ -91,10 +88,7 @@ export default function AdminWithdrawalsPage() {
       label: "Amount",
       sortable: true,
       render: (w) => (
-        <div>
-          <p className="font-semibold text-emerald-600">₦{w.amount?.toLocaleString()}</p>
-          <p className="text-[11px] text-muted-foreground">Receives: ₦{w.seller_receives?.toLocaleString()}</p>
-        </div>
+        <p className="font-semibold text-emerald-600">{w.currency === "NGN" || !w.currency ? "₦" : `${w.currency} `}{w.amount?.toLocaleString()}</p>
       ),
     },
     {
@@ -130,27 +124,36 @@ export default function AdminWithdrawalsPage() {
         }
         return (
           <div className="flex items-center justify-end gap-1">
-            <button
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
               onClick={() => setConfirmAction({ withdrawal: w, action: "complete" })}
-              className="rounded p-1.5 text-emerald-600 hover:bg-emerald-50"
+              className="h-auto w-auto rounded p-1.5 text-emerald-600 hover:bg-emerald-50"
               title="Complete"
             >
               <CheckCircle className="h-4 w-4" />
-            </button>
-            <button
+            </Button>
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
               onClick={() => setConfirmAction({ withdrawal: w, action: "reject" })}
-              className="rounded p-1.5 text-rose-600 hover:bg-rose-50"
+              className="h-auto w-auto rounded p-1.5 text-rose-600 hover:bg-rose-50"
               title="Reject"
             >
               <XCircle className="h-4 w-4" />
-            </button>
-            <button
+            </Button>
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
               onClick={() => setConfirmAction({ withdrawal: w, action: "cancel" })}
-              className="rounded p-1.5 text-muted-foreground hover:bg-surface hover:text-foreground"
+              className="h-auto w-auto rounded p-1.5 text-muted-foreground hover:bg-surface hover:text-foreground"
               title="Cancel"
             >
               <Ban className="h-4 w-4" />
-            </button>
+            </Button>
           </div>
         )
       },
@@ -178,10 +181,12 @@ export default function AdminWithdrawalsPage() {
           columns={columns}
           data={withdrawals}
           rowKey={(w) => w.id}
-          searchPlaceholder="Search by reference or seller..."
+          searchPlaceholder="Search by name, email or bank..."
           searchFilter={(w, q) =>
-            w.reference.toLowerCase().includes(q) ||
-            (w.seller?.shop_name || "").toLowerCase().includes(q)
+            (w.user?.full_name || "").toLowerCase().includes(q) ||
+            (w.user?.email || "").toLowerCase().includes(q) ||
+            (w.bank_name || "").toLowerCase().includes(q) ||
+            (w.account_name || "").toLowerCase().includes(q)
           }
           pageSize={10}
         />
@@ -203,7 +208,7 @@ export default function AdminWithdrawalsPage() {
             ? "Reject Withdrawal"
             : "Cancel Withdrawal"
         }
-        description={`Are you sure you want to ${confirmAction?.action} withdrawal ${confirmAction?.withdrawal.reference}?`}
+        description={`Are you sure you want to ${confirmAction?.action} the ₦${confirmAction?.withdrawal.amount?.toLocaleString()} withdrawal for ${confirmAction?.withdrawal.user?.full_name || "this user"}?`}
         confirmLabel={
           actionLoading
             ? "Processing..."
@@ -218,8 +223,8 @@ export default function AdminWithdrawalsPage() {
         {confirmAction?.action === "reject" && (
           <div className="mt-4">
             <label className="mb-1 block text-sm font-medium">Reason for Rejection</label>
-            <textarea
-              className="w-full rounded-xl border border-border bg-background p-3 text-sm focus:border-brand focus:outline-none"
+            <Textarea
+              className="rounded-xl p-3 focus-visible:border-brand"
               rows={3}
               placeholder="Enter reason..."
               value={rejectReason}

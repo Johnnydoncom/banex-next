@@ -13,7 +13,8 @@ import Link from "next/link"
 export default function AdminStaffPage() {
   const { session, user } = useAuth()
   const token = (session as any)?.accessToken
-  const { users: admins, loading, mutate } = useAdminUsers(token, "admin")
+  const { users, loading } = useAdminUsers(token)
+  const admins = users.filter((u) => u.type === "admin")
 
   const columns: Column<AdminUser>[] = [
     {
@@ -50,7 +51,7 @@ export default function AdminStaffPage() {
       key: "status",
       label: "Status",
       sortable: true,
-      render: (a) => <StatusBadge status={a.status} />,
+      render: (a) => <StatusBadge status={a.status ?? (a.is_suspended || a.suspended_at ? "suspended" : a.email_verified_at ? "active" : "pending")} />,
     },
     {
       key: "created_at",

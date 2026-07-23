@@ -20,6 +20,8 @@ import {
   type AdminProduct,
 } from "@/lib/admin-api"
 import { useAdminProducts } from "@/hooks/use-swr-data"
+import { Button } from "@/components/ui/button"
+import { Textarea } from "@/components/ui/textarea"
 
 type Tab = "all" | "pending" | "active" | "inactive" | "rejected" | "draft"
 
@@ -65,33 +67,36 @@ function RejectReasonModal({
         <label className="mb-1.5 block text-xs font-semibold text-foreground">
           Rejection Reason <span className="font-normal text-muted-foreground">(optional)</span>
         </label>
-        <textarea
+        <Textarea
           value={reason}
           onChange={(e) => setReason(e.target.value)}
           placeholder="Explain why this product is being rejected…"
           rows={4}
-          className="w-full rounded-xl border border-border bg-surface px-3.5 py-2.5 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-rose-500/40 resize-none"
+          className="rounded-xl bg-surface px-3.5 py-2.5 resize-none focus-visible:ring-2 focus-visible:ring-rose-500/40"
         />
 
         <div className="mt-4 flex gap-2 justify-end">
-          <button
+          <Button
+            type="button"
+            variant="outline"
             onClick={onCancel}
             disabled={loading}
-            className="rounded-xl border border-border px-4 py-2 text-xs font-semibold text-foreground hover:bg-surface disabled:opacity-60"
+            className="h-auto rounded-xl px-4 py-2 text-xs font-semibold"
           >
             Cancel
-          </button>
-          <button
+          </Button>
+          <Button
+            type="button"
             onClick={() => onConfirm(reason)}
             disabled={loading}
-            className="inline-flex items-center gap-2 rounded-xl bg-rose-600 px-4 py-2 text-xs font-semibold text-white hover:bg-rose-700 disabled:opacity-60"
+            className="h-auto gap-2 rounded-xl bg-rose-600 px-4 py-2 text-xs font-semibold text-white hover:bg-rose-700"
           >
             {loading ? (
               <><Loader2 className="h-3.5 w-3.5 animate-spin" /> Rejecting…</>
             ) : (
               <><Ban className="h-3.5 w-3.5" /> Confirm Rejection</>
             )}
-          </button>
+          </Button>
         </div>
       </div>
     </div>
@@ -131,46 +136,58 @@ function ProductActionButtons({
 
       {/* Approve — for pending */}
       {s === "pending" && (
-        <button
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon"
           onClick={() => onAction("approve")}
-          className="rounded-lg p-1.5 text-emerald-600 hover:bg-emerald-500/15"
+          className="h-auto w-auto rounded-lg p-1.5 text-emerald-600 hover:bg-emerald-500/15"
           title="Approve product"
         >
           <Check className="h-3.5 w-3.5" />
-        </button>
+        </Button>
       )}
 
       {/* Reject — for pending */}
       {s === "pending" && (
-        <button
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon"
           onClick={() => onAction("reject")}
-          className="rounded-lg p-1.5 text-rose-600 hover:bg-rose-500/15"
+          className="h-auto w-auto rounded-lg p-1.5 text-rose-600 hover:bg-rose-500/15"
           title="Reject product"
         >
           <X className="h-3.5 w-3.5" />
-        </button>
+        </Button>
       )}
 
       {/* Activate — for inactive OR rejected */}
       {(s === "inactive" || s === "rejected" || s === "draft") && (
-        <button
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon"
           onClick={() => onAction("activate")}
-          className="rounded-lg p-1.5 text-emerald-600 hover:bg-emerald-500/15"
+          className="h-auto w-auto rounded-lg p-1.5 text-emerald-600 hover:bg-emerald-500/15"
           title="Activate product"
         >
           <Power className="h-3.5 w-3.5" />
-        </button>
+        </Button>
       )}
 
       {/* Deactivate — for active */}
       {s === "active" && (
-        <button
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon"
           onClick={() => onAction("deactivate")}
-          className="rounded-lg p-1.5 text-muted-foreground hover:bg-amber-500/15 hover:text-amber-600"
+          className="h-auto w-auto rounded-lg p-1.5 text-muted-foreground hover:bg-amber-500/15 hover:text-amber-600"
           title="Deactivate product"
         >
           <PowerOff className="h-3.5 w-3.5" />
-        </button>
+        </Button>
       )}
     </div>
   )
@@ -416,10 +433,12 @@ export default function AdminProductsPage() {
       {/* Tabs */}
       <div className="flex flex-wrap gap-1 rounded-xl bg-surface/60 p-1">
         {tabs.map((t) => (
-          <button
+          <Button
+            type="button"
+            variant="ghost"
             key={t.key}
             onClick={() => setTab(t.key)}
-            className={`rounded-lg px-3 py-2 text-xs font-semibold transition-colors ${
+            className={`h-auto rounded-lg px-3 py-2 text-xs font-semibold ${
               tab === t.key
                 ? "bg-card text-foreground shadow-sm"
                 : "text-muted-foreground hover:text-foreground"
@@ -439,7 +458,7 @@ export default function AdminProductsPage() {
                 {t.count}
               </span>
             )}
-          </button>
+          </Button>
         ))}
       </div>
 

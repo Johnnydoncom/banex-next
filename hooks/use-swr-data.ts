@@ -104,7 +104,7 @@ export const SWR_KEYS = {
   adminDashboard: (token: string) => ["/admin/dashboard", token] as const,
   adminOrders: (token: string) => ["/admin/orders", token] as const,
   adminOrder: (id: string, token: string) => ["/admin/order", id, token] as const,
-  adminUsers: (token: string) => ["/admin/users", token] as const,
+  adminUsers: (token: string, type = "all") => ["/admin/users", type, token] as const,
   adminSellers: (token: string) => ["/admin/sellers", token] as const,
   adminCustomers: (token: string) => ["/admin/customers", token] as const,
   adminProducts: (token: string) => ["/admin/products", token] as const,
@@ -373,10 +373,11 @@ export function useAdminOrders(token: string | undefined) {
   }
 }
 
-export function useAdminUsers(token: string | undefined, type?: "admin" | "vendor" | "customer") {
+export function useAdminUsers(token: string | undefined, opts?: { has_seller?: 0 | 1; search?: string }) {
+  const cacheKey = opts?.has_seller !== undefined ? `has_seller=${opts.has_seller}` : "all"
   const { data, error, isLoading, mutate } = useSWR(
-    token ? SWR_KEYS.adminUsers(token) : null,
-    ([, t]) => fetchAdminUsers(t, type),
+    token ? SWR_KEYS.adminUsers(token, cacheKey) : null,
+    ([, , t]) => fetchAdminUsers(t, opts),
     { revalidateOnFocus: false }
   )
   return {
@@ -521,8 +522,8 @@ export function useAdminRevenue(token: string | undefined) {
     { revalidateOnFocus: false }
   )
   return {
-    summary: data?.data?.summary ?? null as AdminRevenueSummary | null,
-    lines: ((data as any)?.data?.revenue_lines ?? []) as AdminRevenueLine[],
+    summary: (data?.data?.platform_revenue ?? null) as AdminRevenueSummary | null,
+    lines: ((data as any)?.data?.lines ?? []) as AdminRevenueLine[],
     loading: isLoading,
     error,
     mutate,

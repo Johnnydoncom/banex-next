@@ -3,16 +3,22 @@
 import { useEffect, useState } from "react"
 import { Coins, CheckCircle, Loader2, History } from "lucide-react"
 import { DataTable, type Column } from "@/components/DataTable"
-import { StatusBadge } from "@/components/StatusBadge"
 import { ConfirmDialog } from "@/components/ConfirmDialog"
 import { useAuth } from "@/hooks/use-auth"
 import {
   fetchAdminPayouts,
   fetchAdminPayoutHistory,
+  fetchAdminPayoutLines,
   markAdminPayoutPaid,
   type AdminPayout,
 } from "@/lib/admin-api"
 import { toast } from "sonner"
+import { Button } from "@/components/ui/button"
+
+function money(amount: number | undefined, currency = "NGN") {
+  const prefix = currency === "NGN" || !currency ? "₦" : `${currency} `
+  return `${prefix}${(amount ?? 0).toLocaleString()}`
+}
 
 export default function AdminPayoutsPage() {
   const { session } = useAuth()
@@ -34,8 +40,8 @@ export default function AdminPayoutsPage() {
         fetchAdminPayouts(token),
         fetchAdminPayoutHistory(token),
       ])
-      setPayouts(pendingRes.data?.payouts || [])
-      setHistory(historyRes.data?.history || [])
+      setPayouts(pendingRes.data?.seller_payouts || [])
+      setHistory(historyRes.data?.seller_payouts || [])
     } catch (err: any) {
       toast.error(err.message || "Failed to load payouts")
     } finally {
@@ -51,8 +57,19 @@ export default function AdminPayoutsPage() {
     if (!confirmPayout || !token) return
     setActionLoading(true)
     try {
-      await markAdminPayoutPaid(confirmPayout.id, token)
-      toast.success("Payout marked as paid")
+      // The aggregated payout doesn't carry line ids, so fetch this seller's
+      // payable settlement lines and settle them.
+      const linesRes = await fetchAdminPayoutLines(confirmPayout.seller.id, token)
+      const orderItemIds = (linesRes.data?.lines || [])
+        .filter((l) => l.settlement_status === "payable")
+        .map((l) => l.id)
+      if (orderItemIds.length === 0) {
+        toast.error("No payable lines found for this seller.")
+        setConfirmPayout(null)
+        return
+      }
+      await markAdminPayoutPaid(orderItemIds, token)
+      toast.success(`Payout for ${confirmPayout.seller.shop_name} marked as paid`)
       setConfirmPayout(null)
       loadData()
     } catch (err: any) {
@@ -62,63 +79,71 @@ export default function AdminPayoutsPage() {
     }
   }
 
-  const columns: Column<AdminPayout>[] = [
-    {
-      key: "reference",
-      label: "Reference",
-      sortable: true,
-      render: (p) => <span className="font-semibold text-brand">{p.reference}</span>,
-    },
+  const baseColumns: Column<AdminPayout>[] = [
     {
       key: "seller",
       label: "Seller",
       sortable: true,
-      render: (p) => <span className="font-medium">{p.seller?.shop_name || "Unknown"}</span>,
+      render: (p) => (
+        <div>
+          <p className="font-semibold">{p.seller?.shop_name || "Unknown"}</p>
+          <p className="text-[11px] text-muted-foreground">/{p.seller?.slug}</p>
+        </div>
+      ),
+    },
+    {
+      key: "line_count",
+      label: "Items",
+      sortable: true,
+      render: (p) => <span className="text-sm">{p.line_count ?? 0}</span>,
     },
     {
       key: "amount",
-      label: "Amount",
-      sortable: true,
-      render: (p) => <span className="font-bold text-emerald-600">₦{p.amount?.toLocaleString()}</span>,
-    },
-    {
-      key: "status",
-      label: "Status",
-      sortable: true,
-      render: (p) => <StatusBadge status={p.status} />,
-    },
-    {
-      key: "date",
-      label: "Date",
+      label: activeTab === "history" ? "Paid Out" : "Payable",
       sortable: true,
       render: (p) => (
-        <span className="text-xs text-muted-foreground">
-          {new Date(p.created_at?.item).toLocaleString()}
+        <span className="font-bold text-emerald-600">
+          {money(activeTab === "history" ? (p.paid_total ?? p.payable_total) : p.payable_total, p.currency)}
         </span>
       ),
     },
   ]
 
   const pendingColumns: Column<AdminPayout>[] = [
-    ...columns,
+    ...baseColumns,
     {
       key: "actions",
       label: "Actions",
       className: "text-right",
       render: (p) =>
-        p.status === "pending" ? (
-          <button
+        (p.payable_total ?? 0) > 0 ? (
+          <Button
+            type="button"
             onClick={() => setConfirmPayout(p)}
-            className="inline-flex items-center gap-1.5 rounded-lg bg-emerald-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-emerald-700"
+            className="h-auto gap-1.5 rounded-lg bg-emerald-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-emerald-700"
           >
             <CheckCircle className="h-3.5 w-3.5" /> Mark Paid
-          </button>
+          </Button>
         ) : null,
     },
   ]
 
+  const historyColumns: Column<AdminPayout>[] = [
+    ...baseColumns,
+    {
+      key: "paid_at",
+      label: "Paid On",
+      sortable: true,
+      render: (p) => (
+        <span className="text-xs text-muted-foreground">
+          {p.paid_at?.item ? new Date(p.paid_at.item).toLocaleString() : "—"}
+        </span>
+      ),
+    },
+  ]
+
   const currentData = activeTab === "pending" ? payouts : history
-  const currentColumns = activeTab === "pending" ? pendingColumns : columns
+  const currentColumns = activeTab === "pending" ? pendingColumns : historyColumns
 
   return (
     <div className="space-y-6">
@@ -126,36 +151,40 @@ export default function AdminPayoutsPage() {
         <h1 className="font-display text-2xl font-bold flex items-center gap-2">
           <Coins className="h-6 w-6 text-brand" /> Seller Payouts
         </h1>
-        <p className="mt-1 text-sm text-muted-foreground">Manage pending seller payouts and view history.</p>
+        <p className="mt-1 text-sm text-muted-foreground">Settle payable balances owed to sellers and view payout history.</p>
       </div>
 
       {/* Tabs */}
       <div className="flex gap-1 rounded-xl bg-surface/60 p-1 w-fit">
-        <button
+        <Button
+          type="button"
+          variant="ghost"
           onClick={() => setActiveTab("pending")}
-          className={`flex items-center gap-2 rounded-lg px-4 py-2 text-xs font-semibold transition-colors ${
+          className={`h-auto flex items-center gap-2 rounded-lg px-4 py-2 text-xs font-semibold ${
             activeTab === "pending"
               ? "bg-card text-foreground shadow-sm"
               : "text-muted-foreground hover:text-foreground"
           }`}
         >
-          <Coins className="h-3.5 w-3.5" /> Pending
+          <Coins className="h-3.5 w-3.5" /> Payable
           {payouts.length > 0 && (
             <span className="rounded-full bg-brand/20 px-1.5 py-0.5 text-[10px] text-brand font-bold">
               {payouts.length}
             </span>
           )}
-        </button>
-        <button
+        </Button>
+        <Button
+          type="button"
+          variant="ghost"
           onClick={() => setActiveTab("history")}
-          className={`flex items-center gap-2 rounded-lg px-4 py-2 text-xs font-semibold transition-colors ${
+          className={`h-auto flex items-center gap-2 rounded-lg px-4 py-2 text-xs font-semibold ${
             activeTab === "history"
               ? "bg-card text-foreground shadow-sm"
               : "text-muted-foreground hover:text-foreground"
           }`}
         >
           <History className="h-3.5 w-3.5" /> History
-        </button>
+        </Button>
       </div>
 
       {loading ? (
@@ -167,12 +196,9 @@ export default function AdminPayoutsPage() {
         <DataTable
           columns={currentColumns}
           data={currentData}
-          rowKey={(p) => p.id}
-          searchPlaceholder="Search by reference or seller..."
-          searchFilter={(p, q) =>
-            p.reference?.toLowerCase().includes(q) ||
-            (p.seller?.shop_name || "").toLowerCase().includes(q)
-          }
+          rowKey={(p) => p.seller?.id ?? p.seller?.slug}
+          searchPlaceholder="Search by seller..."
+          searchFilter={(p, q) => (p.seller?.shop_name || "").toLowerCase().includes(q)}
           pageSize={15}
         />
       )}
@@ -181,10 +207,11 @@ export default function AdminPayoutsPage() {
         open={!!confirmPayout}
         onOpenChange={(open) => !open && setConfirmPayout(null)}
         title="Mark Payout as Paid"
-        description={`Are you sure you want to mark payout ${confirmPayout?.reference} for ${confirmPayout?.seller?.shop_name} as paid? This action cannot be undone.`}
+        description={`Settle ${money(confirmPayout?.payable_total, confirmPayout?.currency)} across ${confirmPayout?.line_count ?? 0} item(s) for ${confirmPayout?.seller?.shop_name}? This action cannot be undone.`}
         confirmLabel={actionLoading ? "Processing..." : "Yes, Mark Paid"}
         destructive={false}
         onConfirm={handleMarkPaid}
+        loading={actionLoading}
       />
     </div>
   )

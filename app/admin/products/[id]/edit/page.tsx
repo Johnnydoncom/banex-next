@@ -25,6 +25,12 @@ import {
 } from "@/lib/admin-api"
 import { RichTextEditor } from "@/components/RichTextEditor"
 import { LocationSelect } from "@/components/LocationSelect"
+import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
+import { Textarea } from "@/components/ui/textarea"
+import { Switch } from "@/components/ui/switch"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { StatusBadge } from "@/components/StatusBadge"
 import { ConfirmDialog } from "@/components/ConfirmDialog"
 
@@ -73,32 +79,35 @@ function RejectModal({
             <p className="text-xs text-muted-foreground">Provide a reason for the seller</p>
           </div>
         </div>
-        <label className="mb-1.5 block text-xs font-semibold">
+        <Label className="mb-1.5 block text-xs font-semibold">
           Reason <span className="font-normal text-muted-foreground">(optional)</span>
-        </label>
-        <textarea
+        </Label>
+        <Textarea
           value={reason}
           onChange={(e) => setReason(e.target.value)}
           placeholder="e.g. Images are low quality, description is missing…"
           rows={4}
-          className="w-full rounded-xl border border-border bg-surface px-3.5 py-2.5 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-rose-500/40 resize-none"
+          className="rounded-xl bg-surface px-3.5 py-2.5 resize-none focus-visible:ring-2 focus-visible:ring-rose-500/40"
         />
         <div className="mt-4 flex justify-end gap-2">
-          <button
+          <Button
+            type="button"
+            variant="outline"
             onClick={onCancel}
             disabled={loading}
-            className="rounded-xl border border-border px-4 py-2 text-xs font-semibold hover:bg-surface disabled:opacity-60"
+            className="h-auto rounded-xl px-4 py-2 text-xs font-semibold"
           >
             Cancel
-          </button>
-          <button
+          </Button>
+          <Button
+            type="button"
             onClick={() => onConfirm(reason)}
             disabled={loading}
-            className="inline-flex items-center gap-2 rounded-xl bg-rose-600 px-4 py-2 text-xs font-semibold text-white hover:bg-rose-700 disabled:opacity-60"
+            className="h-auto gap-2 rounded-xl bg-rose-600 px-4 py-2 text-xs font-semibold text-white hover:bg-rose-700"
           >
             {loading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Ban className="h-3.5 w-3.5" />}
             {loading ? "Rejecting…" : "Confirm Rejection"}
-          </button>
+          </Button>
         </div>
       </div>
     </div>
@@ -444,17 +453,18 @@ export default function AdminEditProductPage({
             </p>
           </div>
         </div>
-        <button
+        <Button
+          type="button"
           onClick={handleSubmit}
           disabled={submitting}
-          className="inline-flex items-center gap-2 rounded-full bg-gradient-brand px-5 py-2.5 text-xs font-semibold text-primary-foreground shadow-brand disabled:opacity-60"
+          className="h-auto gap-2 rounded-full bg-gradient-brand px-5 py-2.5 text-xs font-semibold text-primary-foreground shadow-brand"
         >
           {submitting ? (
             <><Loader2 className="h-3.5 w-3.5 animate-spin" /> Saving…</>
           ) : (
             <><Save className="h-3.5 w-3.5" /> Save Changes</>
           )}
-        </button>
+        </Button>
       </div>
 
       <div className="grid gap-6 lg:grid-cols-3">
@@ -471,54 +481,60 @@ export default function AdminEditProductPage({
             <div className="space-y-2">
               {/* Approve — pending only */}
               {product.status === "pending" && (
-                <button
+                <Button
+                  type="button"
                   onClick={() => triggerStatusAction("approve")}
                   disabled={statusLoading}
-                  className="flex w-full items-center gap-2.5 rounded-xl bg-emerald-600 px-4 py-2.5 text-xs font-semibold text-white hover:bg-emerald-700 disabled:opacity-60 transition-colors"
+                  className="h-auto w-full justify-start gap-2.5 rounded-xl bg-emerald-600 px-4 py-2.5 text-xs font-semibold text-white hover:bg-emerald-700"
                 >
                   <ShieldCheck className="h-4 w-4" />
                   <span>Approve Product</span>
-                </button>
+                </Button>
               )}
 
               {/* Reject — pending only */}
               {product.status === "pending" && (
-                <button
+                <Button
+                  type="button"
+                  variant="outline"
                   onClick={() => setRejectOpen(true)}
                   disabled={statusLoading}
-                  className="flex w-full items-center gap-2.5 rounded-xl border border-rose-300 bg-rose-50 dark:bg-rose-500/10 px-4 py-2.5 text-xs font-semibold text-rose-700 dark:text-rose-400 hover:bg-rose-100 dark:hover:bg-rose-500/20 disabled:opacity-60 transition-colors"
+                  className="h-auto w-full justify-start gap-2.5 rounded-xl border-rose-300 bg-rose-50 dark:bg-rose-500/10 px-4 py-2.5 text-xs font-semibold text-rose-700 dark:text-rose-400 hover:bg-rose-100 dark:hover:bg-rose-500/20"
                 >
                   <Ban className="h-4 w-4" />
                   <span>Reject</span>
-                </button>
+                </Button>
               )}
 
               {/* Activate — inactive / rejected / draft */}
               {(product.status === "inactive" ||
                 product.status === "rejected" ||
                 product.status === "draft") && (
-                <button
+                <Button
+                  type="button"
                   onClick={() => triggerStatusAction("activate")}
                   disabled={statusLoading}
-                  className="flex w-full items-center gap-2.5 rounded-xl bg-emerald-600 px-4 py-2.5 text-xs font-semibold text-white hover:bg-emerald-700 disabled:opacity-60 transition-colors"
+                  className="h-auto w-full justify-start gap-2.5 rounded-xl bg-emerald-600 px-4 py-2.5 text-xs font-semibold text-white hover:bg-emerald-700"
                 >
                   <Power className="h-4 w-4" />
                   <span>
                     {product.status === "rejected" ? "Override & Activate" : "Activate"}
                   </span>
-                </button>
+                </Button>
               )}
 
               {/* Deactivate — active only */}
               {product.status === "active" && (
-                <button
+                <Button
+                  type="button"
+                  variant="outline"
                   onClick={() => triggerStatusAction("deactivate")}
                   disabled={statusLoading}
-                  className="flex w-full items-center gap-2.5 rounded-xl border border-amber-300 bg-amber-50 dark:bg-amber-500/10 px-4 py-2.5 text-xs font-semibold text-amber-700 dark:text-amber-400 hover:bg-amber-100 dark:hover:bg-amber-500/20 disabled:opacity-60 transition-colors"
+                  className="h-auto w-full justify-start gap-2.5 rounded-xl border-amber-300 bg-amber-50 dark:bg-amber-500/10 px-4 py-2.5 text-xs font-semibold text-amber-700 dark:text-amber-400 hover:bg-amber-100 dark:hover:bg-amber-500/20"
                 >
                   <PowerOff className="h-4 w-4" />
                   <span>Deactivate</span>
-                </button>
+                </Button>
               )}
 
               {(product.status === "active") && (
@@ -592,21 +608,27 @@ export default function AdminEditProductPage({
                     {/* Actions */}
                     <div className="flex flex-col gap-1 opacity-0 transition-opacity group-hover:opacity-100">
                       {!isThisPrimary && (
-                        <button
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
                           onClick={() => setPrimaryKey(`existing:${img.id}`)}
                           title="Set as primary"
-                          className="rounded-lg p-1 text-muted-foreground hover:text-brand hover:bg-brand/10"
+                          className="h-auto w-auto rounded-lg p-1 text-muted-foreground hover:text-brand hover:bg-brand/10"
                         >
                           <Star className="h-3.5 w-3.5" />
-                        </button>
+                        </Button>
                       )}
-                      <button
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
                         onClick={() => markExistingForDeletion(img.id)}
                         title="Remove image"
-                        className="rounded-lg p-1 text-muted-foreground hover:text-rose-600 hover:bg-rose-500/10"
+                        className="h-auto w-auto rounded-lg p-1 text-muted-foreground hover:text-rose-600 hover:bg-rose-500/10"
                       >
                         <Trash2 className="h-3.5 w-3.5" />
-                      </button>
+                      </Button>
                     </div>
                   </div>
                 )
@@ -649,21 +671,27 @@ export default function AdminEditProductPage({
                     {/* Actions */}
                     <div className="flex flex-col gap-1 opacity-0 transition-opacity group-hover:opacity-100">
                       {!isThisPrimary && (
-                        <button
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
                           onClick={() => setPrimaryKey(key)}
                           title="Set as primary"
-                          className="rounded-lg p-1 text-muted-foreground hover:text-brand hover:bg-brand/10"
+                          className="h-auto w-auto rounded-lg p-1 text-muted-foreground hover:text-brand hover:bg-brand/10"
                         >
                           <Star className="h-3.5 w-3.5" />
-                        </button>
+                        </Button>
                       )}
-                      <button
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
                         onClick={() => removeNewImage(idx)}
                         title="Remove image"
-                        className="rounded-lg p-1 text-muted-foreground hover:text-rose-600 hover:bg-rose-500/10"
+                        className="h-auto w-auto rounded-lg p-1 text-muted-foreground hover:text-rose-600 hover:bg-rose-500/10"
                       >
                         <Trash2 className="h-3.5 w-3.5" />
-                      </button>
+                      </Button>
                     </div>
                   </div>
                 )
@@ -679,7 +707,7 @@ export default function AdminEditProductPage({
                     <p className="text-xs font-semibold">Add images</p>
                     <p className="text-[11px]">{5 - totalSlots} slot(s) remaining</p>
                   </div>
-                  <input
+                  <Input
                     ref={fileInputRef}
                     type="file"
                     accept="image/*"
@@ -702,35 +730,35 @@ export default function AdminEditProductPage({
             <div className="space-y-4">
               <div className="grid gap-4 sm:grid-cols-2">
                 <div>
-                  <label className="mb-1.5 block text-xs font-medium text-muted-foreground">
+                  <Label className="mb-1.5 block text-xs text-muted-foreground">
                     Product Name <span className="text-rose-500">*</span>
-                  </label>
-                  <input
+                  </Label>
+                  <Input
                     type="text"
                     value={form.name}
                     onChange={(e) => update("name", e.target.value)}
                     placeholder="e.g. iPhone 16 Pro Max"
-                    className="w-full rounded-xl border border-border bg-background px-4 py-2.5 text-sm outline-none focus:border-brand focus:ring-1 focus:ring-brand"
+                    className="rounded-xl px-4 py-2.5 focus-visible:border-brand focus-visible:ring-brand"
                   />
                 </div>
                 <div>
-                  <label className="mb-1.5 block text-xs font-medium text-muted-foreground">
+                  <Label className="mb-1.5 block text-xs text-muted-foreground">
                     Brand
-                  </label>
-                  <input
+                  </Label>
+                  <Input
                     type="text"
                     value={form.brand}
                     onChange={(e) => update("brand", e.target.value)}
                     placeholder="e.g. Apple"
-                    className="w-full rounded-xl border border-border bg-background px-4 py-2.5 text-sm outline-none focus:border-brand focus:ring-1 focus:ring-brand"
+                    className="rounded-xl px-4 py-2.5 focus-visible:border-brand focus-visible:ring-brand"
                   />
                 </div>
               </div>
 
               <div>
-                <label className="mb-1.5 block text-xs font-medium text-muted-foreground">
+                <Label className="mb-1.5 block text-xs text-muted-foreground">
                   Description
-                </label>
+                </Label>
                 <RichTextEditor
                   value={form.description}
                   onChange={(val) => update("description", val)}
@@ -740,38 +768,30 @@ export default function AdminEditProductPage({
 
               <div className="grid gap-4 sm:grid-cols-2">
                 <div>
-                  <label className="mb-1.5 block text-xs font-medium text-muted-foreground">
+                  <Label className="mb-1.5 block text-xs text-muted-foreground">
                     Category <span className="text-rose-500">*</span>
-                  </label>
-                  <select
-                    value={form.category_id}
-                    onChange={(e) => update("category_id", e.target.value)}
-                    className="w-full rounded-xl border border-border bg-background px-4 py-2.5 text-sm outline-none focus:border-brand focus:ring-1 focus:ring-brand"
-                  >
-                    <option value="">Select category</option>
-                    {categories.map((c) => (
-                      <option key={c.id} value={c.id}>
-                        {c.name}
-                      </option>
-                    ))}
-                  </select>
+                  </Label>
+                  <Select value={form.category_id} onValueChange={(v) => update("category_id", v)}>
+                    <SelectTrigger className="h-auto rounded-xl px-4 py-2.5"><SelectValue placeholder="Select category" /></SelectTrigger>
+                    <SelectContent>
+                      {categories.map((c) => (
+                        <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
                 <div>
-                  <label className="mb-1.5 block text-xs font-medium text-muted-foreground">
+                  <Label className="mb-1.5 block text-xs text-muted-foreground">
                     Seller
-                  </label>
-                  <select
-                    value={form.seller_id}
-                    onChange={(e) => update("seller_id", e.target.value)}
-                    className="w-full rounded-xl border border-border bg-background px-4 py-2.5 text-sm outline-none focus:border-brand focus:ring-1 focus:ring-brand"
-                  >
-                    <option value="">Assign to seller</option>
-                    {sellers.map((s) => (
-                      <option key={s.id} value={s.id}>
-                        {s.shop_name}
-                      </option>
-                    ))}
-                  </select>
+                  </Label>
+                  <Select value={form.seller_id} onValueChange={(v) => update("seller_id", v)}>
+                    <SelectTrigger className="h-auto rounded-xl px-4 py-2.5"><SelectValue placeholder="Assign to seller" /></SelectTrigger>
+                    <SelectContent>
+                      {sellers.map((s) => (
+                        <SelectItem key={s.id} value={s.id}>{s.shop_name}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
               </div>
             </div>
@@ -782,34 +802,34 @@ export default function AdminEditProductPage({
             <h2 className="font-display text-base font-semibold mb-4">Pricing & Logistics</h2>
             <div className="grid gap-4 sm:grid-cols-2">
               <div>
-                <label className="mb-1.5 block text-xs font-medium text-muted-foreground">
+                <Label className="mb-1.5 block text-xs text-muted-foreground">
                   Price (₦) <span className="text-rose-500">*</span>
-                </label>
-                <input
+                </Label>
+                <Input
                   type="number"
                   value={form.price}
                   onChange={(e) => update("price", e.target.value)}
                   placeholder="350000"
                   min="0"
-                  className="w-full rounded-xl border border-border bg-background px-4 py-2.5 text-sm outline-none focus:border-brand focus:ring-1 focus:ring-brand"
+                  className="rounded-xl px-4 py-2.5 focus-visible:border-brand focus-visible:ring-brand"
                 />
               </div>
               <div>
-                <label className="mb-1.5 block text-xs font-medium text-muted-foreground">
+                <Label className="mb-1.5 block text-xs text-muted-foreground">
                   Delivery Estimate
-                </label>
-                <input
+                </Label>
+                <Input
                   type="text"
                   value={form.delivery_estimate}
                   onChange={(e) => update("delivery_estimate", e.target.value)}
                   placeholder="e.g. 3 - 5 days"
-                  className="w-full rounded-xl border border-border bg-background px-4 py-2.5 text-sm outline-none focus:border-brand focus:ring-1 focus:ring-brand"
+                  className="rounded-xl px-4 py-2.5 focus-visible:border-brand focus-visible:ring-brand"
                 />
               </div>
               <div>
-                <label className="mb-1.5 block text-xs font-medium text-muted-foreground">
+                <Label className="mb-1.5 block text-xs text-muted-foreground">
                   Location
-                </label>
+                </Label>
                 <LocationSelect
                   value={form.location}
                   onChange={(val) => update("location", val)}
@@ -828,24 +848,13 @@ export default function AdminEditProductPage({
                   ["is_escrow_enabled", "Escrow Enabled"],
                 ] as [keyof typeof form, string][]
               ).map(([key, label]) => (
-                <label
+                <Label
                   key={key}
                   className="flex cursor-pointer items-center gap-3 rounded-xl border border-border p-3 hover:bg-surface/60 transition-colors"
                 >
-                  <div
-                    onClick={() => update(key, !form[key])}
-                    className={`relative h-5 w-9 rounded-full transition-colors ${
-                      form[key] ? "bg-brand" : "bg-muted"
-                    }`}
-                  >
-                    <span
-                      className={`absolute top-0.5 left-0.5 h-4 w-4 rounded-full bg-white shadow transition-transform ${
-                        form[key] ? "translate-x-4" : "translate-x-0"
-                      }`}
-                    />
-                  </div>
+                  <Switch checked={!!form[key]} onCheckedChange={(v) => update(key, v)} />
                   <span className="text-xs font-medium">{label}</span>
-                </label>
+                </Label>
               ))}
             </div>
           </div>
@@ -856,34 +865,39 @@ export default function AdminEditProductPage({
             <div className="space-y-2">
               {specifications.map((spec, i) => (
                 <div key={i} className="flex items-center gap-2">
-                  <input
+                  <Input
                     type="text"
                     value={spec.key}
                     onChange={(e) => updateSpec(i, "key", e.target.value)}
                     placeholder="Key (e.g. Storage)"
-                    className="flex-1 rounded-xl border border-border bg-background px-3.5 py-2.5 text-sm outline-none focus:border-brand focus:ring-1 focus:ring-brand"
+                    className="flex-1 rounded-xl px-3.5 py-2.5 focus-visible:border-brand focus-visible:ring-brand"
                   />
-                  <input
+                  <Input
                     type="text"
                     value={spec.value}
                     onChange={(e) => updateSpec(i, "value", e.target.value)}
                     placeholder="Value (e.g. 512GB)"
-                    className="flex-1 rounded-xl border border-border bg-background px-3.5 py-2.5 text-sm outline-none focus:border-brand focus:ring-1 focus:ring-brand"
+                    className="flex-1 rounded-xl px-3.5 py-2.5 focus-visible:border-brand focus-visible:ring-brand"
                   />
-                  <button
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="icon"
                     onClick={() => removeSpec(i)}
-                    className="rounded-xl border border-border p-2.5 text-muted-foreground hover:bg-rose-500/10 hover:text-rose-500 hover:border-rose-300 transition-colors"
+                    className="h-auto w-auto rounded-xl p-2.5 text-muted-foreground hover:bg-rose-500/10 hover:text-rose-500 hover:border-rose-300"
                   >
                     <X className="h-4 w-4" />
-                  </button>
+                  </Button>
                 </div>
               ))}
-              <button
+              <Button
+                type="button"
+                variant="link"
                 onClick={addSpec}
-                className="mt-1 text-xs font-semibold text-brand hover:underline"
+                className="mt-1 h-auto p-0 text-xs font-semibold text-brand hover:underline"
               >
                 + Add Specification
-              </button>
+              </Button>
             </div>
           </div>
 
@@ -895,17 +909,18 @@ export default function AdminEditProductPage({
             >
               Cancel
             </Link>
-            <button
+            <Button
+              type="button"
               onClick={handleSubmit}
               disabled={submitting}
-              className="inline-flex items-center gap-2 rounded-xl bg-gradient-brand px-6 py-2.5 text-xs font-semibold text-primary-foreground shadow-brand disabled:opacity-60"
+              className="h-auto gap-2 rounded-xl bg-gradient-brand px-6 py-2.5 text-xs font-semibold text-primary-foreground shadow-brand"
             >
               {submitting ? (
                 <><Loader2 className="h-3.5 w-3.5 animate-spin" /> Saving…</>
               ) : (
                 <><Save className="h-3.5 w-3.5" /> Save Changes</>
               )}
-            </button>
+            </Button>
           </div>
         </div>
       </div>

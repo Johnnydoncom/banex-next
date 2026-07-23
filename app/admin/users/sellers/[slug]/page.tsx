@@ -10,7 +10,8 @@ import {
   fetchAdminCategories,
   fetchAdminSeller,
   updateAdminSeller,
-  updateAdminSellerStatus,
+  toggleAdminSellerApproval,
+  toggleAdminSellerSuspension,
   fetchAdminWhatsAppContacts,
   AdminCategory,
   AdminSeller,
@@ -18,7 +19,11 @@ import {
 } from "@/lib/admin-api"
 import { RichTextEditor } from "@/components/RichTextEditor"
 import { StatusBadge } from "@/components/StatusBadge"
-import { RejectSellerModal } from "@/components/RejectSellerModal"
+import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
+import { Switch } from "@/components/ui/switch"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 
 export default function AdminEditSellerPage() {
   const params = useParams()
@@ -52,7 +57,6 @@ export default function AdminEditSellerPage() {
 
   // Status Action State
   const [statusLoading, setStatusLoading] = useState(false)
-  const [isRejectModalOpen, setIsRejectModalOpen] = useState(false)
 
   const update = (key: string, value: any) => setForm((f) => ({ ...f, [key]: value }))
 
@@ -163,15 +167,27 @@ export default function AdminEditSellerPage() {
     }
   }
 
-  const handleStatusChange = async (action: "approve" | "reject" | "suspend", reason?: string) => {
+  const handleToggleApproval = async () => {
     setStatusLoading(true)
     try {
-      await updateAdminSellerStatus(id, action, session?.accessToken as string, reason)
-      toast.success(`Seller ${action}d successfully.`)
-      if (isRejectModalOpen) setIsRejectModalOpen(false)
+      await toggleAdminSellerApproval(id, session?.accessToken as string)
+      toast.success(seller?.status === "approved" ? "Seller approval revoked." : "Seller approved.")
       await loadData(session?.accessToken as string)
     } catch (err: any) {
-      toast.error(err.message || `Failed to ${action} seller`)
+      toast.error(err.message || "Failed to update seller approval")
+    } finally {
+      setStatusLoading(false)
+    }
+  }
+
+  const handleToggleSuspension = async () => {
+    setStatusLoading(true)
+    try {
+      await toggleAdminSellerSuspension(id, session?.accessToken as string)
+      toast.success(seller?.status === "suspended" ? "Seller unsuspended." : "Seller suspended.")
+      await loadData(session?.accessToken as string)
+    } catch (err: any) {
+      toast.error(err.message || "Failed to update seller suspension")
     } finally {
       setStatusLoading(false)
     }
@@ -214,58 +230,54 @@ export default function AdminEditSellerPage() {
             <h2 className="font-display text-lg font-bold mb-4">Basic Information</h2>
             <div className="space-y-4">
               <div>
-                <label className="mb-1.5 block text-xs font-semibold text-foreground">
+                <Label className="mb-1.5 block text-xs font-semibold text-foreground">
                   Shop Name <span className="text-rose-500">*</span>
-                </label>
-                <input
+                </Label>
+                <Input
                   type="text"
                   value={form.shop_name}
                   onChange={(e) => update("shop_name", e.target.value)}
-                  className="w-full rounded-xl border border-border bg-background px-3 py-2.5 text-sm focus:border-brand focus:outline-none focus:ring-1 focus:ring-brand"
+                  className="rounded-xl px-3 py-2.5 focus-visible:border-brand focus-visible:ring-brand"
                 />
               </div>
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="mb-1.5 block text-xs font-semibold text-foreground">Phone</label>
-                  <input
+                  <Label className="mb-1.5 block text-xs font-semibold text-foreground">Phone</Label>
+                  <Input
                     type="text"
                     value={form.phone}
                     onChange={(e) => update("phone", e.target.value)}
-                    className="w-full rounded-xl border border-border bg-background px-3 py-2.5 text-sm focus:border-brand focus:outline-none focus:ring-1 focus:ring-brand"
+                    className="rounded-xl px-3 py-2.5 focus-visible:border-brand focus-visible:ring-brand"
                   />
                 </div>
                 <div>
-                  <label className="mb-1.5 block text-xs font-semibold text-foreground">WhatsApp Contact</label>
-                  <select
-                    value={form.whatsapp_contact_id}
-                    onChange={(e) => update("whatsapp_contact_id", e.target.value)}
-                    className="w-full rounded-xl border border-border bg-background px-3 py-2.5 text-sm focus:border-brand focus:outline-none focus:ring-1 focus:ring-brand"
-                  >
-                    <option value="">Select a contact</option>
-                    {contacts.map(c => (
-                      <option key={c.id} value={c.id}>{c.label} ({c.phone_number})</option>
-                    ))}
-                  </select>
+                  <Label className="mb-1.5 block text-xs font-semibold text-foreground">WhatsApp Contact</Label>
+                  <Select value={form.whatsapp_contact_id} onValueChange={(v) => update("whatsapp_contact_id", v)}>
+                    <SelectTrigger className="h-auto rounded-xl px-3 py-2.5"><SelectValue placeholder="Select a contact" /></SelectTrigger>
+                    <SelectContent>
+                      {contacts.map(c => (
+                        <SelectItem key={c.id} value={c.id}>{c.label} ({c.phone_number})</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
               </div>
 
               <div>
-                <label className="mb-1.5 block text-xs font-semibold text-foreground">Primary Category</label>
-                <select
-                  value={form.category_id}
-                  onChange={(e) => update("category_id", e.target.value)}
-                  className="w-full rounded-xl border border-border bg-background px-3 py-2.5 text-sm focus:border-brand focus:outline-none focus:ring-1 focus:ring-brand"
-                >
-                  <option value="">Select a category</option>
-                  {categories.map((c) => (
-                    <option key={c.id} value={c.id}>{c.name}</option>
-                  ))}
-                </select>
+                <Label className="mb-1.5 block text-xs font-semibold text-foreground">Primary Category</Label>
+                <Select value={form.category_id} onValueChange={(v) => update("category_id", v)}>
+                  <SelectTrigger className="h-auto rounded-xl px-3 py-2.5"><SelectValue placeholder="Select a category" /></SelectTrigger>
+                  <SelectContent>
+                    {categories.map((c) => (
+                      <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
 
               <div>
-                <label className="mb-1.5 block text-xs font-semibold text-foreground">Description</label>
+                <Label className="mb-1.5 block text-xs font-semibold text-foreground">Description</Label>
                 <div className="overflow-hidden rounded-xl border border-border">
                   <RichTextEditor value={form.description} onChange={(val) => update("description", val)} />
                 </div>
@@ -278,39 +290,39 @@ export default function AdminEditSellerPage() {
             <h2 className="font-display text-lg font-bold mb-4">Location Details</h2>
             <div className="grid grid-cols-2 gap-4">
               <div className="col-span-2">
-                <label className="mb-1.5 block text-xs font-semibold text-foreground">General Location</label>
-                <input
+                <Label className="mb-1.5 block text-xs font-semibold text-foreground">General Location</Label>
+                <Input
                   type="text"
                   value={form.location}
                   onChange={(e) => update("location", e.target.value)}
-                  className="w-full rounded-xl border border-border bg-background px-3 py-2.5 text-sm focus:border-brand focus:outline-none focus:ring-1 focus:ring-brand"
+                  className="rounded-xl px-3 py-2.5 focus-visible:border-brand focus-visible:ring-brand"
                 />
               </div>
               <div>
-                <label className="mb-1.5 block text-xs font-semibold text-foreground">Floor</label>
-                <input
+                <Label className="mb-1.5 block text-xs font-semibold text-foreground">Floor</Label>
+                <Input
                   type="text"
                   value={form.floor}
                   onChange={(e) => update("floor", e.target.value)}
-                  className="w-full rounded-xl border border-border bg-background px-3 py-2.5 text-sm focus:border-brand focus:outline-none focus:ring-1 focus:ring-brand"
+                  className="rounded-xl px-3 py-2.5 focus-visible:border-brand focus-visible:ring-brand"
                 />
               </div>
               <div>
-                <label className="mb-1.5 block text-xs font-semibold text-foreground">Shop No</label>
-                <input
+                <Label className="mb-1.5 block text-xs font-semibold text-foreground">Shop No</Label>
+                <Input
                   type="text"
                   value={form.shop_no}
                   onChange={(e) => update("shop_no", e.target.value)}
-                  className="w-full rounded-xl border border-border bg-background px-3 py-2.5 text-sm focus:border-brand focus:outline-none focus:ring-1 focus:ring-brand"
+                  className="rounded-xl px-3 py-2.5 focus-visible:border-brand focus-visible:ring-brand"
                 />
               </div>
               <div className="col-span-2">
-                <label className="mb-1.5 block text-xs font-semibold text-foreground">Operating Hours</label>
-                <input
+                <Label className="mb-1.5 block text-xs font-semibold text-foreground">Operating Hours</Label>
+                <Input
                   type="text"
                   value={form.operating_hours}
                   onChange={(e) => update("operating_hours", e.target.value)}
-                  className="w-full rounded-xl border border-border bg-background px-3 py-2.5 text-sm focus:border-brand focus:outline-none focus:ring-1 focus:ring-brand"
+                  className="rounded-xl px-3 py-2.5 focus-visible:border-brand focus-visible:ring-brand"
                 />
               </div>
             </div>
@@ -336,47 +348,54 @@ export default function AdminEditSellerPage() {
             </div>
 
             <div className="p-5 space-y-3">
-              {seller.status === "pending" && (
-                <>
-                  <button
-                    onClick={() => handleStatusChange("approve")}
-                    disabled={statusLoading}
-                    className="w-full inline-flex items-center justify-center gap-2 rounded-xl bg-emerald-600 px-4 py-2.5 text-sm font-bold text-white transition-colors hover:bg-emerald-700 disabled:opacity-50"
-                  >
-                    {statusLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}
-                    Approve Seller
-                  </button>
-                  <button
-                    onClick={() => setIsRejectModalOpen(true)}
-                    disabled={statusLoading}
-                    className="w-full inline-flex items-center justify-center gap-2 rounded-xl border border-rose-200 bg-rose-50 px-4 py-2.5 text-sm font-bold text-rose-600 transition-colors hover:bg-rose-100 disabled:opacity-50 dark:border-rose-900/50 dark:bg-rose-950/30 dark:hover:bg-rose-900/50"
-                  >
-                    <X className="h-4 w-4" />
-                    Reject Application
-                  </button>
-                </>
+              {(seller.status === "pending" || seller.status === "rejected") && (
+                <Button
+                  type="button"
+                  onClick={handleToggleApproval}
+                  disabled={statusLoading}
+                  className="h-auto w-full gap-2 rounded-xl bg-emerald-600 px-4 py-2.5 text-sm font-bold text-white hover:bg-emerald-700"
+                >
+                  {statusLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}
+                  Approve Seller
+                </Button>
               )}
 
               {seller.status === "approved" && (
-                <button
-                  onClick={() => handleStatusChange("suspend")}
-                  disabled={statusLoading}
-                  className="w-full inline-flex items-center justify-center gap-2 rounded-xl border border-rose-200 bg-rose-50 px-4 py-2.5 text-sm font-bold text-rose-600 transition-colors hover:bg-rose-100 disabled:opacity-50 dark:border-rose-900/50 dark:bg-rose-950/30 dark:hover:bg-rose-900/50"
-                >
-                  <Ban className="h-4 w-4" />
-                  Suspend Seller
-                </button>
+                <>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={handleToggleSuspension}
+                    disabled={statusLoading}
+                    className="h-auto w-full gap-2 rounded-xl border-rose-200 bg-rose-50 px-4 py-2.5 text-sm font-bold text-rose-600 hover:bg-rose-100 dark:border-rose-900/50 dark:bg-rose-950/30 dark:hover:bg-rose-900/50"
+                  >
+                    {statusLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Ban className="h-4 w-4" />}
+                    Suspend Seller
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={handleToggleApproval}
+                    disabled={statusLoading}
+                    className="h-auto w-full gap-2 rounded-xl bg-surface px-4 py-2.5 text-sm font-bold text-muted-foreground hover:text-foreground"
+                  >
+                    <X className="h-4 w-4" />
+                    Revoke Approval
+                  </Button>
+                </>
               )}
 
-              {(seller.status === "suspended" || seller.status === "rejected") && (
-                <button
-                  onClick={() => handleStatusChange("approve")}
+              {seller.status === "suspended" && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={handleToggleSuspension}
                   disabled={statusLoading}
-                  className="w-full inline-flex items-center justify-center gap-2 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-2.5 text-sm font-bold text-emerald-600 transition-colors hover:bg-emerald-100 disabled:opacity-50 dark:border-emerald-900/50 dark:bg-emerald-950/30 dark:hover:bg-emerald-900/50"
+                  className="h-auto w-full gap-2 rounded-xl border-emerald-200 bg-emerald-50 px-4 py-2.5 text-sm font-bold text-emerald-600 hover:bg-emerald-100 dark:border-emerald-900/50 dark:bg-emerald-950/30 dark:hover:bg-emerald-900/50"
                 >
-                  <Check className="h-4 w-4" />
-                  Re-Approve Seller
-                </button>
+                  {statusLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}
+                  Unsuspend Seller
+                </Button>
               )}
             </div>
           </section>
@@ -385,16 +404,15 @@ export default function AdminEditSellerPage() {
             <h2 className="font-display text-lg font-bold mb-4">Settings</h2>
             <div className="space-y-5">
               <div>
-                <label className="mb-1.5 block text-xs font-semibold text-foreground">Store Tier</label>
-                <select
-                  value={form.tier}
-                  onChange={(e) => update("tier", e.target.value)}
-                  className="w-full rounded-xl border border-border bg-background px-3 py-2.5 text-sm focus:border-brand focus:outline-none focus:ring-1 focus:ring-brand"
-                >
-                  <option value="standard">Standard</option>
-                  <option value="premium">Premium</option>
-                  <option value="anchor_tenant">Anchor Tenant</option>
-                </select>
+                <Label className="mb-1.5 block text-xs font-semibold text-foreground">Store Tier</Label>
+                <Select value={form.tier} onValueChange={(v) => update("tier", v)}>
+                  <SelectTrigger className="h-auto rounded-xl px-3 py-2.5"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="standard">Standard</SelectItem>
+                    <SelectItem value="premium">Premium</SelectItem>
+                    <SelectItem value="anchor_tenant">Anchor Tenant</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
 
               <div className="flex items-center justify-between rounded-xl border border-border p-3">
@@ -402,15 +420,11 @@ export default function AdminEditSellerPage() {
                   <p className="text-sm font-semibold text-foreground">KYC Verified</p>
                   <p className="text-xs text-muted-foreground">Store identity confirmed</p>
                 </div>
-                <label className="relative inline-flex cursor-pointer items-center">
-                  <input
-                    type="checkbox"
-                    className="peer sr-only"
-                    checked={form.is_kyc_verified}
-                    onChange={(e) => update("is_kyc_verified", e.target.checked)}
-                  />
-                  <div className="h-6 w-11 rounded-full bg-surface peer-checked:bg-emerald-500 after:absolute after:left-[2px] after:top-[2px] after:h-5 after:w-5 after:rounded-full after:bg-white after:transition-all peer-checked:after:translate-x-full"></div>
-                </label>
+                <Switch
+                  checked={form.is_kyc_verified}
+                  onCheckedChange={(v) => update("is_kyc_verified", v)}
+                  className="data-[state=checked]:bg-emerald-500"
+                />
               </div>
             </div>
           </section>
@@ -422,53 +436,49 @@ export default function AdminEditSellerPage() {
             {newCoverImage ? (
               <div className="relative overflow-hidden rounded-xl border border-border">
                 <img src={newCoverImage.preview} alt="New Cover Preview" className="h-40 w-full object-cover" />
-                <button
+                <Button
                   type="button"
+                  variant="ghost"
+                  size="icon"
                   onClick={clearNewImage}
-                  className="absolute right-2 top-2 rounded-lg bg-black/50 p-1.5 text-white backdrop-blur-md hover:bg-black/70"
+                  className="absolute right-2 top-2 h-auto w-auto rounded-lg bg-black/50 p-1.5 text-white backdrop-blur-md hover:bg-black/70"
                 >
                   <X className="h-4 w-4" />
-                </button>
+                </Button>
               </div>
             ) : existingCoverImage && !removeCoverImage ? (
               <div className="relative overflow-hidden rounded-xl border border-border">
                 <img src={existingCoverImage} alt="Cover Preview" className="h-40 w-full object-cover" />
-                <button
+                <Button
                   type="button"
+                  variant="ghost"
+                  size="icon"
                   onClick={handleRemoveExistingImage}
-                  className="absolute right-2 top-2 rounded-lg bg-black/50 p-1.5 text-white backdrop-blur-md hover:bg-black/70"
+                  className="absolute right-2 top-2 h-auto w-auto rounded-lg bg-black/50 p-1.5 text-white backdrop-blur-md hover:bg-black/70"
                 >
                   <X className="h-4 w-4" />
-                </button>
+                </Button>
               </div>
             ) : (
               <label className="flex cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed border-border bg-surface py-10 transition-colors hover:border-brand hover:bg-brand-soft/20">
                 <Upload className="mb-2 h-6 w-6 text-muted-foreground" />
                 <span className="text-sm font-medium text-muted-foreground">Click to upload new cover</span>
-                <input type="file" accept="image/*" className="hidden" onChange={handleFileChange} />
+                <Input type="file" accept="image/*" className="hidden" onChange={handleFileChange} />
               </label>
             )}
           </section>
 
-          <button
+          <Button
+            type="button"
             onClick={() => handleSubmit()}
             disabled={submitting || !form.shop_name}
-            className="flex items-center justify-center gap-2 w-full rounded-full  bg-gradient-to-r from-brand to-brand-deep text-white px-5 py-2.5 text-sm font-bold  transition-colors hover:bg-brand-deep disabled:opacity-50"
+            className="h-auto w-full gap-2 rounded-full bg-gradient-to-r from-brand to-brand-deep px-5 py-2.5 text-sm font-bold text-white hover:bg-brand-deep"
           >
             {submitting && <Loader2 className="h-4 w-4 animate-spin" />}
             Save Changes
-          </button>
+          </Button>
         </div>
       </div>
-
-      <RejectSellerModal
-        isOpen={isRejectModalOpen}
-        onClose={() => setIsRejectModalOpen(false)}
-        onConfirm={async (reason) => {
-          await handleStatusChange("reject", reason)
-        }}
-        shopName={seller.shop_name}
-      />
     </div>
   )
 }

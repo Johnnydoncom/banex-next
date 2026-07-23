@@ -1,7 +1,8 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import { CreditCard, CheckCircle, XCircle, Download, Loader2, ExternalLink } from "lucide-react"
+import { CreditCard, CheckCircle, XCircle, Download, Loader2 } from "lucide-react"
+import { Button } from "@/components/ui/button"
 import { DataTable, type Column } from "@/components/DataTable"
 import { StatusBadge } from "@/components/StatusBadge"
 import { ConfirmDialog } from "@/components/ConfirmDialog"
@@ -87,8 +88,8 @@ export default function AdminPaymentsPage() {
   const handleDownloadProof = async (payment: AdminPayment) => {
     if (!token) return
     try {
-      if (payment.proof_of_payment_url) {
-        window.open(payment.proof_of_payment_url, "_blank")
+      if (payment.proof_download_url) {
+        window.open(payment.proof_download_url, "_blank")
         return
       }
       const res = await downloadAdminPaymentProof(payment.id, token)
@@ -111,7 +112,7 @@ export default function AdminPaymentsPage() {
       render: (p) => (
         <div className="text-sm">
           <p className="font-medium">{p.order?.reference || "—"}</p>
-          <p className="text-xs text-muted-foreground">{p.order?.customer?.full_name || "Unknown"}</p>
+          <p className="text-xs text-muted-foreground">{p.order?.buyer?.name || "Unknown"}</p>
         </div>
       ),
     },
@@ -119,14 +120,14 @@ export default function AdminPaymentsPage() {
       key: "amount",
       label: "Amount",
       sortable: true,
-      render: (p) => <span className="font-semibold">₦{p.amount?.toLocaleString()}</span>,
+      render: (p) => <span className="font-semibold">{p.currency === "NGN" || !p.currency ? "₦" : `${p.currency} `}{p.amount?.toLocaleString()}</span>,
     },
     {
       key: "method",
       label: "Method",
       render: (p) => (
         <span className="inline-block rounded-full bg-surface px-2 py-0.5 text-xs font-medium capitalize">
-          {p.method}
+          {p.payment_method?.name || "—"}
         </span>
       ),
     },
@@ -152,31 +153,40 @@ export default function AdminPaymentsPage() {
       className: "text-right",
       render: (p) => (
         <div className="flex items-center justify-end gap-1">
-          {p.proof_of_payment_url && (
-            <button
+          {p.has_proof && (
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
               onClick={() => handleDownloadProof(p)}
-              className="rounded p-1.5 text-muted-foreground hover:bg-surface hover:text-foreground"
+              className="h-auto w-auto rounded p-1.5 text-muted-foreground hover:bg-surface hover:text-foreground"
               title="View Proof"
             >
               <Download className="h-4 w-4" />
-            </button>
+            </Button>
           )}
-          {p.status === "pending" && (
+          {p.proof_status === "pending_review" && (
             <>
-              <button
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
                 onClick={() => setConfirmAction({ payment: p, action: "approve" })}
-                className="rounded p-1.5 text-emerald-600 hover:bg-emerald-50"
+                className="h-auto w-auto rounded p-1.5 text-emerald-600 hover:bg-emerald-50"
                 title="Approve"
               >
                 <CheckCircle className="h-4 w-4" />
-              </button>
-              <button
+              </Button>
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
                 onClick={() => setConfirmAction({ payment: p, action: "reject" })}
-                className="rounded p-1.5 text-rose-600 hover:bg-rose-50"
+                className="h-auto w-auto rounded p-1.5 text-rose-600 hover:bg-rose-50"
                 title="Reject"
               >
                 <XCircle className="h-4 w-4" />
-              </button>
+              </Button>
             </>
           )}
         </div>
@@ -196,10 +206,12 @@ export default function AdminPaymentsPage() {
       {/* Tabs */}
       <div className="flex flex-wrap gap-1 rounded-xl bg-surface/60 p-1">
         {tabs.map((t) => (
-          <button
+          <Button
+            type="button"
+            variant="ghost"
             key={t.key}
             onClick={() => setTab(t.key)}
-            className={`flex-1 min-w-[80px] rounded-lg px-3 py-2 text-xs font-semibold transition-colors ${
+            className={`h-auto flex-1 min-w-[80px] rounded-lg px-3 py-2 text-xs font-semibold ${
               tab === t.key ? "bg-card text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"
             }`}
           >
@@ -209,7 +221,7 @@ export default function AdminPaymentsPage() {
                 {t.count}
               </span>
             )}
-          </button>
+          </Button>
         ))}
       </div>
 
@@ -226,7 +238,8 @@ export default function AdminPaymentsPage() {
           searchPlaceholder="Search by reference or customer..."
           searchFilter={(p, q) =>
             p.reference?.toLowerCase().includes(q) ||
-            (p.order?.customer?.full_name || "").toLowerCase().includes(q)
+            (p.order?.reference || "").toLowerCase().includes(q) ||
+            (p.order?.buyer?.name || "").toLowerCase().includes(q)
           }
           pageSize={15}
         />

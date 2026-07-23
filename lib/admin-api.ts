@@ -5,8 +5,6 @@
  * Uses the existing api-client infrastructure for consistency.
  */
 
-import { apiGet } from "@/lib/api-client"
-
 // ─── Shared API envelope ──────────────────────────────────────────────────────
 
 type ApiEnvelope<T> = {
@@ -114,12 +112,14 @@ export async function fetchAdminCategory(id: string, token: string) {
   return proxyFetch<{ category: AdminCategory }>(`/admin/categories/${id}`, token)
 }
 
-export async function createAdminCategory(data: Partial<AdminCategory>, token: string) {
-  return proxyFetch<{ category: AdminCategory }>("/admin/categories", token, "POST", data)
+export async function createAdminCategory(data: FormData, token: string) {
+  return proxyFetchFormData<{ category: AdminCategory }>("/admin/categories", token, "POST", data)
 }
 
-export async function updateAdminCategory(id: string, data: Partial<AdminCategory>, token: string) {
-  return proxyFetch<{ category: AdminCategory }>(`/admin/categories/${id}`, token, "PUT", data)
+export async function updateAdminCategory(id: string, data: FormData, token: string) {
+  // Laravel expects _method=PUT when updating via multipart form data.
+  data.append("_method", "PUT")
+  return proxyFetchFormData<{ category: AdminCategory }>(`/admin/categories/${id}`, token, "POST", data)
 }
 
 export async function deleteAdminCategory(id: string, token: string) {
@@ -178,17 +178,21 @@ export async function updateAdminSeller(id: string, data: FormData, token: strin
   return proxyFetchFormData<{ seller: AdminSeller }>(`/admin/sellers/${id}`, token, "POST", data)
 }
 
-export async function updateAdminSellerStatus(
-  id: string,
-  action: "approve" | "reject" | "suspend",
-  token: string,
-  reason?: string
-) {
-  const body = reason ? new URLSearchParams({ reason }).toString() : undefined
-  const headers = reason ? { "Content-Type": "application/x-www-form-urlencoded" } : undefined
+/**
+ * Seller status is controlled by two toggles on the API:
+ *  - toggle-approval   → flips pending ⇄ approved
+ *  - toggle-suspension → flips approved ⇄ suspended (accepts an optional note)
+ */
+export async function toggleAdminSellerApproval(id: string, token: string) {
+  return proxyFetch<{ seller: AdminSeller }>(`/admin/sellers/${id}/toggle-approval`, token, "POST")
+}
+
+export async function toggleAdminSellerSuspension(id: string, token: string, note?: string) {
+  const body = note ? new URLSearchParams({ note }).toString() : undefined
+  const headers = note ? { "Content-Type": "application/x-www-form-urlencoded" } : undefined
 
   return proxyFetch<{ seller: AdminSeller }>(
-    `/admin/sellers/${id}/${action}`,
+    `/admin/sellers/${id}/toggle-suspension`,
     token,
     "POST",
     body,
@@ -276,12 +280,6 @@ export async function deactivateAdminProduct(id: string, token: string) {
   return proxyFetch<{ product: AdminProduct }>(`/admin/products/${id}/deactivate`, token, "POST")
 }
 
-/** @deprecated Use the individual action functions above instead */
-export async function updateAdminProductStatus(id: string, action: "approve" | "reject" | "activate" | "deactivate", token: string) {
-  const actionMap: Record<string, string> = { approve: "approved", reject: "reject", activate: "activate", deactivate: "deactivate" }
-  return proxyFetch<{ product: AdminProduct }>(`/admin/products/${id}/${actionMap[action]}`, token, "POST")
-}
-
 // ─── Admin WhatsApp Contacts ──────────────────────────────────────────────────
 
 export type AdminWhatsAppContact = {
@@ -308,13 +306,20 @@ export type AdminUser = {
   id: string
   full_name: string | null
   email: string
-  type: "admin" | "vendor" | "customer"
-  status: "active" | "suspended" | "pending"
+  type: string // "user" | "admin"
+  registered_via?: string
   phone: string | null
-  email_verified_at: string | null
-  created_at: { item: string }
-  updated_at: { item: string }
+  email_verified_at: { item: string } | null
+  status?: "active" | "suspended" | "pending"
+  is_suspended?: boolean
+  suspended_at?: { item: string } | null
+  has_store?: boolean
+  store_status?: string | null
   seller: { id: string; shop_name: string; slug: string; status: string } | null
+  wallet?: { balance: number; currency: string } | null
+  orders_count?: number
+  created_at: { item: string }
+  updated_at?: { item: string }
 }
 
 type AdminUsersData = {
@@ -322,8 +327,16 @@ type AdminUsersData = {
   pagination: { current_page: number; per_page: number; total: number; last_page: number }
 }
 
-export async function fetchAdminUsers(token: string, type?: "admin" | "vendor" | "customer") {
-  const qs = type ? `?filter[type]=${type}` : ""
+/**
+ * Fetch users. The API filters by `has_seller` (0 = buyers only, 1 = users
+ * who own a shop) and `search`, NOT by a `type` field. Admin accounts are
+ * distinguished by `type === "admin"` in the payload.
+ */
+export async function fetchAdminUsers(token: string, opts?: { has_seller?: 0 | 1; search?: string }) {
+  const params = new URLSearchParams()
+  if (opts?.has_seller !== undefined) params.set("has_seller", String(opts.has_seller))
+  if (opts?.search) params.set("search", opts.search)
+  const qs = params.toString() ? `?${params.toString()}` : ""
   return proxyFetch<AdminUsersData>(`/admin/users${qs}`, token)
 }
 
@@ -331,8 +344,14 @@ export async function fetchAdminUser(id: string, token: string) {
   return proxyFetch<{ user: AdminUser }>(`/admin/users/${id}`, token)
 }
 
-export async function updateAdminUser(id: string, data: Partial<AdminUser>, token: string) {
-  return proxyFetch<{ user: AdminUser }>(`/admin/users/${id}`, token, "PUT", data)
+/** Update editable user fields (full_name, phone). Sent as urlencoded. */
+export async function updateAdminUser(id: string, data: { full_name?: string | null; phone?: string | null }, token: string) {
+  const params = new URLSearchParams()
+  if (data.full_name !== undefined && data.full_name !== null) params.set("full_name", data.full_name)
+  if (data.phone !== undefined && data.phone !== null) params.set("phone", data.phone)
+  return proxyFetch<{ user: AdminUser }>(`/admin/users/${id}`, token, "PUT", params.toString(), {
+    "Content-Type": "application/x-www-form-urlencoded",
+  })
 }
 
 export async function toggleUserVerification(id: string, token: string) {
@@ -361,15 +380,15 @@ export async function deleteAdminWhatsAppContact(id: string, token: string) {
 
 export type AdminWithdrawal = {
   id: string
-  seller_id: string
-  reference: string
-  amount: number
   status: "pending" | "processing" | "completed" | "failed" | "rejected" | "cancelled"
-  seller_receives: number
+  amount: number
+  currency: string
   bank_name: string | null
+  bank_code: string | null
   account_number: string | null
   account_name: string | null
-  seller: { id: string; shop_name: string; slug: string }
+  user: { id: string; full_name: string; email: string }
+  processed_at: { item: string } | null
   created_at: { item: string }
   updated_at: { item: string }
 }
@@ -398,70 +417,115 @@ export async function cancelAdminWithdrawal(id: string, token: string) {
 // ─── Admin Seller Tiers ───────────────────────────────────────────────────────
 
 export type AdminSellerTier = {
-  id: string
+  id: number | string
+  slug: string
   name: string
   commission_percent: number
-  benefits: string[]
-  created_at: { item: string }
+  commission_percent_label?: string
+  sort_order?: number
+  is_active?: boolean
   updated_at: { item: string }
 }
 
 export async function fetchAdminSellerTiers(token: string) {
-  return proxyFetch<{ tiers: AdminSellerTier[] }>("/admin/seller-tiers", token)
+  return proxyFetch<{ seller_tiers: AdminSellerTier[] }>("/admin/seller-tiers", token)
 }
 
-export async function updateAdminSellerTier(id: string, data: Partial<AdminSellerTier>, token: string) {
-  return proxyFetch<{ tier: AdminSellerTier }>(`/admin/seller-tiers/${id}`, token, "PUT", data)
+/**
+ * Seller tiers are updated in bulk via PUT /admin/seller-tiers with a
+ * `{ tiers: [{ id, slug, name?, commission_percent }] }` payload.
+ */
+export type AdminSellerTierUpdate = { id: number | string; slug: string; name?: string; commission_percent: number }
+
+export async function updateAdminSellerTiers(tiers: AdminSellerTierUpdate[], token: string) {
+  return proxyFetch<{ seller_tiers: AdminSellerTier[] }>("/admin/seller-tiers", token, "PUT", { tiers })
 }
 
 // ─── Admin Seller Payouts ─────────────────────────────────────────────────────
 
+// Shape verified live 2026-07-23. Payouts are aggregated per seller (no id/reference/status).
 export type AdminPayout = {
-  id: string
-  seller_id: string
-  amount: number
-  status: "pending" | "paid"
-  reference: string
   seller: { id: string; shop_name: string; slug: string }
-  created_at: { item: string }
-  updated_at: { item: string }
+  line_count: number
+  payable_total: number
+  paid_total?: number
+  currency: string
+  paid_at?: { item: string } | null
+}
+
+// A single settlement line under a seller's payout (from the per-seller detail).
+export type AdminPayoutLine = {
+  id: string
+  order_id: string
+  order_created_at: { item: string }
+  product_name: string
+  quantity: number
+  line_seller_total: number
+  line_platform_fee: number
+  commission_percent: number
+  currency: string
+  settlement_status: string
 }
 
 export async function fetchAdminPayouts(token: string) {
-  return proxyFetch<{ payouts: AdminPayout[]; pagination: any }>("/admin/seller-payouts", token)
+  return proxyFetch<{ seller_payouts: AdminPayout[]; pagination?: any }>("/admin/seller-payouts", token)
 }
 
 export async function fetchAdminPayoutHistory(token: string) {
-  return proxyFetch<{ history: AdminPayout[]; pagination: any }>("/admin/seller-payouts/history", token)
+  return proxyFetch<{ seller_payouts: AdminPayout[]; pagination: any }>("/admin/seller-payouts/history", token)
 }
 
-export async function fetchAdminPayout(id: string, token: string) {
-  return proxyFetch<{ payout: AdminPayout }>(`/admin/seller-payouts/${id}`, token)
+/** Payable settlement lines for one seller (used to gather order_item_ids for mark-paid). */
+export async function fetchAdminPayoutLines(sellerId: string, token: string) {
+  return proxyFetch<{ lines: AdminPayoutLine[] }>(`/admin/seller-payouts/${sellerId}`, token)
 }
 
-export async function markAdminPayoutPaid(id: string, token: string) {
-  return proxyFetch<{ payout: AdminPayout }>(`/admin/seller-payouts/${id}/mark-paid`, token, "POST")
+/**
+ * Mark a payout as paid. The API keys payouts by the underlying order items,
+ * so it expects `order_item_ids[]` plus an optional payment reference.
+ */
+export async function markAdminPayoutPaid(orderItemIds: string[], token: string, reference?: string) {
+  const params = new URLSearchParams()
+  orderItemIds.forEach((id, i) => params.append(`order_item_ids[${i}]`, id))
+  if (reference) params.append("reference", reference)
+  return proxyFetch<{ payout: AdminPayout }>(
+    "/admin/seller-payouts/mark-paid",
+    token,
+    "POST",
+    params.toString(),
+    { "Content-Type": "application/x-www-form-urlencoded" }
+  )
 }
 
 // ─── Admin Orders ─────────────────────────────────────────────────────────────
 
+export type AdminOrderItem = {
+  id: string
+  product_id: string
+  seller_id: string
+  status: string
+  product_name: string
+  unit_price: number
+  quantity: number
+  line_total: number
+  weight_kg?: string
+  currency: string
+  seller_shop_name: string | null
+  primary_image_url: string | null
+}
+
 export type AdminOrder = {
   id: string
   reference: string
-  status: "pending" | "processing" | "in_transit" | "delivered" | "cancelled" | "disputed"
-  total_amount: number
-  customer_id: string
-  customer: { id: string; full_name: string; email: string }
-  items: {
-    id: string
-    product_name: string
-    quantity: number
-    unit_price: number
-    seller: { id: string; shop_name: string }
-    status: string
-  }[]
+  status: string
+  fulfillment_type?: string
+  user: { id: string; name: string; email: string }
+  summary: { subtotal: number; delivery_fee: number; total: number; currency: string }
+  item_count: number
+  // `items` is only present on the single-order (detail) response.
+  items?: AdminOrderItem[]
   created_at: { item: string }
-  updated_at: { item: string }
+  updated_at?: { item: string }
 }
 
 export async function fetchAdminOrders(token: string, status?: string) {
@@ -477,7 +541,7 @@ export async function cancelAdminOrder(id: string, token: string) {
   return proxyFetch<{ order: AdminOrder }>(`/admin/orders/${id}/cancel`, token, "POST")
 }
 
-export async function updateAdminOrderStatus(id: string, status: "process" | "transit" | "deliver", token: string) {
+export async function updateAdminOrderStatus(id: string, status: "in-process" | "in-transit" | "in-delivered", token: string) {
   return proxyFetch<{ order: AdminOrder }>(`/admin/orders/${id}/mark-${status}`, token, "POST")
 }
 
@@ -488,82 +552,145 @@ export async function sellerActionAdminOrder(orderId: string, itemId: string, ac
 
 // ─── Admin Revenue ────────────────────────────────────────────────────────────
 
+// Shape verified live 2026-07-23 against GET /admin/platform-revenue.
 export type AdminRevenueSummary = {
-  total_revenue: number
-  pending_revenue: number
-  available_revenue: number
+  currency: string
+  anticipated_fee: number
+  payable_fee: number
+  realized_fee: number
+  collectible_fee: number
+  seller_payouts: { pending_total: number; payable_total: number; paid_out_total: number }
+  line_counts: { pending: number; payable: number; paid_out: number; void: number }
+  period: { from: string | null; to: string | null }
 }
 
 export type AdminRevenueLine = {
   id: string
-  amount: number
-  description: string
-  type: string
+  order_id: string
+  order_reference: string
+  order_created_at: { item: string }
+  order_status: string
+  product_name: string
+  quantity: number
+  unit_price: number
+  line_total: number
+  line_seller_total: number
+  line_platform_fee: number
+  commission_percent: number
+  settlement_status: string
+  item_status: string
+  currency: string
   created_at: { item: string }
+  seller: { id: string; shop_name: string; slug: string } | null
 }
 
 export async function fetchAdminRevenueSummary(token: string) {
-  return proxyFetch<{ summary: AdminRevenueSummary }>("/admin/revenue/summary", token)
+  return proxyFetch<{ platform_revenue: AdminRevenueSummary }>("/admin/platform-revenue", token)
 }
 
 export async function fetchAdminRevenueLines(token: string) {
-  return proxyFetch<{ lines: AdminRevenueLine[]; pagination: any }>("/admin/revenue/lines", token)
+  return proxyFetch<{ lines: AdminRevenueLine[]; pagination: any }>("/admin/platform-revenue/lines", token)
 }
 
 // ─── Admin Payment Methods ────────────────────────────────────────────────────
 
+// Shape verified live 2026-07-23 against GET /admin/payment-methods.
 export type AdminPaymentMethod = {
   id: string
   name: string
   slug: string
-  is_active: boolean
-  configuration: Record<string, any>
-  created_at: { item: string }
-  updated_at: { item: string }
+  image: string | null
+  status: "active" | "inactive"
+  status_updated_at: { item: string } | null
+  transactions_count: number
+  manual_payment_instructions?: {
+    bank_name?: string
+    account_name?: string
+    account_number?: string
+    instructions?: string
+  } | null
 }
 
 export async function fetchAdminPaymentMethods(token: string) {
   return proxyFetch<{ payment_methods: AdminPaymentMethod[] }>("/admin/payment-methods", token)
 }
 
-export async function updateAdminPaymentMethod(id: string, data: Partial<AdminPaymentMethod>, token: string) {
-  return proxyFetch<{ payment_method: AdminPaymentMethod }>(`/admin/payment-methods/${id}`, token, "PUT", data)
+/**
+ * Update a payment method. Sent as multipart form data (POST + _method=PUT)
+ * so an optional `image` file can be included. `status` is "active"/"inactive".
+ */
+export async function updateAdminPaymentMethod(
+  id: string,
+  data: { name?: string; status?: "active" | "inactive"; image?: File | null; remove_image?: boolean },
+  token: string
+) {
+  const form = new FormData()
+  if (data.name !== undefined) form.append("name", data.name)
+  if (data.status !== undefined) form.append("status", data.status)
+  if (data.image) form.append("image", data.image)
+  if (data.remove_image) form.append("remove_image", "1")
+  form.append("_method", "PUT")
+  return proxyFetchFormData<{ payment_method: AdminPaymentMethod }>(`/admin/payment-methods/${id}`, token, "POST", form)
 }
 
 // ─── Admin Payments ───────────────────────────────────────────────────────────
 
 export type AdminPayment = {
   id: string
-  order_id: string
-  amount: number
-  method: string
-  status: "pending" | "approved" | "rejected"
   reference: string
-  proof_of_payment_url?: string
-  order: { id: string; reference: string; customer: { full_name: string } }
+  amount: number
+  currency: string
+  status: string
+  proof_status: string
+  proof_mime: string | null
+  proof_size: number | null
+  proof_uploaded_at: { item: string } | null
+  proof_reviewed_at: { item: string } | null
+  proof_rejection_reason: string | null
+  payment_method: { id: string; name: string; slug: string } | null
+  order: {
+    id: string
+    reference: string
+    status: string
+    total: number
+    currency: string
+    created_at: { item: string }
+    buyer: { id: string; name: string; email: string } | null
+    items?: {
+      id: string
+      product_name: string
+      unit_price: number
+      quantity: number
+      line_total: number
+      seller_shop_name: string | null
+    }[]
+  } | null
+  has_proof: boolean
+  proof_download_url: string | null
   created_at: { item: string }
-  updated_at: { item: string }
 }
 
+// Admin payment review covers manual (proof-of-payment) transfers under
+// the /admin/payments/manual namespace.
 export async function fetchAdminPayments(token: string) {
-  return proxyFetch<{ payments: AdminPayment[]; pagination: any }>("/admin/payments", token)
+  return proxyFetch<{ payments: AdminPayment[]; pagination: any }>("/admin/payments/manual/pending-review", token)
 }
 
 export async function fetchAdminPayment(id: string, token: string) {
-  return proxyFetch<{ payment: AdminPayment }>(`/admin/payments/${id}`, token)
+  return proxyFetch<{ payment: AdminPayment }>(`/admin/payments/${id}/manual`, token)
 }
 
 export async function approveAdminPayment(id: string, token: string) {
-  return proxyFetch<{ payment: AdminPayment }>(`/admin/payments/${id}/approve`, token, "POST")
+  return proxyFetch<{ payment: AdminPayment }>(`/admin/payments/${id}/manual/approve`, token, "POST")
 }
 
 export async function rejectAdminPayment(id: string, token: string, reason: string) {
-  return proxyFetch<{ payment: AdminPayment }>(`/admin/payments/${id}/reject`, token, "POST", { reason })
+  return proxyFetch<{ payment: AdminPayment }>(`/admin/payments/${id}/manual/reject`, token, "POST", { reason })
 }
 
 export async function downloadAdminPaymentProof(id: string, token: string) {
-  // Assuming this returns a URL or file blob. We'll return the raw response envelope.
-  return proxyFetch<{ url: string }>(`/admin/payments/${id}/proof`, token)
+  // Returns the stored proof-of-payment (URL or file reference).
+  return proxyFetch<{ url: string }>(`/admin/payments/${id}/manual/proof`, token)
 }
 
 // ─── Aggregated Dashboard Data ────────────────────────────────────────────────
