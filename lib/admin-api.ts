@@ -137,7 +137,9 @@ export type AdminSeller = {
   category_id: string | null
   category: { id: string; name: string; slug: string; image_url: string | null } | null
   description: string | null
-  tier: string
+  seller_tier_id?: string | null
+  // The list endpoint returns `tier` as a slug string; the detail endpoint returns a tier object.
+  tier: string | { id: string; slug: string; name: string; commission_percent?: number } | null
   cover_image_url: string | null
   operating_hours: string | null
   floor: string | null

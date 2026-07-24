@@ -90,7 +90,7 @@ export default function AdminEditSellerPage() {
           floor: s.floor || "",
           shop_no: s.shop_no || "",
           operating_hours: s.operating_hours || "",
-          tier: s.tier || "standard",
+          tier: (typeof s.tier === "string" ? s.tier : s.tier?.slug) || "standard",
           is_kyc_verified: s.is_kyc_verified === 1 || s.is_kyc_verified === true,
           whatsapp_contact_id: s.whatsapp_contact_id || "",
         })
