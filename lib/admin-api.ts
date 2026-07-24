@@ -633,6 +633,40 @@ export async function updateAdminPaymentMethod(
   return proxyFetchFormData<{ payment_method: AdminPaymentMethod }>(`/admin/payment-methods/${id}`, token, "POST", form)
 }
 
+// ─── Admin Settings ───────────────────────────────────────────────────────────
+// Site-wide settings. Shape verified live 2026-07-24 against GET /admin/settings.
+// GET is admin-only; the manual-payment bank details are ALSO exposed publicly via
+// /generic/payment-methods (Bank Transfer method's manual_payment_instructions).
+
+export type AdminManualPayment = {
+  bank_name: string | null
+  account_name: string | null
+  account_number: string | null
+  instructions: string | null
+}
+
+export type AdminSettings = {
+  admin_notification_emails: string[]
+  support_email: string | null
+  manual_payment: AdminManualPayment
+  updated_at?: { item: string }
+}
+
+export type AdminSettingsUpdate = {
+  support_email?: string | null
+  admin_notification_emails?: string[]
+  manual_payment?: Partial<AdminManualPayment>
+}
+
+export async function fetchAdminSettings(token: string) {
+  return proxyFetch<{ settings: AdminSettings }>("/admin/settings", token)
+}
+
+/** Update site-wide settings. Sent as JSON to PUT /admin/settings. */
+export async function updateAdminSettings(data: AdminSettingsUpdate, token: string) {
+  return proxyFetch<{ settings: AdminSettings }>("/admin/settings", token, "PUT", data)
+}
+
 // ─── Admin Payments ───────────────────────────────────────────────────────────
 
 export type AdminPayment = {

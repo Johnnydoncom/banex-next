@@ -68,7 +68,7 @@ export default function AdminSellersPage() {
       sortable: true,
       render: (s) => (
         <div>
-          <Link href={`/admin/users/sellers/${s.slug}`} className="font-semibold hover:text-brand flex items-center gap-1.5">
+          <Link href={`/admin/users/sellers/${s.id}`} className="font-semibold hover:text-brand flex items-center gap-1.5">
             <Store className="h-3.5 w-3.5 text-emerald-500" />
             {s.shop_name}
           </Link>
@@ -160,8 +160,8 @@ export default function AdminSellersPage() {
               key={t.key}
               onClick={() => setTab(t.key)}
               className={`h-auto flex-1 rounded-lg px-3 py-2 text-xs font-semibold ${tab === t.key
-                  ? "bg-card text-foreground shadow-sm"
-                  : "text-muted-foreground hover:text-foreground"
+                ? "bg-card text-foreground shadow-sm"
+                : "text-muted-foreground hover:text-foreground"
                 }`}
             >
               {t.label}
@@ -212,15 +212,15 @@ export default function AdminSellersPage() {
             ? `Revoke approval for ${seller?.shop_name}?`
             : `Approve ${seller?.shop_name}?`
           : isSuspended
-          ? `Unsuspend ${seller?.shop_name}?`
-          : `Suspend ${seller?.shop_name}?`
+            ? `Unsuspend ${seller?.shop_name}?`
+            : `Suspend ${seller?.shop_name}?`
         const description = isApproval
           ? isApproved
             ? "This vendor will move back to pending and their products will be hidden."
             : "This vendor will be activated and their products will be visible."
           : isSuspended
-          ? "This seller will be reactivated and their listings shown again."
-          : "This seller will be suspended and their listings hidden."
+            ? "This seller will be reactivated and their listings shown again."
+            : "This seller will be suspended and their listings hidden."
         const confirmLabel = isApproval ? (isApproved ? "Revoke" : "Approve") : isSuspended ? "Unsuspend" : "Suspend"
         const destructive = isApproval ? isApproved : !isSuspended
         return (

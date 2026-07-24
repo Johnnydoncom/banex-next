@@ -4,6 +4,7 @@ import { buildMetadata } from "@/lib/seo/metadata"
 import { JsonLd } from "@/lib/seo/JsonLdComponent"
 import { webPageSchema, breadcrumbSchema } from "@/lib/seo/jsonld"
 import { ContactForm } from "./ContactForm"
+import { CONTACT } from "@/lib/seo/config"
 
 export const metadata = buildMetadata({
   title: "Contact Banex Mall — Support & Partnerships",
@@ -34,7 +35,7 @@ export default function ContactPage() {
           {[
             { icon: Phone, t: "Call us", s: "+234 800 BANEX 00", sub: "Mon–Sat, 8am – 7pm" },
             { icon: MessageCircle, t: "WhatsApp", s: "+234 901 234 5678", sub: "Fastest response" },
-            { icon: Mail, t: "Email", s: "support@banexmall.ng", sub: "24-hour reply" },
+            { icon: Mail, t: "Email", s: CONTACT.email, sub: "24-hour reply" },
             { icon: MapPin, t: "Head office", s: "Banex Plaza, Wuse 2", sub: "Abuja, Nigeria" },
           ].map(({ icon: Icon, t, s, sub }) => (
             <div key={t} className="flex gap-4 rounded-2xl border border-border bg-card p-5 shadow-soft">
