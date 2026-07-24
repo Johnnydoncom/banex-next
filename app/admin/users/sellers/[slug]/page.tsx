@@ -13,9 +13,11 @@ import {
   toggleAdminSellerApproval,
   toggleAdminSellerSuspension,
   fetchAdminWhatsAppContacts,
+  fetchAdminSellerTiers,
   AdminCategory,
   AdminSeller,
   AdminWhatsAppContact,
+  AdminSellerTier,
 } from "@/lib/admin-api"
 import { RichTextEditor } from "@/components/RichTextEditor"
 import { StatusBadge } from "@/components/StatusBadge"
@@ -41,7 +43,7 @@ export default function AdminEditSellerPage() {
     floor: "",
     shop_no: "",
     operating_hours: "",
-    tier: seller?.seller_tier_id || "",
+    tier: "",
     is_kyc_verified: false,
     whatsapp_contact_id: "",
   })
@@ -52,6 +54,7 @@ export default function AdminEditSellerPage() {
 
   const [categories, setCategories] = useState<AdminCategory[]>([])
   const [contacts, setContacts] = useState<AdminWhatsAppContact[]>([])
+  const [tiers, setTiers] = useState<AdminSellerTier[]>([])
   const [loadingData, setLoadingData] = useState(true)
   const [submitting, setSubmitting] = useState(false)
 
@@ -69,14 +72,16 @@ export default function AdminEditSellerPage() {
   const loadData = async (token: string) => {
     try {
       setLoadingData(true)
-      const [catsRes, sellerRes, contactsRes] = await Promise.all([
+      const [catsRes, sellerRes, contactsRes, tiersRes] = await Promise.all([
         fetchAdminCategories(token),
         fetchAdminSeller(id, token),
         fetchAdminWhatsAppContacts(token),
+        fetchAdminSellerTiers(token),
       ])
 
       setCategories(catsRes.data?.categories || [])
       setContacts(contactsRes.data?.whatsapp_contacts || [])
+      setTiers(tiersRes.data?.seller_tiers || [])
 
       const s = sellerRes.data?.seller
       if (s) {
@@ -90,7 +95,8 @@ export default function AdminEditSellerPage() {
           floor: s.floor || "",
           shop_no: s.shop_no || "",
           operating_hours: s.operating_hours || "",
-          tier: s.seller_tier_id || "",
+          // The update endpoint keys tier by slug (UUID is silently ignored), so bind by slug.
+          tier: (typeof s.tier === "string" ? s.tier : s.tier?.slug) || "",
           is_kyc_verified: s.is_kyc_verified === 1 || s.is_kyc_verified === true,
           whatsapp_contact_id: s.whatsapp_contact_id || "",
         })
@@ -405,12 +411,19 @@ export default function AdminEditSellerPage() {
             <div className="space-y-5">
               <div>
                 <Label className="mb-1.5 block text-xs font-semibold text-foreground">Store Tier</Label>
-                <Select value={form.tier} onValueChange={(v) => update("tier", v)}>
-                  <SelectTrigger className="h-auto rounded-xl px-3 py-2.5"><SelectValue /></SelectTrigger>
+                <Select value={form.tier} onValueChange={(v) => update("tier", v)} disabled={tiers.length === 0}>
+                  <SelectTrigger className="h-auto rounded-xl px-3 py-2.5">
+                    <SelectValue placeholder={tiers.length === 0 ? "No tiers available" : "Select a tier"} />
+                  </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="standard">Standard</SelectItem>
-                    <SelectItem value="premium">Premium</SelectItem>
-                    <SelectItem value="anchor_tenant">Anchor Tenant</SelectItem>
+                    {tiers.map((t) => (
+                      <SelectItem key={t.slug} value={t.slug}>
+                        {t.name}
+                        {t.commission_percent != null && (
+                          <span className="ml-1 text-xs text-muted-foreground">· {t.commission_percent}%</span>
+                        )}
+                      </SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
               </div>
