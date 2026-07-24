@@ -137,8 +137,8 @@ export function AdminShell({ title, subtitle, nav, accent, children, guard }: Pr
                   href={item.to}
                   title={!showLabels ? item.label : undefined}
                   className={`group relative flex items-center gap-3 rounded-xl px-3 py-2.5 text-[13px] font-medium transition-all ${active
-                      ? `bg-gradient-to-r ${accentClasses} text-primary-foreground shadow-sm`
-                      : "text-muted-foreground hover:bg-surface hover:text-foreground"
+                    ? `bg-gradient-to-r ${accentClasses} text-primary-foreground shadow-sm`
+                    : "text-muted-foreground hover:bg-surface hover:text-foreground"
                     } ${!showLabels ? "justify-center" : ""}`}
                 >
                   <item.icon
@@ -148,8 +148,8 @@ export function AdminShell({ title, subtitle, nav, accent, children, guard }: Pr
                   {showLabels && <span>{item.label}</span>}
                   {showLabels && item.badge != null && item.badge > 0 && (
                     <span className={`ml-auto rounded-full px-2 py-0.5 text-[10px] font-bold ${active
-                        ? "bg-white/20 text-primary-foreground"
-                        : "bg-brand/10 text-brand-deep"
+                      ? "bg-white/20 text-primary-foreground"
+                      : "bg-brand/10 text-brand-deep"
                       }`}>
                       {item.badge}
                     </span>
@@ -291,7 +291,7 @@ export function AdminShell({ title, subtitle, nav, accent, children, guard }: Pr
             <Search className="h-3.5 w-3.5 text-muted-foreground" />
             <Input
               placeholder="Search…"
-              className="w-40 bg-transparent text-xs outline-none placeholder:text-muted-foreground/60 lg:w-56 border-none bg-transparent shadow-none"
+              className="h-6 w-40 bg-transparent text-xs outline-none placeholder:text-muted-foreground/60 lg:w-56 border-none bg-transparent shadow-none focus:ring-0 focus-visible:outline-none focus-visible:border-none focus-visible:ring-0"
             />
           </div>
 

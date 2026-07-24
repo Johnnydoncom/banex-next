@@ -28,8 +28,6 @@ type DataTableProps<T> = {
   searchFilter?: (row: T, query: string) => boolean
   /** Number of rows per page (default 10) */
   pageSize?: number
-  /** Render a mobile-friendly card for each row instead of a table row */
-  mobileCard?: (row: T) => React.ReactNode
   /** Empty state component */
   emptyState?: React.ReactNode
 }
@@ -45,7 +43,6 @@ export function DataTable<T>({
   searchPlaceholder = "Search…",
   searchFilter,
   pageSize = 10,
-  mobileCard,
   emptyState,
 }: DataTableProps<T>) {
   const [query, setQuery] = useState("")
@@ -124,10 +121,15 @@ export function DataTable<T>({
         )
       ) : (
         <>
-          {/* Desktop table */}
-          <div className="hidden overflow-x-auto rounded-2xl border border-border bg-card md:block">
-            <table className="w-full text-sm">
-              <thead>
+          {/*
+            Single responsive table (one DOM tree for all screen sizes).
+            - md+  : renders as a normal table inside a bordered card.
+            - < md : CSS `display` utilities restack each <tr> into its own card,
+                     each <td> becomes a label/value row (label via ::before).
+          */}
+          <div className="md:overflow-x-auto md:rounded-2xl md:border md:border-border md:bg-card">
+            <table className="block w-full text-sm md:table">
+              <thead className="hidden md:table-header-group">
                 <tr className="border-b border-border bg-surface/60">
                   {columns.map((col) => (
                     <th
@@ -135,9 +137,11 @@ export function DataTable<T>({
                       className={`px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground ${col.className ?? ""}`}
                     >
                       {col.sortable ? (
-                        <Button variant="ghost" type="button"
+                        <Button
+                          variant="ghost"
+                          type="button"
                           onClick={() => toggleSort(col.key)}
-                          className="inline-flex items-center hover:text-foreground"
+                          className="h-auto p-0 text-xs font-semibold uppercase tracking-wider text-muted-foreground hover:bg-transparent hover:text-foreground"
                         >
                           {col.label}
                           <SortIcon col={col.key} />
@@ -149,36 +153,36 @@ export function DataTable<T>({
                   ))}
                 </tr>
               </thead>
-              <tbody className="divide-y divide-border">
+              <tbody className="block space-y-3 md:table-row-group md:space-y-0">
                 {paged.map((row) => (
-                  <tr key={rowKey(row)} className="transition-colors hover:bg-surface/40">
-                    {columns.map((col) => (
-                      <td key={col.key} className={`px-4 py-3.5 ${col.className ?? ""}`}>
-                        {col.render(row)}
-                      </td>
-                    ))}
+                  <tr
+                    key={rowKey(row)}
+                    className="block overflow-hidden rounded-2xl border border-border bg-card shadow-soft transition-colors md:table-row md:rounded-none md:border-0 md:border-b md:border-border md:bg-transparent md:shadow-none md:last:border-b-0 md:hover:bg-surface/40"
+                  >
+                    {columns.map((col, idx) =>
+                      idx === 0 ? (
+                        // Primary/identity column → full-width card header on mobile
+                        <td
+                          key={col.key}
+                          className={`block border-b border-border/50 bg-surface/40 px-4 py-3 text-sm last:border-b-0 md:table-cell md:border-0 md:bg-transparent md:py-3.5 md:align-middle ${col.className ?? ""}`}
+                        >
+                          {col.render(row)}
+                        </td>
+                      ) : (
+                        // Remaining columns → label / value rows on mobile
+                        <td
+                          key={col.key}
+                          data-label={col.label}
+                          className={`flex items-center justify-between gap-3 border-b border-border/50 px-4 py-2.5 text-sm last:border-b-0 before:shrink-0 before:text-[11px] before:font-semibold before:uppercase before:tracking-wide before:text-muted-foreground before:content-[attr(data-label)] md:table-cell md:border-0 md:py-3.5 md:align-middle md:before:content-none ${col.className ?? ""}`}
+                        >
+                          {col.render(row)}
+                        </td>
+                      )
+                    )}
                   </tr>
                 ))}
               </tbody>
             </table>
-          </div>
-
-          {/* Mobile cards */}
-          <div className="space-y-3 md:hidden">
-            {paged.map((row) =>
-              mobileCard ? (
-                <div key={rowKey(row)}>{mobileCard(row)}</div>
-              ) : (
-                <div key={rowKey(row)} className="rounded-2xl border border-border bg-card p-4 space-y-2">
-                  {columns.map((col) => (
-                    <div key={col.key} className="flex items-start justify-between gap-2">
-                      <span className="text-xs font-medium text-muted-foreground">{col.label}</span>
-                      <span className="text-right text-sm">{col.render(row)}</span>
-                    </div>
-                  ))}
-                </div>
-              ),
-            )}
           </div>
 
           {/* Pagination */}

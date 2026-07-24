@@ -144,7 +144,7 @@ export default function AdminSettingsPage() {
   }
 
   return (
-    <div className="space-y-6 container">
+    <div className="space-y-6 px-0 container">
       <div>
         <h1 className="font-display text-2xl font-bold">Settings</h1>
         <p className="mt-1 text-sm text-muted-foreground">
