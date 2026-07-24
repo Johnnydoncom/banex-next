@@ -23,8 +23,11 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { GenericCategory } from "@/lib/generic-api"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
+import type { ResolvedSiteSettings } from "@/lib/site-settings"
 
-export function HeaderClient({ categories }: { categories: GenericCategory[] }) {
+export function HeaderClient({ categories, settings }: { categories: GenericCategory[]; settings?: ResolvedSiteSettings }) {
+  const siteName = settings?.siteName || "Banex Mall"
+  const logoSrc = settings?.logoUrl || "/assets/banex-mall-logo.png"
   const { count, open } = useCart()
   const wishlist = useWishlist()
   const { user } = useAuth()
@@ -60,10 +63,11 @@ export function HeaderClient({ categories }: { categories: GenericCategory[] }) 
       {/* Main bar */}
       <div className="mx-auto flex h-20 container items-center gap-3 md:gap-6">
         <MobileNav categories={categories} />
-        <Link href="/" className="flex items-center" aria-label="Banex Mall home">
+        <Link href="/" className="flex items-center" aria-label={`${siteName} home`}>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
-            src="/assets/banex-mall-logo.png"
-            alt="Banex Mall"
+            src={logoSrc}
+            alt={siteName}
             className="h-10 w-auto md:h-14"
             width={220}
             height={110}

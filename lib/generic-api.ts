@@ -83,6 +83,21 @@ export async function fetchGenericHome() {
   return res.data
 }
 
+// ─── Public site settings ───────────────────────────────────────────────────
+// Public subset of admin settings (no auth). Verified live 2026-07-24.
+export type PublicSettings = {
+  site_name: string | null
+  logo_url: string | null
+  support_email: string | null
+}
+
+export async function fetchGenericSettings() {
+  const res = await apiGet<ApiEnvelope<{ settings: PublicSettings }>>("/generic/settings", {
+    next: { revalidate: 300 },
+  })
+  return res.data?.settings ?? null
+}
+
 export async function fetchGenericCategories() {
   const res = await apiGet<ApiEnvelope<{ categories: GenericCategory[]; total_listings_count: number }>>("/generic/categories")
   return res.data

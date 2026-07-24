@@ -6,7 +6,6 @@ import {
   type LucideIcon,
   Menu,
   LogOut,
-  Bell,
   Search,
   ChevronRight,
   X,
@@ -19,6 +18,7 @@ import { toast } from "sonner"
 import Image from "next/image"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
+import { AdminNotifications } from "@/components/AdminNotifications"
 
 export type NavItem = {
   to: string
@@ -136,24 +136,21 @@ export function AdminShell({ title, subtitle, nav, accent, children, guard }: Pr
                   key={item.to}
                   href={item.to}
                   title={!showLabels ? item.label : undefined}
-                  className={`group relative flex items-center gap-3 rounded-xl px-3 py-2.5 text-[13px] font-medium transition-all ${
-                    active
+                  className={`group relative flex items-center gap-3 rounded-xl px-3 py-2.5 text-[13px] font-medium transition-all ${active
                       ? `bg-gradient-to-r ${accentClasses} text-primary-foreground shadow-sm`
                       : "text-muted-foreground hover:bg-surface hover:text-foreground"
-                  } ${!showLabels ? "justify-center" : ""}`}
+                    } ${!showLabels ? "justify-center" : ""}`}
                 >
                   <item.icon
-                    className={`h-[18px] w-[18px] flex-shrink-0 ${
-                      active ? "text-primary-foreground" : "text-brand"
-                    }`}
+                    className={`h-[18px] w-[18px] flex-shrink-0 ${active ? "text-primary-foreground" : "text-brand"
+                      }`}
                   />
                   {showLabels && <span>{item.label}</span>}
                   {showLabels && item.badge != null && item.badge > 0 && (
-                    <span className={`ml-auto rounded-full px-2 py-0.5 text-[10px] font-bold ${
-                      active
+                    <span className={`ml-auto rounded-full px-2 py-0.5 text-[10px] font-bold ${active
                         ? "bg-white/20 text-primary-foreground"
                         : "bg-brand/10 text-brand-deep"
-                    }`}>
+                      }`}>
                       {item.badge}
                     </span>
                   )}
@@ -294,14 +291,12 @@ export function AdminShell({ title, subtitle, nav, accent, children, guard }: Pr
             <Search className="h-3.5 w-3.5 text-muted-foreground" />
             <Input
               placeholder="Search…"
-              className="w-40 bg-transparent text-xs outline-none placeholder:text-muted-foreground/60 lg:w-56"
+              className="w-40 bg-transparent text-xs outline-none placeholder:text-muted-foreground/60 lg:w-56 border-none bg-transparent shadow-none"
             />
           </div>
 
           {/* Notifications */}
-          <Button variant="ghost" type="button" className="relative rounded-lg border border-border p-2 text-muted-foreground hover:bg-surface hover:text-foreground">
-            <Bell className="h-4 w-4" />
-          </Button>
+          <AdminNotifications />
 
           {/* User avatar */}
           <div className="flex items-center gap-2">

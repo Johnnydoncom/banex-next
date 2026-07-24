@@ -649,24 +649,88 @@ export type AdminManualPayment = {
 
 export type AdminSettings = {
   admin_notification_emails: string[]
+  site_name: string | null
+  logo_url: string | null
   support_email: string | null
+  // Nested on READ; written as flat manual_* fields (see updateAdminSettings).
   manual_payment: AdminManualPayment
   updated_at?: { item: string }
 }
 
 export type AdminSettingsUpdate = {
+  site_name?: string | null
   support_email?: string | null
   admin_notification_emails?: string[]
   manual_payment?: Partial<AdminManualPayment>
+  logo?: File | null
+  remove_logo?: boolean
 }
 
 export async function fetchAdminSettings(token: string) {
   return proxyFetch<{ settings: AdminSettings }>("/admin/settings", token)
 }
 
-/** Update site-wide settings. Sent as JSON to PUT /admin/settings. */
+/**
+ * Update site-wide settings. The API takes multipart form data (POST + _method=PUT)
+ * so a `logo` file can be included. Manual-payment fields are FLAT on write
+ * (manual_bank_name, …) even though they're nested under `manual_payment` on read.
+ */
 export async function updateAdminSettings(data: AdminSettingsUpdate, token: string) {
-  return proxyFetch<{ settings: AdminSettings }>("/admin/settings", token, "PUT", data)
+  const form = new FormData()
+  form.append("_method", "PUT")
+  if (data.site_name !== undefined) form.append("site_name", data.site_name ?? "")
+  if (data.support_email !== undefined) form.append("support_email", data.support_email ?? "")
+  if (data.admin_notification_emails !== undefined) {
+    // Send at least an empty marker so an emptied list clears server-side.
+    if (data.admin_notification_emails.length === 0) {
+      form.append("admin_notification_emails", "")
+    } else {
+      data.admin_notification_emails.forEach((email) => form.append("admin_notification_emails[]", email))
+    }
+  }
+  if (data.manual_payment) {
+    const mp = data.manual_payment
+    if (mp.bank_name !== undefined) form.append("manual_bank_name", mp.bank_name ?? "")
+    if (mp.account_name !== undefined) form.append("manual_account_name", mp.account_name ?? "")
+    if (mp.account_number !== undefined) form.append("manual_account_number", mp.account_number ?? "")
+    if (mp.instructions !== undefined) form.append("manual_payment_instructions", mp.instructions ?? "")
+  }
+  if (data.logo) form.append("logo", data.logo)
+  if (data.remove_logo) form.append("remove_logo", "1")
+  return proxyFetchFormData<{ settings: AdminSettings }>("/admin/settings", token, "POST", form)
+}
+
+// ─── Admin Notifications ──────────────────────────────────────────────────────
+// Verified live 2026-07-24: GET /admin/notifications → { notifications[], pagination, unread_count }.
+// Item shape is defensive (server had none to sample); common Laravel-notification fields are optional.
+
+export type AdminNotification = {
+  id: string
+  type?: string
+  title?: string | null
+  message?: string | null
+  body?: string | null
+  data?: Record<string, any> | null
+  link?: string | null
+  url?: string | null
+  read_at?: { item: string } | string | null
+  is_read?: boolean
+  created_at?: { item: string } | string
+}
+
+export async function fetchAdminNotifications(token: string, perPage = 15) {
+  return proxyFetch<{ notifications: AdminNotification[]; pagination: any; unread_count: number }>(
+    `/admin/notifications?per_page=${perPage}`,
+    token
+  )
+}
+
+export async function markAllNotificationsRead(token: string) {
+  return proxyFetch<{ unread_count?: number }>("/admin/notifications/mark-all-read", token, "POST")
+}
+
+export async function clearAllNotifications(token: string) {
+  return proxyFetch<null>("/admin/notifications", token, "DELETE")
 }
 
 // ─── Admin Payments ───────────────────────────────────────────────────────────

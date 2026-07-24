@@ -1,7 +1,7 @@
 "use client"
 
-import { useState, useEffect } from "react"
-import { Loader2, CreditCard, Mail, Bell, Landmark, Save, X, Plus } from "lucide-react"
+import { useState, useEffect, useRef } from "react"
+import { Loader2, CreditCard, Mail, Bell, Landmark, Save, X, Plus, ImageIcon, Upload, Globe } from "lucide-react"
 import { toast } from "sonner"
 import { useAuth } from "@/hooks/use-auth"
 import {
@@ -29,10 +29,15 @@ export default function AdminSettingsPage() {
   // ── Site settings ──────────────────────────────────────────────────────────
   const [loadingSettings, setLoadingSettings] = useState(true)
   const [savingSettings, setSavingSettings] = useState(false)
+  const [siteName, setSiteName] = useState("")
   const [supportEmail, setSupportEmail] = useState("")
   const [notifyEmails, setNotifyEmails] = useState<string[]>([])
   const [newEmail, setNewEmail] = useState("")
   const [manual, setManual] = useState({ ...emptyManual })
+  const [logoUrl, setLogoUrl] = useState<string | null>(null)
+  const [logoFile, setLogoFile] = useState<{ file: File; preview: string } | null>(null)
+  const [removeLogo, setRemoveLogo] = useState(false)
+  const logoInputRef = useRef<HTMLInputElement>(null)
 
   // ── Payment methods ────────────────────────────────────────────────────────
   const [paymentMethods, setPaymentMethods] = useState<AdminPaymentMethod[]>([])
@@ -56,6 +61,7 @@ export default function AdminSettingsPage() {
 
   function hydrate(s?: AdminSettings) {
     if (!s) return
+    setSiteName(s.site_name ?? "")
     setSupportEmail(s.support_email ?? "")
     setNotifyEmails(s.admin_notification_emails ?? [])
     setManual({
@@ -64,6 +70,17 @@ export default function AdminSettingsPage() {
       account_number: s.manual_payment?.account_number ?? "",
       instructions: s.manual_payment?.instructions ?? "",
     })
+    setLogoUrl(s.logo_url ?? null)
+    setLogoFile(null)
+    setRemoveLogo(false)
+  }
+
+  const handleLogoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    if (file.size > 2 * 1024 * 1024) return toast.error("Logo must be under 2MB")
+    setLogoFile({ file, preview: URL.createObjectURL(file) })
+    setRemoveLogo(false)
   }
 
   const addNotifyEmail = () => {
@@ -87,6 +104,7 @@ export default function AdminSettingsPage() {
     try {
       const res = await updateAdminSettings(
         {
+          site_name: siteName.trim() || null,
           support_email: supportEmail.trim() || null,
           admin_notification_emails: notifyEmails,
           manual_payment: {
@@ -95,6 +113,8 @@ export default function AdminSettingsPage() {
             account_number: manual.account_number.trim() || null,
             instructions: manual.instructions.trim() || null,
           },
+          logo: logoFile?.file ?? null,
+          remove_logo: removeLogo,
         },
         token
       )
@@ -141,7 +161,60 @@ export default function AdminSettingsPage() {
           </div>
         ) : (
           <div className="space-y-8">
-            {/* General */}
+            {/* Brand / general */}
+            <section>
+              <h2 className="mb-4 flex items-center gap-2 border-b border-border pb-2 font-display text-lg font-semibold">
+                <Globe className="h-5 w-5 text-brand" /> Brand
+              </h2>
+              <div className="grid gap-6 sm:grid-cols-2">
+                <div>
+                  <Label htmlFor="site-name" className="mb-1.5 block text-xs text-muted-foreground">Site name</Label>
+                  <Input
+                    id="site-name"
+                    value={siteName}
+                    onChange={(e) => setSiteName(e.target.value)}
+                    placeholder="Banex Marketplace"
+                    className="rounded-xl px-4 py-2.5 focus-visible:border-brand"
+                  />
+                  <p className="mt-1 text-[11px] text-muted-foreground">Displayed across the site header, title and footer.</p>
+                </div>
+                <div>
+                  <Label className="mb-1.5 block text-xs text-muted-foreground">Logo</Label>
+                  <div className="flex items-center gap-3">
+                    <div className="flex h-16 w-16 flex-none items-center justify-center overflow-hidden rounded-xl border border-border bg-surface">
+                      {logoFile ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img src={logoFile.preview} alt="Logo preview" className="h-full w-full object-contain" />
+                      ) : logoUrl && !removeLogo ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img src={logoUrl} alt="Logo" className="h-full w-full object-contain" />
+                      ) : (
+                        <ImageIcon className="h-6 w-6 text-muted-foreground/40" />
+                      )}
+                    </div>
+                    <div className="flex flex-col gap-2">
+                      <input ref={logoInputRef} type="file" accept="image/*" className="hidden" onChange={handleLogoChange} />
+                      <Button type="button" variant="outline" onClick={() => logoInputRef.current?.click()} className="h-auto gap-1.5 rounded-lg px-3 py-1.5 text-xs">
+                        <Upload className="h-3.5 w-3.5" /> {logoUrl || logoFile ? "Change" : "Upload"}
+                      </Button>
+                      {(logoUrl || logoFile) && (
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          onClick={() => { setLogoFile(null); setRemoveLogo(true) }}
+                          className="h-auto justify-start rounded-lg px-3 py-1 text-xs text-rose-600 hover:bg-rose-500/10"
+                        >
+                          Remove logo
+                        </Button>
+                      )}
+                    </div>
+                  </div>
+                  <p className="mt-1 text-[11px] text-muted-foreground">PNG/SVG recommended · max 2MB.</p>
+                </div>
+              </div>
+            </section>
+
+            {/* Support contact */}
             <section>
               <h2 className="mb-4 flex items-center gap-2 border-b border-border pb-2 font-display text-lg font-semibold">
                 <Mail className="h-5 w-5 text-brand" /> Support Contact

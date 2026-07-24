@@ -1,12 +1,16 @@
 import Link from "next/link"
+import type { ResolvedSiteSettings } from "@/lib/site-settings"
 
-export function Footer() {
+export function Footer({ settings }: { settings?: ResolvedSiteSettings }) {
+  const siteName = settings?.siteName || "Banex Mall"
+  const logoSrc = settings?.logoUrl || "/assets/banex-mall-logo.png"
   return (
     <footer className="mt-24 border-t border-border bg-surface/60">
       <div className="mx-auto container py-16">
         <div className="grid gap-12 md:grid-cols-4">
           <div className="md:col-span-1">
-            <img src="/assets/banex-mall-logo.png" alt="Banex Mall" className="h-14 w-auto" width={220} height={110} />
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={logoSrc} alt={siteName} className="h-14 w-auto" width={220} height={110} />
             <p className="mt-4 max-w-md text-sm leading-relaxed text-muted-foreground">
               Nigeria&apos;s friendly marketplace. Buy and sell anything from verified sellers across the country.
             </p>
@@ -39,7 +43,7 @@ export function Footer() {
         </div>
         <div className="mt-12 h-px w-full bg-border" />
         <p className="mt-6 text-center text-xs text-muted-foreground">
-          © {new Date().getFullYear()} Banex Mall. Made with care in Nigeria.
+          © {new Date().getFullYear()} {siteName}. Made with care in Nigeria.
         </p>
       </div>
     </footer>

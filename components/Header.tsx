@@ -1,7 +1,8 @@
 import { fetchGenericCategories, GenericCategory } from "@/lib/generic-api"
 import { HeaderClient } from "./HeaderClient"
+import type { ResolvedSiteSettings } from "@/lib/site-settings"
 
-export async function Header() {
+export async function Header({ settings }: { settings?: ResolvedSiteSettings }) {
   let categories: GenericCategory[] = []
   try {
     const categoriesData = await fetchGenericCategories()
@@ -10,5 +11,5 @@ export async function Header() {
     console.error("[header] Failed to fetch categories:", e)
   }
 
-  return <HeaderClient categories={categories} />
+  return <HeaderClient categories={categories} settings={settings} />
 }
