@@ -41,7 +41,7 @@ export default function AdminEditSellerPage() {
     floor: "",
     shop_no: "",
     operating_hours: "",
-    tier: "standard",
+    tier: seller?.seller_tier_id || "",
     is_kyc_verified: false,
     whatsapp_contact_id: "",
   })
@@ -90,7 +90,7 @@ export default function AdminEditSellerPage() {
           floor: s.floor || "",
           shop_no: s.shop_no || "",
           operating_hours: s.operating_hours || "",
-          tier: (typeof s.tier === "string" ? s.tier : s.tier?.slug) || "standard",
+          tier: s.seller_tier_id || "",
           is_kyc_verified: s.is_kyc_verified === 1 || s.is_kyc_verified === true,
           whatsapp_contact_id: s.whatsapp_contact_id || "",
         })
