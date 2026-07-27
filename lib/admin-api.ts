@@ -543,8 +543,15 @@ export async function cancelAdminOrder(id: string, token: string) {
   return proxyFetch<{ order: AdminOrder }>(`/admin/orders/${id}/cancel`, token, "POST")
 }
 
-export async function updateAdminOrderStatus(id: string, status: "in-process" | "in-transit" | "in-delivered", token: string) {
-  return proxyFetch<{ order: AdminOrder }>(`/admin/orders/${id}/mark-${status}`, token, "POST")
+// Endpoint paths verified live 2026-07-25: mark-in-process, mark-in-transit, mark-delivered.
+// NOTE: the delivered transition is `mark-delivered` (NOT `mark-in-delivered`, which 404s).
+export async function updateAdminOrderStatus(id: string, action: "process" | "transit" | "deliver", token: string) {
+  const pathByAction: Record<typeof action, string> = {
+    process: "mark-in-process",
+    transit: "mark-in-transit",
+    deliver: "mark-delivered",
+  }
+  return proxyFetch<{ order: AdminOrder }>(`/admin/orders/${id}/${pathByAction[action]}`, token, "POST")
 }
 
 export async function sellerActionAdminOrder(orderId: string, itemId: string, action: "accept" | "decline", token: string, reason?: string) {

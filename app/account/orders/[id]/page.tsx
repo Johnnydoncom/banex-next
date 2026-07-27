@@ -24,9 +24,11 @@ function parseDate(raw: string | { item: string } | undefined): string {
   return raw.item
 }
 
-// Show the "Pay Now" banner for any order that has NOT reached a paid/fulfilled terminal state.
-// This is safer than a whitelist — any unknown status from the API will default to showing the button.
-const PAID_TERMINAL_STATUSES = ["paid", "delivered", "shipped", "processing", "accepted", "completed", "cancelled", "refunded"]
+// Payment info is shown ONLY for orders that still await payment. An order is
+// "unpaid" only if it has NOT been paid (payment.status !== "paid") AND its status
+// is one of the pending/awaiting-payment states. Any other status (paid, accepted,
+// processing, intransit, delivered, cancelled, refunded, …) never shows payment.
+const PENDING_PAYMENT_STATUSES = ["pending", "unpaid", "awaiting_payment", "paymentfailed", "payment_failed"]
 
 function StatusBadge({ status }: { status: string }) {
   const map: Record<string, { icon: React.ReactNode; className: string; label: string }> = {
@@ -297,7 +299,9 @@ export default function OrderDetailsPage() {
   const subtotal = order.summary?.subtotal ?? order.lines_summary?.subtotal ?? 0
   const deliveryFee = order.summary?.delivery_fee ?? order.shipping?.selected_rate?.fee ?? 0
   const total = order.summary?.total ?? (subtotal + deliveryFee)
-  const isUnpaid = !PAID_TERMINAL_STATUSES.includes(order.status)
+  const isUnpaid =
+    order.payment?.status !== "paid" &&
+    PENDING_PAYMENT_STATUSES.includes((order.status ?? "").toLowerCase())
 
   return (
     <div className="space-y-5 pb-20 print:pb-0 print:space-y-4">

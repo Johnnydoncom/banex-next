@@ -370,7 +370,7 @@ export default function CheckoutPage() {
                   {!showNewAddress && addresses.length > 0 ? (
                     <div className="grid gap-3 sm:grid-cols-2">
                       {addresses.map(addr => (
-                        <Button variant="ghost"
+                        <button
                           key={addr.id}
                           type="button"
                           onClick={() => setSelectedAddressId(addr.id)}
@@ -381,7 +381,7 @@ export default function CheckoutPage() {
                           <span className="mt-1 text-xs text-muted-foreground line-clamp-1">{addr.street}</span>
                           <span className="text-xs text-muted-foreground">{addr.city}, {addr.state}</span>
                           <span className="mt-2 text-[11px] font-medium text-foreground">{addr.phone}</span>
-                        </Button>
+                        </button>
                       ))}
                       <Button variant="ghost" type="button"
                         onClick={() => setShowNewAddress(true)}
@@ -426,7 +426,7 @@ export default function CheckoutPage() {
                 <legend className="px-1 font-display text-base font-semibold">Shipping Method</legend>
                 <div className="mt-3 grid gap-3 sm:grid-cols-2">
                   {shippingRates.map((rate) => (
-                    <Button variant="ghost"
+                    <button
                       key={rate.id}
                       type="button"
                       onClick={() => setSelectedRateId(rate.id)}
@@ -436,7 +436,7 @@ export default function CheckoutPage() {
                       <span className="font-semibold text-sm">{rate.name}</span>
                       <span className="mt-1 text-xs text-muted-foreground">{rate.delivery_window}</span>
                       <span className="mt-2 text-sm font-semibold text-brand">{formatNaira(rate.fee)}</span>
-                    </Button>
+                    </button>
                   ))}
                 </div>
               </fieldset>
@@ -636,25 +636,23 @@ function PayOption({
   const isWallet = slug === "wallet"
 
   return (
-    <Button variant="ghost" type="button"
+    <button type="button"
       onClick={onClick}
       disabled={disabled}
-      className={`group relative flex items-center gap-3 rounded-xl border p-3 text-left transition-all duration-200 ${
-        active
-          ? isWallet 
-            ? "border-brand bg-brand-soft/10 ring-1 ring-brand/20 shadow-sm"
-            : "border-[#0ba4db] bg-[#0ba4db]/5 ring-1 ring-[#0ba4db]/20 shadow-sm"
-          : disabled
-            ? "border-border bg-surface/50 opacity-50 cursor-not-allowed"
-            : "border-border bg-card hover:border-brand/40 hover:bg-surface/30"
-      }`}
+      className={`group relative flex items-center gap-3 rounded-xl border p-3 text-left transition-all duration-200 ${active
+        ? isWallet
+          ? "border-brand bg-brand-soft/10 ring-1 ring-brand/20 shadow-sm"
+          : "border-[#0ba4db] bg-[#0ba4db]/5 ring-1 ring-[#0ba4db]/20 shadow-sm"
+        : disabled
+          ? "border-border bg-surface/50 opacity-50 cursor-not-allowed"
+          : "border-border bg-card hover:border-brand/40 hover:bg-surface/30"
+        }`}
     >
       {/* Icon */}
-      <div className={`flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-lg border transition-colors ${
-        active
-          ? isWallet ? "border-brand/30 bg-brand/10 text-brand" : "border-[#0ba4db]/30 bg-[#0ba4db]/10 text-[#0ba4db]"
-          : "border-border bg-background text-muted-foreground group-hover:text-foreground group-hover:border-border/80"
-      }`}>
+      <div className={`flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-lg border transition-colors ${active
+        ? isWallet ? "border-brand/30 bg-brand/10 text-brand" : "border-[#0ba4db]/30 bg-[#0ba4db]/10 text-[#0ba4db]"
+        : "border-border bg-background text-muted-foreground group-hover:text-foreground group-hover:border-border/80"
+        }`}>
         {isPaystack ? (
           <PaystackLogo className="h-5 w-auto" />
         ) : imageUrl ? (
@@ -682,16 +680,15 @@ function PayOption({
       </div>
 
       {/* Radio indicator */}
-      <div className={`flex h-4 w-4 flex-shrink-0 items-center justify-center rounded-full border transition-all ${
-        active 
-          ? isWallet ? "border-brand bg-brand text-white" : "border-[#0ba4db] bg-[#0ba4db] text-white"
-          : "border-muted-foreground/30"
-      }`}>
+      <div className={`flex h-4 w-4 flex-shrink-0 items-center justify-center rounded-full border transition-all ${active
+        ? isWallet ? "border-brand bg-brand text-white" : "border-[#0ba4db] bg-[#0ba4db] text-white"
+        : "border-muted-foreground/30"
+        }`}>
         {active && (
           <div className="h-1.5 w-1.5 rounded-full bg-white" />
         )}
       </div>
-    </Button>
+    </button>
   )
 }
 

@@ -43,15 +43,15 @@ export default function AdminOrderDetailPage({ params }: { params: Promise<{ id:
           toast.success("Order cancelled")
         }
       } else if (newStatus === "process") {
-        const res = await updateAdminOrderStatus(id, "in-process", token)
+        const res = await updateAdminOrderStatus(id, "process", token)
         setOrder(res.data?.order ?? null)
         toast.success("Order marked as processing")
       } else if (newStatus === "transit") {
-        const res = await updateAdminOrderStatus(id, "in-transit", token)
+        const res = await updateAdminOrderStatus(id, "transit", token)
         setOrder(res.data?.order ?? null)
         toast.success("Order marked as in transit")
       } else if (newStatus === "deliver") {
-        const res = await updateAdminOrderStatus(id, "in-delivered", token)
+        const res = await updateAdminOrderStatus(id, "deliver", token)
         setOrder(res.data?.order ?? null)
         toast.success("Order marked as delivered")
       }
