@@ -16,7 +16,7 @@ const faqs = [
   { q: "How does escrow work on Banex Mall?", a: "When you pay, your money is held safely by Banex. We only release it to the seller once you confirm you've received the item as described." },
   { q: "How do I become a verified seller?", a: "Apply via Become a Seller. We review your KYC and business details, usually within 48 hours." },
   { q: "What payment methods are supported?", a: "Card payments, bank transfer, and USSD are all available at checkout." },
-  { q: "Can I make an offer or bid on a listing?", a: "Yes. On the product page tap Make Offer to negotiate or Request Quote for bulk enquiries." },
+  { q: "Can I contact a seller about a listing?", a: "Yes. On the product page tap Chat on WhatsApp to message the seller directly, or Request Quote for bulk enquiries." },
   { q: "What if my item arrives damaged?", a: "You're covered by our 7-day buyer protection. Open a return from Track Order and we'll arrange pickup and refund." },
   { q: "How are sellers vetted?", a: "Verified sellers complete KYC, ID verification, and meet rating thresholds. Look for the green Verified badge." },
 ]

@@ -454,20 +454,13 @@ export type WishlistItemData = {
   id: string          // server wishlist item ID (used for DELETE)
   product_id: string  // the product ID
   created_at?: { item: string }
-  // Note: the API does NOT embed a full product object in wishlist responses.
-  // Product details must come from the local GenericProduct data when toggling.
+  // The wishlist API embeds a lightweight product summary (verified live 2026-07-25):
+  // { name, image, price, url } — `url` is the absolute product page URL.
   product?: {
-    id: string
     name: string
-    slug: string
+    image: string | null
     price: number
-    currency?: string
-    images?: { url: string; is_primary: boolean }[]
-    seller?: {
-      id: string
-      shop_name: string
-      slug: string
-    } | null
+    url: string
   } | null
 }
 

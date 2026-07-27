@@ -36,20 +36,31 @@ type WishlistContextValue = {
 const WishlistContext = createContext<WishlistContextValue | null>(null)
 const STORAGE_KEY = "banex.wishlist"
 
-// The GET /user/wishlist API only returns {id, product_id} without full product details.
-// So when authenticated, we maintain client state with full product data;
-// server IDs are tracked for DELETE operations.
-// On sync (login with local items), we post product_ids[] and get back the server item IDs.
+// GET /user/wishlist now embeds a product summary { name, image, price, url },
+// so the authoritative wishlist (with full details for the header + wishlist page)
+// comes straight from the server. Guest items live in localStorage and are synced
+// up on login, after which we reload the server wishlist as the source of truth.
 
-function extractServerIds(serverItems: WishlistItemData[]): Map<string, string> {
-  // Returns a map of productId -> serverWishlistItemId
-  const map = new Map<string, string>()
-  serverItems.forEach(item => {
-    if (item.product_id && item.id) {
-      map.set(item.product_id, item.id)
-    }
-  })
-  return map
+/** Derive the product slug from the absolute product `url` (…/product/<slug>). */
+function slugFromUrl(url?: string | null): string {
+  if (!url) return ""
+  const path = url.includes("://") ? url.split("://")[1].split("/").slice(1).join("/") : url
+  const parts = path.split(/[?#]/)[0].split("/").filter(Boolean)
+  return parts[parts.length - 1] || ""
+}
+
+/** Map a server wishlist item (with embedded product summary) to the UI shape. */
+function mapServerItem(item: WishlistItemData): WishlistItem {
+  return {
+    id: item.id,
+    productId: item.product_id,
+    productSlug: slugFromUrl(item.product?.url),
+    productName: item.product?.name || "Saved item",
+    productImage: item.product?.image || "",
+    sellerId: null,
+    sellerName: null,
+    price: item.product?.price ?? 0,
+  }
 }
 
 export function WishlistProvider({ children }: { children: ReactNode }) {
@@ -84,40 +95,17 @@ export function WishlistProvider({ children }: { children: ReactNode }) {
           localItems = localRaw ? JSON.parse(localRaw) : []
         } catch {}
 
+        // Push any guest (localStorage) items up to the server first.
         if (localItems.length > 0) {
-          // Sync local items to server; get back server IDs for each product
           const productIds = localItems.map(item => item.productId)
-          const serverItems = await userSyncWishlist(productIds)
-          const serverIdMap = extractServerIds(serverItems)
-          if (mounted) {
-            // Enrich local items with real server wishlist item IDs
-            const enriched = localItems.map(item => ({
-              ...item,
-              id: serverIdMap.get(item.productId) ?? item.id
-            }))
-            setItems(enriched)
-            window.localStorage.removeItem(STORAGE_KEY)
-          }
-        } else {
-          // No local items; fetch server wishlist (only id+product_id available)
-          // We can't reconstruct full product details from server alone,
-          // so just clear items - they'll be added freshly going forward.
-          const serverItems = await userFetchWishlist()
-          if (mounted) {
-            // Only keep the server IDs as empty placeholders to avoid re-adding duplicates
-            // Product details will be populated when user toggles from UI
-            const minimalItems: WishlistItem[] = serverItems.map(item => ({
-              id: item.id,
-              productId: item.product_id,
-              productSlug: "",
-              productName: "Saved item",
-              productImage: "",
-              sellerId: null,
-              sellerName: null,
-              price: 0
-            }))
-            setItems(minimalItems)
-          }
+          await userSyncWishlist(productIds)
+          window.localStorage.removeItem(STORAGE_KEY)
+        }
+
+        // Load the authoritative server wishlist — now includes full product details.
+        const serverItems = await userFetchWishlist()
+        if (mounted) {
+          setItems(serverItems.map(mapServerItem))
         }
       } catch (err) {
         console.error("Wishlist sync failed", err)

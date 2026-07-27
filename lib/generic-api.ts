@@ -36,7 +36,7 @@ export type GenericProduct = {
   is_nationwide_delivery: boolean
   is_authentic_only: boolean
   images: { url: string; sort_order: number; is_primary: boolean }[]
-  seller: { id: string; shop_name: string; slug: string } | null
+  seller: { id: string; shop_name: string; slug: string; whatsapp?: string | null } | null
   category: { id: string; name: string; slug: string; image_url: string | null } | null
   description?: string | null
   specifications?: string[]
@@ -125,11 +125,26 @@ export async function fetchGenericProducts(params?: {
   if (params?.seller_id) searchParams["filter[seller_id]"] = params.seller_id
   if (params?.min_price !== undefined) searchParams["filter[min_price]"] = params.min_price
   if (params?.max_price !== undefined) searchParams["filter[max_price]"] = params.max_price
-  
+  // Map the UI sort keys to the API's `sort` values (verified live: price, -price,
+  // -created_at, -is_featured, -rating_average,-reviews_count). Falls back to the
+  // raw value if an already-API sort string is passed.
+  if (params?.sort) {
+    searchParams["sort"] = PRODUCT_SORT_MAP[params.sort] ?? params.sort
+  }
+
   const res = await apiGet<ApiEnvelope<{ products: GenericProduct[]; pagination: Pagination }>>("/generic/products", {
     params: searchParams,
   })
   return res.data
+}
+
+/** UI sort key → API `sort` value for /generic/products. */
+export const PRODUCT_SORT_MAP: Record<string, string> = {
+  featured: "-is_featured",
+  newest: "-created_at",
+  "price-asc": "price",
+  "price-desc": "-price",
+  rating: "-rating_average,-reviews_count",
 }
 
 export async function fetchGenericProduct(slug: string) {

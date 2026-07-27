@@ -2,13 +2,12 @@
 
 import { useState } from "react"
 import { motion } from "framer-motion"
-import { Check, Truck, Phone, Lock, ShoppingBag, MessageCircle, FileText, Gavel } from "lucide-react"
+import { Truck, Phone, Lock, ShoppingBag, MessageCircle, FileText } from "lucide-react"
 import { toast } from "sonner"
 import { useRouter } from "next/navigation"
 import { useCart } from "@/components/CartContext"
 import type { GenericProduct } from "@/lib/generic-api"
 import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 
 // Helper formatter
@@ -20,10 +19,10 @@ const formatNaira = (amount: number) => {
   }).format(amount)
 }
 
-const sellerPhone = (sellerId: string) => {
-  // Demo phone derived from id; in production this would come from the DB or API
-  const tail = (sellerId.length * 13) % 10000
-  return `+234 80 ${String(tail).padStart(4, "0")} 1234`
+// Format a raw digits phone (e.g. "2349073934379") for display.
+const formatPhone = (digits: string) => {
+  const d = digits.startsWith("234") ? `+${digits}` : digits.startsWith("+") ? digits : `+${digits}`
+  return d
 }
 
 interface ProductSellerCardProps {
@@ -37,16 +36,17 @@ export function ProductSellerCard({ product, sellerProduct, isBestPrice, index }
   const router = useRouter()
   const { add, open } = useCart()
 
-  const [bidOpen, setBidOpen] = useState(false)
-  const [bidAmount, setBidAmount] = useState<number>(0)
   const [quoteOpen, setQuoteOpen] = useState(false)
   const [quoteText, setQuoteText] = useState("")
 
   const s = sellerProduct.seller
   if (!s) return null
 
-  const phone = sellerPhone(s.id)
-  const waLink = `https://wa.me/${phone.replace(/[^\d]/g, "")}?text=${encodeURIComponent(
+  // Contact channel = the seller's assigned WhatsApp contact (digits only). When
+  // no contact is assigned the API returns null → hide the chat/call options.
+  const whatsappDigits = (s.whatsapp || "").replace(/[^\d]/g, "")
+  const hasContact = whatsappDigits.length > 0
+  const waLink = `https://wa.me/${whatsappDigits}?text=${encodeURIComponent(
     `Hi ${s.shop_name}, I'm interested in your "${sellerProduct.name}" listing on Banex Mall.`,
   )}`
 
@@ -106,9 +106,11 @@ export function ProductSellerCard({ product, sellerProduct, isBestPrice, index }
           <p className="mt-1 text-xs text-muted-foreground">
             <Truck className="mr-1 inline h-3 w-3" /> Delivery: {sellerProduct.delivery_estimate || "3-5 days"}
           </p>
-          <p className="mt-1 inline-flex items-center gap-1 text-xs text-muted-foreground">
-            <Phone className="h-3 w-3" /> {phone}
-          </p>
+          {hasContact && (
+            <p className="mt-1 inline-flex items-center gap-1 text-xs text-muted-foreground">
+              <Phone className="h-3 w-3" /> {formatPhone(whatsappDigits)}
+            </p>
+          )}
         </div>
 
         <div className="flex flex-col items-start md:items-end">
@@ -126,72 +128,35 @@ export function ProductSellerCard({ product, sellerProduct, isBestPrice, index }
             >
               <ShoppingBag className="h-3.5 w-3.5" /> Add
             </Button>
-            <a
-              href={`tel:${phone.replace(/\s/g, "")}`}
-              className="inline-flex items-center gap-1.5 rounded-full border border-border bg-background px-3 py-2 text-xs font-medium hover:border-brand hover:text-brand"
-            >
-              <Phone className="h-3.5 w-3.5" /> Call
-            </a>
-            <a
-              href={waLink}
-              target="_blank"
-              rel="noreferrer"
-              className="inline-flex items-center gap-1.5 rounded-full border border-border bg-background px-3 py-2 text-xs font-medium hover:border-brand hover:text-brand"
-            >
-              <MessageCircle className="h-3.5 w-3.5" /> Chat
-            </a>
+            {hasContact && (
+              <>
+                <a
+                  href={`tel:+${whatsappDigits}`}
+                  className="inline-flex items-center gap-1.5 rounded-full border border-border bg-background px-3 py-2 text-xs font-medium hover:border-brand hover:text-brand"
+                >
+                  <Phone className="h-3.5 w-3.5" /> Call
+                </a>
+                <a
+                  href={waLink}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="inline-flex items-center gap-1.5 rounded-full border border-emerald-500/40 bg-emerald-500/10 px-3 py-2 text-xs font-medium text-emerald-700 hover:bg-emerald-500/20 dark:text-emerald-400"
+                >
+                  <MessageCircle className="h-3.5 w-3.5" /> Chat on WhatsApp
+                </a>
+              </>
+            )}
             <Button variant="ghost" type="button"
               onClick={() => {
                 setQuoteOpen(!quoteOpen)
-                setBidOpen(false)
               }}
               className="inline-flex items-center gap-1.5 rounded-full border border-border bg-background px-3 py-2 text-xs font-medium hover:border-brand hover:text-brand"
             >
               <FileText className="h-3.5 w-3.5" /> Quote
             </Button>
-            <Button variant="ghost" type="button"
-              onClick={() => {
-                setBidOpen(!bidOpen)
-                setBidAmount(Math.round(sellerProduct.price * 0.9))
-                setQuoteOpen(false)
-              }}
-              className="inline-flex items-center gap-1.5 rounded-full border border-border bg-background px-3 py-2 text-xs font-medium hover:border-brand hover:text-brand"
-            >
-              <Gavel className="h-3.5 w-3.5" /> Make offer
-            </Button>
           </div>
         </div>
       </div>
-
-      {bidOpen && (
-        <form
-          onSubmit={(e) => {
-            e.preventDefault()
-            toast.success(`Offer of ${formatNaira(bidAmount)} sent to ${s.shop_name}`)
-            setBidOpen(false)
-          }}
-          className="mt-4 grid gap-2 rounded-xl border border-border bg-surface/40 p-4 sm:grid-cols-[1fr_auto]"
-        >
-          <label className="block">
-            <span className="text-[11px] font-semibold uppercase tracking-widest text-brand-deep">
-              Your offer
-            </span>
-            <Input
-              type="number"
-              min={1000}
-              value={bidAmount}
-              onChange={(e) => setBidAmount(Number(e.target.value))}
-              className="mt-1 h-11 w-full rounded-full border border-border bg-background px-4 text-sm outline-none focus:border-brand"
-            />
-          </label>
-          <Button variant="ghost"
-            type="submit"
-            className="self-end rounded-full bg-gradient-brand px-5 py-3 text-sm font-semibold text-primary-foreground"
-          >
-            Send offer
-          </Button>
-        </form>
-      )}
 
       {quoteOpen && (
         <form
