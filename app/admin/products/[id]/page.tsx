@@ -346,9 +346,8 @@ export default function AdminProductDetailPage({
                   variant="ghost"
                   key={i}
                   onClick={() => setImgIdx(i)}
-                  className={`relative h-16 w-16 flex-none overflow-hidden rounded-xl border-2 p-0 hover:bg-transparent ${
-                    i === imgIdx ? "border-brand" : "border-border hover:border-brand/50"
-                  }`}
+                  className={`relative h-16 w-16 flex-none overflow-hidden rounded-xl border-2 p-0 hover:bg-transparent ${i === imgIdx ? "border-brand" : "border-border hover:border-brand/50"
+                    }`}
                 >
                   <Image src={img} alt={`${product.name} ${i + 1}`} fill className="object-cover" />
                 </Button>
@@ -358,15 +357,14 @@ export default function AdminProductDetailPage({
 
           {/* Status banner */}
           <div
-            className={`rounded-xl border px-4 py-3 ${
-              product.status === "active"
+            className={`rounded-xl border px-4 py-3 ${product.status === "active"
                 ? "border-emerald-200 bg-emerald-50 dark:bg-emerald-500/10"
                 : product.status === "pending"
-                ? "border-amber-200 bg-amber-50 dark:bg-amber-500/10"
-                : product.status === "rejected"
-                ? "border-rose-200 bg-rose-50 dark:bg-rose-500/10"
-                : "border-border bg-surface/60"
-            }`}
+                  ? "border-amber-200 bg-amber-50 dark:bg-amber-500/10"
+                  : product.status === "rejected"
+                    ? "border-rose-200 bg-rose-50 dark:bg-rose-500/10"
+                    : "border-border bg-surface/60"
+              }`}
           >
             <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground mb-1">
               Status
@@ -447,7 +445,7 @@ export default function AdminProductDetailPage({
               <div>
                 <p className="text-xs font-medium text-muted-foreground">Shop</p>
                 <Link
-                  href={`/admin/sellers/${product.seller?.slug || product.seller_id}`}
+                  href={`/admin/users/sellers/${product.seller_id}`}
                   className="mt-1 inline-flex items-center gap-1.5 text-sm font-medium text-brand hover:underline"
                 >
                   <Store className="h-3.5 w-3.5" />
