@@ -3,6 +3,12 @@ import { getToken } from "next-auth/jwt"
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "https://api-marketplace.banexmall.com/api"
 
+// This proxy serves authenticated, per-user data (wishlist, cart, orders, wallet…).
+// It must never be cached — always run dynamically and hit the backend fresh.
+export const dynamic = "force-dynamic"
+export const fetchCache = "force-no-store"
+export const revalidate = 0
+
 /**
  * Universal API Proxy
  *
@@ -38,6 +44,8 @@ async function handleProxy(req: NextRequest, { params }: { params: Promise<{ pat
     const fetchOptions: RequestInit = {
       method: req.method,
       headers,
+      // Bypass Next.js' data cache — this is live per-user data, never stale.
+      cache: "no-store",
     }
 
     // Only attach body for methods that support it
@@ -59,8 +67,12 @@ async function handleProxy(req: NextRequest, { params }: { params: Promise<{ pat
       data = textData // fallback to text if not JSON
     }
 
-    // Pass through the exact status from the backend
-    return NextResponse.json(data, { status: response.status })
+    // Pass through the exact status from the backend, and tell the browser never
+    // to cache this authenticated response (prevents stale wishlist/cart/etc.).
+    return NextResponse.json(data, {
+      status: response.status,
+      headers: { "Cache-Control": "no-store, no-cache, must-revalidate" },
+    })
   } catch (error: any) {
     console.error(`[api/proxy] Error forwarding to ${targetUrl}:`, error)
     return NextResponse.json(

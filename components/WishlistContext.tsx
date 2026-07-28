@@ -76,7 +76,7 @@ export function WishlistProvider({ children }: { children: ReactNode }) {
       if (raw && status === "unauthenticated") {
         setItems(JSON.parse(raw))
       }
-    } catch {}
+    } catch { }
   }, [status])
 
   // 2. Sync to Backend when User Logs In
@@ -93,7 +93,7 @@ export function WishlistProvider({ children }: { children: ReactNode }) {
         let localItems: WishlistItem[] = []
         try {
           localItems = localRaw ? JSON.parse(localRaw) : []
-        } catch {}
+        } catch { }
 
         // Push any guest (localStorage) items up to the server first.
         if (localItems.length > 0) {
@@ -168,7 +168,7 @@ export function WishlistProvider({ children }: { children: ReactNode }) {
     if (status === "authenticated") {
       try {
         // Use server wishlist item id (not product id) for DELETE
-        const serverItemId = itemToRemove.id
+        const serverItemId = itemToRemove.productId
         if (serverItemId && !serverItemId.startsWith("temp-")) {
           await userRemoveWishlist(serverItemId)
         }
