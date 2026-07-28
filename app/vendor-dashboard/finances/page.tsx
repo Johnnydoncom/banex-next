@@ -44,7 +44,9 @@ function earningsStatus(status: string) {
   switch (status) {
     case "paid_out":
     case "settled": return { l: "Paid Out", c: "bg-emerald-500/15 text-emerald-700" }
-    case "payable": return { l: "Payable", c: "bg-blue-500/15 text-blue-700" }
+    // "payable" = cleared but admin hasn't paid it out yet → still awaiting payout,
+    // not withdrawable. Grouped visually with pending (amber) rather than "cleared".
+    case "payable": return { l: "Awaiting Payout", c: "bg-amber-500/15 text-amber-700" }
     case "void":
     case "reversed": return { l: "Void", c: "bg-rose-500/15 text-rose-700" }
     default: return { l: "Pending", c: "bg-amber-500/15 text-amber-700" }
@@ -79,6 +81,10 @@ export default function VendorFinancesPage() {
   const { bankAccounts, loading: banksLoading, mutate: mutateBanks } = useBankAccounts(token)
 
   const balance = wallet?.balance ?? null
+  // Everything not yet marked paid by admin sits "awaiting payout" — the backend
+  // splits this into pending (uncleared) + payable (cleared but not yet paid out).
+  // Neither is in the wallet balance, so from the vendor's view both are Pending.
+  const awaitingPayout = (earnings?.pending_total ?? 0) + (earnings?.payable_total ?? 0)
 
   // Modals
   const [showBankModal, setShowBankModal] = useState(false)
@@ -182,14 +188,22 @@ export default function VendorFinancesPage() {
       </div>
 
       {/* Top stats */}
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        {/* Wallet balance */}
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        {/* Wallet balance — the only withdrawable pool (funds admin has marked paid) */}
         <div className="rounded-2xl border border-emerald-500/20 bg-gradient-to-br from-emerald-600 to-emerald-700 p-5 text-white">
-          <p className="text-xs font-semibold uppercase tracking-widest text-emerald-100/70">Available Balance</p>
+          <p className="text-xs font-semibold uppercase tracking-widest text-emerald-100/70">Balance</p>
           <p className="mt-2 font-display text-3xl font-bold">
             {walletLoading ? <Loader2 className="h-6 w-6 animate-spin" /> : balance !== null ? formatNaira(balance) : "—"}
           </p>
-          <p className="mt-1 text-xs text-emerald-100/60">{wallet?.currency ?? "NGN"}</p>
+          <p className="mt-1 text-xs text-emerald-100/60">Available to withdraw</p>
+        </div>
+        {/* Pending — earnings awaiting admin payout (not yet in balance): pending + payable */}
+        <div className="rounded-2xl border border-amber-500/20 bg-card p-5">
+          <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">Pending</p>
+          <p className="mt-2 font-display text-2xl font-bold text-amber-600">
+            {earningsLoading ? "..." : earnings ? formatNaira(awaitingPayout) : "—"}
+          </p>
+          <p className="mt-1 text-xs text-muted-foreground">Awaiting admin payout</p>
         </div>
         {/* Lifetime earned */}
         <div className="rounded-2xl border border-border bg-card p-5">
@@ -198,22 +212,6 @@ export default function VendorFinancesPage() {
             {earningsLoading ? "..." : earnings?.lifetime_total !== undefined ? formatNaira(earnings.lifetime_total) : "—"}
           </p>
           <p className="mt-1 text-xs text-muted-foreground">Net of commission</p>
-        </div>
-        {/* Payable */}
-        <div className="rounded-2xl border border-border bg-card p-5">
-          <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">Available to Withdraw</p>
-          <p className="mt-2 font-display text-2xl font-bold text-emerald-600">
-            {earningsLoading ? "..." : earnings?.payable_total !== undefined ? formatNaira(earnings.payable_total) : "—"}
-          </p>
-          <p className="mt-1 text-xs text-muted-foreground">Cleared for payout</p>
-        </div>
-        {/* Pending */}
-        <div className="rounded-2xl border border-border bg-card p-5">
-          <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">Pending</p>
-          <p className="mt-2 font-display text-2xl font-bold text-amber-600">
-            {earningsLoading ? "..." : earnings?.pending_total !== undefined ? formatNaira(earnings.pending_total) : "—"}
-          </p>
-          <p className="mt-1 text-xs text-muted-foreground">Awaiting clearance</p>
         </div>
       </div>
 
@@ -347,8 +345,8 @@ export default function VendorFinancesPage() {
                 <p className="mt-2 font-display text-2xl font-bold text-emerald-600">{formatNaira(earnings.paid_out_total)}</p>
               </div>
               <div className="rounded-2xl border border-amber-500/10 bg-card p-5">
-                <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">Pending Payout</p>
-                <p className="mt-2 font-display text-2xl font-bold text-amber-600">{formatNaira(earnings.pending_total)}</p>
+                <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">Awaiting Payout</p>
+                <p className="mt-2 font-display text-2xl font-bold text-amber-600">{formatNaira(awaitingPayout)}</p>
               </div>
             </div>
           )}
