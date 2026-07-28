@@ -337,6 +337,53 @@ export async function userFetchOrder(id: string) {
   return res.data?.order
 }
 
+// ─── ORDER TRACKING ───────────────────────────────────────────────────────────
+// GET /user/orders/:reference/tracking — keyed by the order REFERENCE (e.g.
+// "OR1782908533425398EC8CC4"), not the id. Requires an authenticated session.
+// Verified live 2026-07-28.
+export type OrderTrackingStep = {
+  key: string
+  label: string
+  // completed | current | upcoming | skipped | failed (backend-driven)
+  state: string
+  completed_at: string | null
+}
+
+export type OrderTrackingData = {
+  order_id: string
+  reference: string
+  fulfillment_type: "delivery" | "mall_pickup"
+  current_status: string
+  steps: OrderTrackingStep[]
+  fulfillment?: {
+    type: "delivery" | "mall_pickup"
+    delivery_address?: AddressData | null
+    selected_rate?: {
+      id: string
+      code: string
+      name: string
+      fee: number
+      currency: string
+      delivery_window?: string | null
+    } | null
+  } | null
+  items: {
+    id: string
+    product_name: string
+    quantity: number
+    status?: string
+    seller_shop_name?: string
+    primary_image_url?: string | null
+  }[]
+}
+
+export async function userFetchOrderTracking(reference: string) {
+  const res = await apiGet<ApiEnvelope<{ tracking: OrderTrackingData }>>(
+    `${PROXY_BASE}/user/orders/${encodeURIComponent(reference)}/tracking`,
+  )
+  return res.data?.tracking ?? null
+}
+
 // Re-initialize payment for an existing pending order
 // Calls POST /user/orders/:orderId/payment/initialize → returns a fresh Paystack authorization_url
 // callbackUrl: the absolute URL Paystack should redirect to after payment

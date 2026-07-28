@@ -59,9 +59,9 @@ export function VendorQuickOrder({ item, vendor }: { item: GenericProduct; vendo
   return (
     <Button variant="ghost" type="button"
       onClick={orderInStore}
-      className="absolute bottom-3 right-3 inline-flex items-center gap-1 rounded-full bg-gradient-brand px-3 py-1.5 text-[11px] font-semibold text-primary-foreground shadow-soft"
+      className="mt-2 inline-flex h-auto w-full items-center justify-center gap-1.5 rounded-full bg-gradient-brand px-3 py-2 text-xs font-semibold text-primary-foreground shadow-soft"
     >
-      <Bike className="h-3 w-3" /> Quick order
+      <Bike className="h-3.5 w-3.5" /> Quick order
     </Button>
   )
 }

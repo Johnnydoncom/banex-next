@@ -27,7 +27,7 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
         ogType: "profile",
       })
     }
-  } catch {}
+  } catch { }
   return buildMetadata({ title: "Vendor", path: "/vendors", noindex: true })
 }
 
@@ -36,7 +36,7 @@ export default async function VendorPage({ params }: { params: Promise<{ slug: s
   try {
     const resolvedParams = await params
     sellerData = await fetchGenericSeller(resolvedParams.slug)
-  } catch(e) {
+  } catch (e) {
     // If not found
   }
 
@@ -79,15 +79,15 @@ export default async function VendorPage({ params }: { params: Promise<{ slug: s
     ]),
     ...(items.length
       ? [
-          itemListSchema(
-            `${vendor.shop_name} catalogue`,
-            items.map((p: { name: string; slug: string; images?: { url: string; is_primary: boolean }[] }) => ({
-              name: p.name,
-              path: `/product/${p.slug}`,
-              image: p.images?.find((i) => i.is_primary)?.url || p.images?.[0]?.url,
-            })),
-          ),
-        ]
+        itemListSchema(
+          `${vendor.shop_name} catalogue`,
+          items.map((p: { name: string; slug: string; images?: { url: string; is_primary: boolean }[] }) => ({
+            name: p.name,
+            path: `/product/${p.slug}`,
+            image: p.images?.find((i) => i.is_primary)?.url || p.images?.[0]?.url,
+          })),
+        ),
+      ]
       : []),
   ]
 
@@ -127,7 +127,7 @@ export default async function VendorPage({ params }: { params: Promise<{ slug: s
 
       {/* Meta strip */}
       <section className="mx-auto max-w-7xl px-4 md:px-8">
-        <div className="grid gap-3 rounded-2xl border border-border bg-card p-4 sm:grid-cols-2 md:grid-cols-4 md:p-5">
+        <div className="grid grid-cols-1 gap-3 rounded-2xl border border-border bg-card p-4 sm:grid-cols-2 md:grid-cols-4 md:p-5">
           <Meta icon={Star} label="Rating" value={`${vendor.rating_average || "New"} · ${vendor.reviews_count || 0} reviews`} />
           <Meta icon={MapPin} label="In-store" value={vendor.location || "Banex Mall"} />
           <Meta icon={Clock} label="Hours" value="9 AM - 6 PM" />
@@ -181,10 +181,9 @@ export default async function VendorPage({ params }: { params: Promise<{ slug: s
         </div>
 
         {items.length ? (
-          <div className="mt-6 grid grid-cols-2 gap-5 md:grid-cols-3 lg:grid-cols-4">
+          <div className="mt-6 grid grid-cols-2 gap-4 md:gap-5 md:grid-cols-3 lg:grid-cols-4">
             {items.map((p) => (
-              <div key={p.id} className="relative">
-                {/* Need to adapt ProductCard to use GenericProduct! */}
+              <div key={p.id} className="flex flex-col">
                 <ApiProductCard product={p as any} />
                 <VendorQuickOrder item={p} vendor={vendor} />
               </div>

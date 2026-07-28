@@ -2,6 +2,7 @@ import Link from "next/link"
 import { MapPin, Star } from "lucide-react"
 import { GenericProduct } from "@/lib/generic-api"
 import { WishlistButton } from "./WishlistButton"
+import Image from "next/image"
 
 function formatNaira(amount: number) {
   return new Intl.NumberFormat("en-NG", { style: "currency", currency: "NGN", maximumFractionDigits: 0 }).format(amount)
@@ -17,7 +18,7 @@ export function ApiProductCard({ product }: { product: GenericProduct }) {
     >
       <div className="relative aspect-square overflow-hidden bg-surface">
         {primaryImage ? (
-          <img
+          <Image
             src={primaryImage.url}
             alt={product.name}
             loading="lazy"
@@ -41,11 +42,11 @@ export function ApiProductCard({ product }: { product: GenericProduct }) {
         <WishlistButton product={product} />
       </div>
 
-      <div className="p-4">
+      <div className="p-3 md:p-4">
         {product.brand && (
           <p className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">{product.brand}</p>
         )}
-        <h3 className="mt-0.5 line-clamp-2 font-display text-base font-semibold text-foreground">
+        <h3 className="mt-0.5 line-clamp-2 font-display text-sm md:text-base font-semibold text-foreground">
           {product.name}
         </h3>
 
@@ -62,14 +63,14 @@ export function ApiProductCard({ product }: { product: GenericProduct }) {
           )}
         </div>
 
-        <div className="mt-3 flex items-end justify-between">
-          <div>
+        <div className="mt-3 flex flex-wrap items-end justify-between gap-x-2 gap-y-1">
+          <div className="min-w-0">
             <p className="text-[10px] uppercase tracking-wider text-muted-foreground">Price</p>
-            <p className="font-display text-xl font-bold text-foreground">{formatNaira(product.price)}</p>
+            <p className="font-display text-lg font-bold text-foreground md:text-xl">{formatNaira(product.price)}</p>
           </div>
           {product.location && (
-            <div className="flex items-center gap-1 text-[11px] text-muted-foreground">
-              <MapPin className="h-3 w-3" /> {product.location}
+            <div className="flex min-w-0 items-center gap-1 text-[11px] text-muted-foreground">
+              <MapPin className="h-3 w-3 shrink-0" /> <span className="truncate">{product.location}</span>
             </div>
           )}
         </div>
