@@ -3,6 +3,7 @@
 import { useState } from "react"
 import { motion } from "framer-motion"
 import { Button } from "@/components/ui/button"
+import Image from "next/image"
 
 interface ProductImageGalleryProps {
   images: { url: string; sort_order: number; is_primary: boolean }[]
@@ -43,7 +44,7 @@ export function ProductImageGallery({ images, name }: ProductImageGalleryProps) 
       className="relative flex flex-col gap-4"
     >
       <div className="relative aspect-square overflow-hidden rounded-2xl border border-border bg-card">
-        <img
+        <Image
           src={sortedImages[activeIdx].url}
           alt={name}
           width={900}
@@ -53,17 +54,16 @@ export function ProductImageGallery({ images, name }: ProductImageGalleryProps) 
       </div>
 
       {sortedImages.length > 1 && (
-        <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
+        <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide w-full">
           {sortedImages.map((img, idx) => (
-            <Button variant="ghost" type="button"
+            <button type="button"
               key={img.url}
               onClick={() => setActiveIdx(idx)}
-              className={`relative h-20 w-20 shrink-0 overflow-hidden rounded-lg border-2 transition-all ${
-                activeIdx === idx ? "border-brand" : "border-transparent opacity-70 hover:opacity-100"
-              }`}
+              className={`relative h-20 w-20 shrink-0 overflow-hidden rounded-lg border-2 transition-all ${activeIdx === idx ? "border-brand" : "border-transparent opacity-70 hover:opacity-100"
+                }`}
             >
-              <img src={img.url} alt={`${name} thumbnail ${idx + 1}`} className="h-full w-full object-cover" />
-            </Button>
+              <Image src={img.url} alt={`${name} thumbnail ${idx + 1}`} width={100} height={100} className="h-full w-full object-cover" />
+            </button>
           ))}
         </div>
       )}

@@ -107,20 +107,20 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
   return (
     <div>
       <JsonLd schema={jsonLd} />
-      <div className="mx-auto max-w-7xl px-4 pt-6 md:px-8">
+      <div className="mx-auto max-w-7xl px-4 pt-4 md:px-8">
         <Link href="/shop" className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-brand">
           <ChevronLeft className="h-4 w-4" /> Back to marketplace
         </Link>
       </div>
 
-      <section className="mx-auto grid max-w-7xl gap-10 px-4 py-8 md:grid-cols-2 md:px-8 md:py-12">
+      <section className="mx-auto grid grid-cols-1 max-w-7xl gap-10 px-4 py-4 md:grid-cols-2 md:px-8 md:py-12">
         <ProductImageGallery images={product.images || []} name={product.name} />
 
         <div>
           <p className="text-xs uppercase tracking-widest text-brand-deep">
             {product.brand} · {product.category?.name || "Uncategorized"}
           </p>
-          <h1 className="mt-3 font-display text-3xl font-bold md:text-5xl">{product.name}</h1>
+          <h1 className="mt-3 font-display text-3xl font-bold md:text-5xl break-all">{product.name}</h1>
           <div className="mt-3 flex items-center gap-2 text-sm text-muted-foreground">
             <Star className="h-4 w-4 fill-brand text-brand" />
             <span className="text-foreground">{product.rating_average || "0.0"}</span>
