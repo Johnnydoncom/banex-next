@@ -181,7 +181,7 @@ export default async function VendorPage({ params }: { params: Promise<{ slug: s
         </div>
 
         {items.length ? (
-          <div className="mt-6 grid grid-cols-2 gap-4 md:gap-5 md:grid-cols-3 lg:grid-cols-4">
+          <div className="mt-6 grid grid-cols-2 gap-3 md:gap-5 lg:grid-cols-3">
             {items.map((p) => (
               <div key={p.id} className="flex flex-col">
                 <ApiProductCard product={p as any} />

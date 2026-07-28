@@ -1,5 +1,6 @@
 import { Header } from "@/components/Header"
 import { Footer } from "@/components/Footer"
+import { MobileBottomNav } from "@/components/MobileBottomNav"
 import { getSiteSettings } from "@/lib/site-settings"
 
 /**
@@ -16,10 +17,12 @@ export default async function SiteLayout({ children }: { children: React.ReactNo
   const settings = await getSiteSettings()
 
   return (
-    <div className="min-h-screen flex flex-col">
+    // pb on mobile reserves room so the fixed bottom nav never hides the footer
+    <div className="min-h-screen flex flex-col pb-16 md:pb-0">
       <Header settings={settings} />
       <main className="flex-1">{children}</main>
       <Footer settings={settings} />
+      <MobileBottomNav />
     </div>
   )
 }

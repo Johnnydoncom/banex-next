@@ -30,12 +30,12 @@ export function ApiProductCard({ product }: { product: GenericProduct }) {
           <div className="h-full w-full bg-brand-soft/20" />
         )}
         {product.category && (
-          <span className="absolute left-3 top-3 rounded-full bg-card/90 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wider text-brand-deep backdrop-blur">
+          <span className="absolute left-3 top-3 rounded-full bg-card/90 px-1.5 md:px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wider text-brand-deep backdrop-blur">
             {product.category.name}
           </span>
         )}
         {product.is_authentic_only && (
-          <span className="absolute left-3 top-9 rounded-full bg-emerald-500/90 px-2 py-0.5 text-[10px] font-semibold text-white backdrop-blur">
+          <span className="absolute left-3 top-9 rounded-full bg-emerald-500/90 px-1 md:px-2 py-0.5 text-[10px] font-semibold text-white backdrop-blur">
             Authentic
           </span>
         )}
@@ -44,9 +44,9 @@ export function ApiProductCard({ product }: { product: GenericProduct }) {
 
       <div className="p-3 md:p-4">
         {product.brand && (
-          <p className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">{product.brand}</p>
+          <p className="text-[10px] md:text-[11px] font-medium uppercase tracking-wider text-muted-foreground">{product.brand}</p>
         )}
-        <h3 className="mt-0.5 line-clamp-2 font-display text-sm md:text-base font-semibold text-foreground">
+        <h3 className="mt-0.5 line-clamp-2 font-display text-sm font-semibold text-foreground">
           {product.name}
         </h3>
 
@@ -63,9 +63,9 @@ export function ApiProductCard({ product }: { product: GenericProduct }) {
           )}
         </div>
 
-        <div className="mt-3 flex flex-wrap items-end justify-between gap-x-2 gap-y-1">
+        <div className="mt-3 flex flex-col md:flex-row items-start md:items-end justify-between gap-x-2 gap-y-1">
           <div className="min-w-0">
-            <p className="text-[10px] uppercase tracking-wider text-muted-foreground">Price</p>
+            <p className="hidden md:block text-[10px] uppercase tracking-wider text-muted-foreground">Price</p>
             <p className="font-display text-lg font-bold text-foreground md:text-xl">{formatNaira(product.price)}</p>
           </div>
           {product.location && (

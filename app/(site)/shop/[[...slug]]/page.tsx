@@ -210,7 +210,7 @@ export default async function ShopPage({
                 <p className="mt-2 text-sm text-muted-foreground">Try a different search or widen your filters.</p>
               </div>
             ) : (
-              <div className="grid grid-cols-2 gap-5 lg:grid-cols-3 ">
+              <div className="grid grid-cols-2 gap-3 md:gap-5 lg:grid-cols-3 ">
                 {filteredProducts.map((p: GenericProduct) => (
                   <ApiProductCard key={p.id} product={p as any} />
                 ))}
