@@ -31,9 +31,9 @@ function VerifyContent() {
     // We use the orderId if passed (set in the Paystack callback URL config),
     // otherwise we must find the order by reference from the orders list.
     // The backend verify endpoint takes the order UUID.
-    const id = orderId || reference!
+    const id = reference || orderId;
 
-    userCheckoutVerifyPayment(id)
+    userCheckoutVerifyPayment(id!)
       .then((order) => {
         if (order) {
           setOrderRef(order.reference)

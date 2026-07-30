@@ -506,23 +506,40 @@ export type AdminOrderItem = {
   product_id: string
   seller_id: string
   status: string
+  decline_reason?: string | null
   product_name: string
   unit_price: number
   quantity: number
   line_total: number
+  line_seller_total?: number
+  line_platform_fee?: number
+  settlement_status?: string
+  commission_percent?: number
   weight_kg?: string
   currency: string
   seller_shop_name: string | null
   primary_image_url: string | null
 }
 
+// Backend-driven, context-aware transition. `path` ends in mark-in-process /
+// mark-in-transit / mark-delivered; `label` is already worded for the fulfillment
+// type (e.g. "Mark ready for pickup" instead of "Mark In Transit" for mall pickup).
+export type AdminOrderAction = {
+  key: string
+  label: string
+  method: string
+  path: string
+}
+
 export type AdminOrder = {
   id: string
   reference: string
   status: string
+  status_label?: string
   fulfillment_type?: string
+  available_actions?: AdminOrderAction[]
   user: { id: string; name: string; email: string }
-  summary: { subtotal: number; delivery_fee: number; total: number; currency: string }
+  summary: { subtotal: number; delivery_fee: number; vat_amount?: number; total: number; currency: string }
   item_count: number
   // `items` is only present on the single-order (detail) response.
   items?: AdminOrderItem[]
@@ -692,7 +709,9 @@ export async function updateAdminSettings(data: AdminSettingsUpdate, token: stri
     if (data.admin_notification_emails.length === 0) {
       form.append("admin_notification_emails", "")
     } else {
-      data.admin_notification_emails.forEach((email) => form.append("admin_notification_emails[]", email))
+      // Use indexed keys (admin_notification_emails[0], [1]…) rather than repeated
+      // `[]` — unambiguous and immune to any layer collapsing duplicate keys.
+      data.admin_notification_emails.forEach((email, i) => form.append(`admin_notification_emails[${i}]`, email))
     }
   }
   if (data.manual_payment) {

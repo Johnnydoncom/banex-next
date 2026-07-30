@@ -2,7 +2,7 @@
 
 import { use, useEffect, useState } from "react"
 import Link from "next/link"
-import { ArrowLeft, User, MapPin, Truck, Calendar, ImageOff } from "lucide-react"
+import { ArrowLeft, User, Truck, Calendar, ImageOff, Store, ChevronRight } from "lucide-react"
 import { StatusBadge } from "@/components/StatusBadge"
 import { useAuth } from "@/hooks/use-auth"
 import { fetchAdminOrder, updateAdminOrderStatus, cancelAdminOrder, sellerActionAdminOrder, type AdminOrder } from "@/lib/admin-api"
@@ -100,6 +100,19 @@ export default function AdminOrderDetailPage({ params }: { params: Promise<{ id:
     )
   }
 
+  // Mall-pickup orders are never "in transit" — hide only that one option for them.
+  const isMallPickup = order.fulfillment_type === "mall_pickup"
+
+  // An order can span multiple sellers — collect the distinct sellers from items
+  // so admin can jump straight to a seller's page.
+  const sellers = Array.from(
+    new Map(
+      (order.items ?? [])
+        .filter((i) => i.seller_id)
+        .map((i) => [i.seller_id, { id: i.seller_id, name: i.seller_shop_name || "Unknown seller" }]),
+    ).values(),
+  )
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -117,7 +130,8 @@ export default function AdminOrderDetailPage({ params }: { params: Promise<{ id:
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="process">Mark Processing</SelectItem>
-              <SelectItem value="transit">Mark In Transit</SelectItem>
+              {/* Mall pickup is never "in transit" — hide only this option for pickup orders */}
+              {!isMallPickup && <SelectItem value="transit">Mark In Transit</SelectItem>}
               <SelectItem value="deliver">Mark Delivered</SelectItem>
               <SelectItem value="cancelled">Cancel Order</SelectItem>
             </SelectContent>
@@ -153,7 +167,19 @@ export default function AdminOrderDetailPage({ params }: { params: Promise<{ id:
                   </div>
                   <div className="flex-1 min-w-0">
                     <p className="font-semibold">{item.product_name}</p>
-                    <p className="text-xs text-muted-foreground">Sold by {item.seller_shop_name || "Unknown"}</p>
+                    {item.seller_id ? (
+                      <Link
+                        href={`/admin/users/sellers/${item.seller_id}`}
+                        className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-brand hover:underline"
+                      >
+                        <Store className="h-3 w-3" /> Sold by {item.seller_shop_name || "Unknown"}
+                      </Link>
+                    ) : (
+                      <p className="text-xs text-muted-foreground">Sold by {item.seller_shop_name || "Unknown"}</p>
+                    )}
+                    {item.decline_reason && (
+                      <p className="mt-1 text-xs text-rose-600">Declined: {item.decline_reason}</p>
+                    )}
                     <div className="mt-1 text-sm font-medium">₦{item.unit_price?.toLocaleString()} × {item.quantity}</div>
                     {/* Per-item accept/decline for seller */}
                     {(item.status === "paid" || item.status === "pending") && (
@@ -218,6 +244,33 @@ export default function AdminOrderDetailPage({ params }: { params: Promise<{ id:
               <Link href={`/admin/users/customers`} className="text-brand hover:underline text-xs font-medium mt-2 block">View all customers</Link>
             </div>
           </div>
+
+          {/* Sellers / Vendors in this order */}
+          {sellers.length > 0 && (
+            <div className="rounded-2xl border border-border bg-card p-6">
+              <h2 className="font-display text-base font-semibold mb-4 flex items-center gap-2">
+                <Store className="h-4 w-4" /> {sellers.length > 1 ? "Sellers" : "Seller"}
+              </h2>
+              <ul className="space-y-2">
+                {sellers.map((s) => (
+                  <li key={s.id}>
+                    <Link
+                      href={`/admin/users/sellers/${s.id}`}
+                      className="group flex items-center justify-between rounded-xl border border-border bg-surface/40 px-3 py-2.5 text-sm transition-colors hover:border-brand hover:bg-surface"
+                    >
+                      <span className="flex items-center gap-2 font-medium">
+                        <span className="flex h-7 w-7 items-center justify-center rounded-full bg-brand/10 text-brand">
+                          <Store className="h-3.5 w-3.5" />
+                        </span>
+                        {s.name}
+                      </span>
+                      <ChevronRight className="h-4 w-4 text-muted-foreground group-hover:text-brand" />
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
 
           <div className="rounded-2xl border border-border bg-card p-6">
              <h2 className="font-display text-base font-semibold mb-4 flex items-center gap-2"><Truck className="h-4 w-4" /> Status Timeline</h2>

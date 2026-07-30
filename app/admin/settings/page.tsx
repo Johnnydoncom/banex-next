@@ -84,12 +84,30 @@ export default function AdminSettingsPage() {
   }
 
   const addNotifyEmail = () => {
-    const email = newEmail.trim().toLowerCase()
-    if (!email) return
-    if (!EMAIL_RE.test(email)) return toast.error("Enter a valid email address")
-    if (notifyEmails.includes(email)) return toast.error("That email is already added")
-    setNotifyEmails((prev) => [...prev, email])
-    setNewEmail("")
+    // Accept one OR many at once — split on commas, semicolons or whitespace so
+    // pasting/typing "a@x.com, b@y.com" adds both instead of failing as one.
+    const candidates = newEmail
+      .split(/[,;\s]+/)
+      .map((e) => e.trim().toLowerCase())
+      .filter(Boolean)
+    if (candidates.length === 0) return
+
+    const valid: string[] = []
+    const invalid: string[] = []
+    const dupes: string[] = []
+    for (const email of candidates) {
+      if (!EMAIL_RE.test(email)) invalid.push(email)
+      else if (notifyEmails.includes(email) || valid.includes(email)) dupes.push(email)
+      else valid.push(email)
+    }
+
+    if (valid.length) setNotifyEmails((prev) => [...prev, ...valid])
+    // Keep any addresses that failed validation in the box so they can be fixed.
+    setNewEmail(invalid.join(", "))
+
+    if (invalid.length) toast.error(`Not a valid email: ${invalid.join(", ")}`)
+    else if (dupes.length && !valid.length) toast.error("That email is already added")
+    if (valid.length > 1) toast.success(`Added ${valid.length} emails`)
   }
 
   const removeNotifyEmail = (email: string) =>
@@ -270,22 +288,27 @@ export default function AdminSettingsPage() {
               </div>
               <div className="mt-3 flex max-w-md gap-2">
                 <Input
-                  type="email"
+                  type="text"
+                  inputMode="email"
                   value={newEmail}
                   onChange={(e) => setNewEmail(e.target.value)}
                   onKeyDown={(e) => {
-                    if (e.key === "Enter") {
+                    if (e.key === "Enter" || e.key === ",") {
                       e.preventDefault()
                       addNotifyEmail()
                     }
                   }}
-                  placeholder="ops@banexmall.com"
+                  onBlur={() => newEmail.trim() && addNotifyEmail()}
+                  placeholder="ops@banexmall.com, alerts@banexmall.com"
                   className="rounded-xl px-4 py-2.5 focus-visible:border-brand"
                 />
                 <Button type="button" variant="outline" onClick={addNotifyEmail} className="h-auto gap-1.5 rounded-xl px-4 py-2.5">
                   <Plus className="h-4 w-4" /> Add
                 </Button>
               </div>
+              <p className="mt-2 text-xs text-muted-foreground">
+                Add several at once — separate with commas. Press Enter or comma to add.
+              </p>
             </section>
 
             {/* Manual payment (bank transfer) */}

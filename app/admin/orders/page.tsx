@@ -89,7 +89,16 @@ export default function AdminOrdersPage() {
       key: "status",
       label: "Status",
       sortable: true,
-      render: (o) => <StatusBadge status={o.status} />,
+      render: (o) => (
+        <div className="space-y-1">
+          <StatusBadge status={o.status} />
+          {o.fulfillment_type && (
+            <p className="text-[11px] capitalize text-muted-foreground">
+              {o.fulfillment_type.replace(/_/g, " ")}
+            </p>
+          )}
+        </div>
+      ),
     },
     {
       key: "actions",

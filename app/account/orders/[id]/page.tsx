@@ -32,19 +32,19 @@ const PENDING_PAYMENT_STATUSES = ["pending", "unpaid", "awaiting_payment", "paym
 
 function StatusBadge({ status }: { status: string }) {
   const map: Record<string, { icon: React.ReactNode; className: string; label: string }> = {
-    paid:             { icon: <CheckCircle2 className="h-3.5 w-3.5" />, className: "bg-emerald-500/15 text-emerald-700 border border-emerald-200", label: "Paid" },
-    completed:        { icon: <CheckCircle2 className="h-3.5 w-3.5" />, className: "bg-emerald-500/15 text-emerald-700 border border-emerald-200", label: "Completed" },
-    delivered:        { icon: <CheckCircle2 className="h-3.5 w-3.5" />, className: "bg-emerald-500/15 text-emerald-700 border border-emerald-200", label: "Delivered" },
-    accepted:         { icon: <CheckCircle2 className="h-3.5 w-3.5" />, className: "bg-teal-500/15 text-teal-700 border border-teal-200", label: "Accepted" },
-    processing:       { icon: <RefreshCw className="h-3.5 w-3.5" />, className: "bg-blue-500/15 text-blue-700 border border-blue-200", label: "Processing" },
-    shipped:          { icon: <Truck className="h-3.5 w-3.5" />, className: "bg-blue-500/15 text-blue-700 border border-blue-200", label: "Shipped" },
-    pending:          { icon: <Clock className="h-3.5 w-3.5" />, className: "bg-amber-500/15 text-amber-700 border border-amber-200", label: "Pending Payment" },
-    unpaid:           { icon: <Clock className="h-3.5 w-3.5" />, className: "bg-amber-500/15 text-amber-700 border border-amber-200", label: "Unpaid" },
-    payment_pending:  { icon: <Clock className="h-3.5 w-3.5" />, className: "bg-amber-500/15 text-amber-700 border border-amber-200", label: "Awaiting Payment" },
-    payment_failed:   { icon: <XCircle className="h-3.5 w-3.5" />, className: "bg-rose-500/15 text-rose-700 border border-rose-200", label: "Payment Failed" },
-    failed:           { icon: <XCircle className="h-3.5 w-3.5" />, className: "bg-rose-500/15 text-rose-700 border border-rose-200", label: "Payment Failed" },
-    cancelled:        { icon: <XCircle className="h-3.5 w-3.5" />, className: "bg-slate-500/15 text-slate-700 border border-slate-200", label: "Cancelled" },
-    refunded:         { icon: <RefreshCw className="h-3.5 w-3.5" />, className: "bg-slate-500/15 text-slate-700 border border-slate-200", label: "Refunded" },
+    paid: { icon: <CheckCircle2 className="h-3.5 w-3.5" />, className: "bg-emerald-500/15 text-emerald-700 border border-emerald-200", label: "Paid" },
+    completed: { icon: <CheckCircle2 className="h-3.5 w-3.5" />, className: "bg-emerald-500/15 text-emerald-700 border border-emerald-200", label: "Completed" },
+    delivered: { icon: <CheckCircle2 className="h-3.5 w-3.5" />, className: "bg-emerald-500/15 text-emerald-700 border border-emerald-200", label: "Delivered" },
+    accepted: { icon: <CheckCircle2 className="h-3.5 w-3.5" />, className: "bg-teal-500/15 text-teal-700 border border-teal-200", label: "Accepted" },
+    processing: { icon: <RefreshCw className="h-3.5 w-3.5" />, className: "bg-blue-500/15 text-blue-700 border border-blue-200", label: "Processing" },
+    shipped: { icon: <Truck className="h-3.5 w-3.5" />, className: "bg-blue-500/15 text-blue-700 border border-blue-200", label: "Shipped" },
+    pending: { icon: <Clock className="h-3.5 w-3.5" />, className: "bg-amber-500/15 text-amber-700 border border-amber-200", label: "Pending Payment" },
+    unpaid: { icon: <Clock className="h-3.5 w-3.5" />, className: "bg-amber-500/15 text-amber-700 border border-amber-200", label: "Unpaid" },
+    payment_pending: { icon: <Clock className="h-3.5 w-3.5" />, className: "bg-amber-500/15 text-amber-700 border border-amber-200", label: "Awaiting Payment" },
+    payment_failed: { icon: <XCircle className="h-3.5 w-3.5" />, className: "bg-rose-500/15 text-rose-700 border border-rose-200", label: "Payment Failed" },
+    failed: { icon: <XCircle className="h-3.5 w-3.5" />, className: "bg-rose-500/15 text-rose-700 border border-rose-200", label: "Payment Failed" },
+    cancelled: { icon: <XCircle className="h-3.5 w-3.5" />, className: "bg-slate-500/15 text-slate-700 border border-slate-200", label: "Cancelled" },
+    refunded: { icon: <RefreshCw className="h-3.5 w-3.5" />, className: "bg-slate-500/15 text-slate-700 border border-slate-200", label: "Refunded" },
   }
   // Fallback: any unknown status (amber = potentially unpaid) with the raw status as label
   const config = map[status] ?? { icon: <Clock className="h-3.5 w-3.5" />, className: "bg-amber-500/15 text-amber-700 border border-amber-200", label: status.replace(/_/g, " ") }
@@ -110,7 +110,7 @@ function PaymentSection({
         window.location.href = data.payment_intent.authorization_url
       } else {
         setState("verifying")
-        const updated = await userCheckoutVerifyPayment(order.id)
+        const updated = await userCheckoutVerifyPayment(order.reference)
         if (updated) {
           setState("success")
           onPaymentSuccess(updated)
@@ -186,11 +186,10 @@ function PaymentSection({
                   type="button"
                   onClick={handlePaystackPay}
                   disabled={state === "loading" || state === "redirecting" || state === "verifying" || state === "success"}
-                  className={`relative h-auto min-w-[160px] gap-2 overflow-hidden rounded-xl px-6 py-3 text-sm font-bold shadow-lg ${
-                    state === "success"
+                  className={`relative h-auto min-w-[160px] gap-2 overflow-hidden rounded-xl px-6 py-3 text-sm font-bold shadow-lg ${state === "success"
                       ? "bg-emerald-500 text-white"
                       : "bg-gradient-to-r from-amber-500 to-orange-500 text-white hover:from-amber-600 hover:to-orange-600 hover:shadow-amber-500/30 active:scale-95"
-                  }`}
+                    }`}
                 >
                   {state === "loading" && <Loader2 className="h-4 w-4 animate-spin" />}
                   {state === "redirecting" && <Loader2 className="h-4 w-4 animate-spin" />}
@@ -390,9 +389,8 @@ export default function OrderDetailsPage() {
                     Sold by {it.seller_shop_name || "Unknown Seller"}
                   </p>
                   {it.status && (
-                    <span className={`mt-1 inline-flex w-fit rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide ${
-                      it.status === "paid" ? "bg-emerald-500/10 text-emerald-700" : "bg-amber-500/10 text-amber-700"
-                    }`}>
+                    <span className={`mt-1 inline-flex w-fit rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide ${it.status === "paid" ? "bg-emerald-500/10 text-emerald-700" : "bg-amber-500/10 text-amber-700"
+                      }`}>
                       {it.status}
                     </span>
                   )}

@@ -288,8 +288,8 @@ export async function userCheckoutPlaceOrder(
   return res.data
 }
 
-export async function userCheckoutVerifyPayment(orderId: string) {
-  const res = await apiPost<ApiEnvelope<{ order: OrderData }>>(`${PROXY_BASE}/user/orders/${orderId}/payment/verify`, {})
+export async function userCheckoutVerifyPayment(orderReference: string) {
+  const res = await apiPost<ApiEnvelope<{ order: OrderData }>>(`${PROXY_BASE}/user/orders/${orderReference}/payment/verify`, {})
   return res.data?.order
 }
 
