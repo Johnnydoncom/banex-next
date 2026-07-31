@@ -2,12 +2,14 @@
 
 import Link from "next/link"
 import { useEffect, useState } from "react"
-import { Package, Search, ChevronLeft, ChevronRight } from "lucide-react"
+import { Package, Search, ChevronLeft, ChevronRight, Truck } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { useAuth } from "@/hooks/use-auth"
 import { userFetchOrders, type OrderData, type OrderPagination } from "@/lib/user-api"
 import { formatNaira } from "@/lib/products"
+import { OrderTracker } from "@/components/OrderTracker"
 
 // The API returns created_at as { item: "ISO string" } — handle both shapes
 function parseDate(raw: string | { item: string } | undefined): string {
@@ -27,6 +29,7 @@ export default function OrdersPage() {
   const [q, setQ] = useState("")
   const [page, setPage] = useState(1)
   const [loading, setLoading] = useState(true)
+  const [trackingOrderRef, setTrackingOrderRef] = useState<string | null>(null)
 
   useEffect(() => {
     if (!user) return
@@ -131,9 +134,19 @@ export default function OrdersPage() {
                     {total !== undefined && (
                       <p className="text-sm font-bold">{formatNaira(total)}</p>
                     )}
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setTrackingOrderRef(o.reference)}
+                      className="h-7 gap-1.5 rounded-full border-brand/30 bg-brand-soft/20 text-brand-deep hover:bg-brand hover:text-primary-foreground px-3 text-xs font-semibold"
+                    >
+                      <Truck className="h-3.5 w-3.5" />
+                      Track
+                    </Button>
                     <Link
                       href={`/account/orders/${o.id}`}
-                      className="rounded-full border border-border bg-card px-3 py-1.5 text-xs font-semibold hover:border-brand hover:text-brand"
+                      className="rounded-full border border-border bg-card px-3 py-1 text-xs font-semibold hover:border-brand hover:text-brand"
                     >
                       View details
                     </Link>
@@ -206,6 +219,19 @@ export default function OrdersPage() {
           </Button>
         </div>
       )}
+      {/* Tracking Modal Dialog */}
+      <Dialog open={!!trackingOrderRef} onOpenChange={(open) => !open && setTrackingOrderRef(null)}>
+        <DialogContent className="max-w-3xl overflow-hidden p-0 rounded-3xl border-border bg-card">
+          <DialogHeader className="sr-only">
+            <DialogTitle>Order Tracking</DialogTitle>
+          </DialogHeader>
+          {trackingOrderRef && (
+            <div className="max-h-[85vh] overflow-y-auto p-4 sm:p-6">
+              <OrderTracker reference={trackingOrderRef} />
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

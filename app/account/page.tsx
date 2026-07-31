@@ -2,7 +2,8 @@
 
 import Link from "next/link"
 import { useEffect, useState } from "react"
-import { Package, Heart, MapPin, Wallet, ArrowRight, ShoppingBag, ChevronRight, Clock } from "lucide-react"
+import { Package, Heart, MapPin, Wallet, ArrowRight, ShoppingBag, ChevronRight, Clock, Truck } from "lucide-react"
+import { OrderTracker } from "@/components/OrderTracker"
 import { useAuth } from "@/hooks/use-auth"
 import { StatCard } from "@/components/DashboardLayout"
 import { StatusBadge } from "@/components/StatusBadge"
@@ -124,6 +125,33 @@ export default function AccountOverview() {
           </>
         )}
       </section>
+
+      {/* Active Order Tracking Widget */}
+      {(() => {
+        const activeOrder = orders.find(
+          (o) => !["delivered", "cancelled", "refunded"].includes(o.status.toLowerCase())
+        )
+        if (!activeOrder) return null
+        return (
+          <section className="space-y-3">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-brand/10">
+                  <Truck className="h-4 w-4 text-brand" />
+                </span>
+                <h2 className="font-display text-base font-bold">Active Order Live Tracking</h2>
+              </div>
+              <Link
+                href={`/account/orders/${activeOrder.id}`}
+                className="flex items-center gap-1 text-xs font-semibold text-brand hover:underline"
+              >
+                Full Details <ArrowRight className="h-3 w-3" />
+              </Link>
+            </div>
+            <OrderTracker reference={activeOrder.order_number} showItems={false} />
+          </section>
+        )
+      })()}
 
       {/* Vendor CTA */}
       {user && isVendor ? (

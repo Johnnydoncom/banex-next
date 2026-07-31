@@ -17,6 +17,7 @@ import {
 } from "@/lib/user-api"
 import { formatNaira } from "@/lib/products"
 import { BankTransferUploadScreen } from "@/components/BankTransferUpload"
+import { OrderTracker } from "@/components/OrderTracker"
 
 function parseDate(raw: string | { item: string } | undefined): string {
   if (!raw) return ""
@@ -364,6 +365,11 @@ export default function OrderDetailsPage() {
           }}
         />
       )}
+
+      {/* ── Live Order Tracking Stepper ── */}
+      <div className="print:hidden">
+        <OrderTracker reference={order.reference || order.id} showItems={false} />
+      </div>
 
       <div className="grid gap-5 lg:grid-cols-[1fr_320px] print:grid-cols-1">
         {/* Items */}

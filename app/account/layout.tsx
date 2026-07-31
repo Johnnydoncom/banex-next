@@ -1,6 +1,6 @@
 "use client"
 
-import { LayoutDashboard, Package, Heart, MapPin, UserCircle, Store, Settings } from "lucide-react"
+import { LayoutDashboard, Package, Truck, Heart, MapPin, UserCircle, Store, Settings } from "lucide-react"
 import { DashboardLayout } from "@/components/DashboardLayout"
 import { useAuth } from "@/hooks/use-auth"
 import { useRoles } from "@/hooks/use-roles"
@@ -18,6 +18,7 @@ export default function AccountLayout({ children }: { children: React.ReactNode 
   const navItems = [
     { to: "/account", label: "Overview", icon: LayoutDashboard, exact: true },
     { to: "/account/orders", label: "Orders", icon: Package },
+    { to: "/account/track", label: "Track Order", icon: Truck },
     { to: "/account/wishlist", label: "Wishlist", icon: Heart },
     { to: "/account/addresses", label: "Addresses", icon: MapPin },
     { to: "/account/profile", label: "Profile", icon: UserCircle },
