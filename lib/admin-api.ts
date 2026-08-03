@@ -222,6 +222,7 @@ export type AdminProduct = {
   is_nationwide_delivery: boolean
   is_authentic_only: boolean
   in_stock: boolean
+  stock_quantity: number
   delivery_estimate: string | null
   specifications: string[]
   rating_average: number | null

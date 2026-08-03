@@ -132,6 +132,7 @@ export default function AdminEditProductPage({
     brand: "",
     description: "",
     price: "",
+    stock_quantity: "",
     category_id: "",
     seller_id: "",
     location: "Lagos",
@@ -209,6 +210,7 @@ export default function AdminEditProductPage({
           brand: p.brand ?? "",
           description: p.description ?? "",
           price: p.price?.toString() ?? "",
+          stock_quantity: p.stock_quantity?.toString() ?? "",
           category_id: p.category_id ?? "",
           seller_id: p.seller_id ?? "",
           location: p.location ?? "Lagos",
@@ -306,6 +308,7 @@ export default function AdminEditProductPage({
       fd.append("brand", form.brand)
       fd.append("description", form.description)
       fd.append("price", form.price)
+      if (form.stock_quantity !== "") fd.append("stock_quantity", form.stock_quantity)
       fd.append("category_id", form.category_id)
       fd.append("seller_id", form.seller_id)
       fd.append("location", form.location)
@@ -813,6 +816,20 @@ export default function AdminEditProductPage({
                   min="0"
                   className="rounded-xl px-4 py-2.5 focus-visible:border-brand focus-visible:ring-brand"
                 />
+              </div>
+              <div>
+                <Label className="mb-1.5 block text-xs text-muted-foreground">
+                  Stock Quantity
+                </Label>
+                <Input
+                  type="number"
+                  value={form.stock_quantity}
+                  onChange={(e) => update("stock_quantity", e.target.value)}
+                  placeholder="50"
+                  min="0"
+                  className="rounded-xl px-4 py-2.5 focus-visible:border-brand focus-visible:ring-brand"
+                />
+                <p className="mt-1 text-[11px] text-muted-foreground">Manage inventory on behalf of the seller.</p>
               </div>
               <div>
                 <Label className="mb-1.5 block text-xs text-muted-foreground">

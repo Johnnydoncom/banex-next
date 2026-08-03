@@ -299,9 +299,16 @@ export default function OrderDetailsPage() {
   const subtotal = order.summary?.subtotal ?? order.lines_summary?.subtotal ?? 0
   const deliveryFee = order.summary?.delivery_fee ?? order.shipping?.selected_rate?.fee ?? 0
   const total = order.summary?.total ?? (subtotal + deliveryFee)
+  // A bank-transfer receipt that has been submitted and is awaiting (or has passed)
+  // admin review. Once a receipt is under review, the order is no longer "payment
+  // required" — we replace the prompt with a calm "under review" notice.
+  const proofStatus = (order.payment?.proof_status ?? "").toLowerCase()
+  const proofUnderReview = proofStatus === "pending_review" || proofStatus === "approved"
   const isUnpaid =
     order.payment?.status !== "paid" &&
+    !proofUnderReview &&
     PENDING_PAYMENT_STATUSES.includes((order.status ?? "").toLowerCase())
+  const paymentUnderReview = order.payment?.status !== "paid" && proofUnderReview
 
   return (
     <div className="space-y-5 pb-20 print:pb-0 print:space-y-4">
@@ -354,7 +361,7 @@ export default function OrderDetailsPage() {
         </div>
       </div>
 
-      {/* ── Payment Section (only for unpaid orders) ── */}
+      {/* ── Payment Section (only for orders that still need payment) ── */}
       {isUnpaid && (
         <PaymentSection
           order={order}
@@ -364,6 +371,22 @@ export default function OrderDetailsPage() {
             setTimeout(() => loadOrder(order.id), 1500)
           }}
         />
+      )}
+
+      {/* ── Payment under review (receipt submitted, awaiting admin confirmation) ── */}
+      {paymentUnderReview && (
+        <div className="flex items-start gap-3 rounded-2xl border border-blue-300 bg-gradient-to-br from-blue-50 to-sky-50 p-5 dark:border-blue-800/50 dark:from-blue-950/30 dark:to-sky-950/30 print:hidden">
+          <div className="flex h-9 w-9 flex-none items-center justify-center rounded-full bg-blue-500/15">
+            <Clock className="h-[18px] w-[18px] text-blue-600 dark:text-blue-400" />
+          </div>
+          <div>
+            <h3 className="font-display font-bold text-blue-900 dark:text-blue-300">Payment under review</h3>
+            <p className="mt-1 text-sm text-blue-800/80 dark:text-blue-400/80">
+              We&apos;ve received your payment receipt and it&apos;s being confirmed by our team. Your order will
+              proceed automatically once payment is verified — no further action is needed.
+            </p>
+          </div>
+        </div>
       )}
 
       {/* ── Live Order Tracking Stepper ── */}

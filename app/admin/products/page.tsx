@@ -359,6 +359,25 @@ export default function AdminProductsPage() {
       ),
     },
     {
+      key: "stock",
+      label: "Stock",
+      sortable: true,
+      render: (p) => (
+        <span
+          className={`text-sm font-semibold ${
+            p.stock_quantity <= 0
+              ? "text-rose-600"
+              : p.stock_quantity <= 5
+                ? "text-amber-600"
+                : "text-foreground"
+          }`}
+        >
+          {p.stock_quantity ?? 0}
+          {p.stock_quantity <= 0 && <span className="ml-1 text-[10px] font-medium">(out)</span>}
+        </span>
+      ),
+    },
+    {
       key: "status",
       label: "Status",
       sortable: true,

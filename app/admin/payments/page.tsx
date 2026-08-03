@@ -11,7 +11,6 @@ import {
   fetchAdminPayments,
   approveAdminPayment,
   rejectAdminPayment,
-  downloadAdminPaymentProof,
   type AdminPayment,
 } from "@/lib/admin-api"
 import { toast } from "sonner"
@@ -85,18 +84,11 @@ export default function AdminPaymentsPage() {
     }
   }
 
-  const handleDownloadProof = async (payment: AdminPayment) => {
-    if (!token) return
-    try {
-      if (payment.proof_download_url) {
-        window.open(payment.proof_download_url, "_blank")
-        return
-      }
-      const res = await downloadAdminPaymentProof(payment.id, token)
-      if (res.data?.url) window.open(res.data.url, "_blank")
-    } catch (err: any) {
-      toast.error("Could not retrieve proof of payment")
-    }
+  const handleDownloadProof = (payment: AdminPayment) => {
+    // The backend's proof_download_url (…/admin/payments/{id}/manual/proof) requires
+    // the admin bearer token — opening it directly 401s. Route it through our proxy,
+    // which injects the token from the session cookie and streams the file back.
+    window.open(`/api/proxy/admin/payments/${payment.id}/manual/proof`, "_blank")
   }
 
   const columns: Column<AdminPayment>[] = [

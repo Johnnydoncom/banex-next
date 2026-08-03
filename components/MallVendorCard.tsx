@@ -43,9 +43,8 @@ export function MallVendorCard({
         )}
 
         <span
-          className={`absolute right-3 top-3 inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-semibold backdrop-blur ${
-            vendor.is_open ? "bg-emerald-500/90 text-white" : "bg-card/90 text-muted-foreground"
-          }`}
+          className={`absolute right-3 top-3 inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-semibold backdrop-blur ${vendor.is_open ? "bg-emerald-500/90 text-white" : "bg-card/90 text-muted-foreground"
+            }`}
         >
           <span
             className={`h-1.5 w-1.5 rounded-full ${vendor.is_open ? "bg-white" : "bg-muted-foreground"}`}
@@ -68,11 +67,9 @@ export function MallVendorCard({
           {vendor.rating_average != null ? vendor.rating_average.toFixed(1) : "New"}
           <span className="text-muted-foreground">({vendor.reviews_count})</span>
         </span>
-        {vendor.location && (
-          <span className="inline-flex items-center gap-1 text-muted-foreground">
-            <MapPin className="h-3 w-3 text-brand" /> {vendor.location}
-          </span>
-        )}
+        <span className="inline-flex items-center gap-1 text-muted-foreground">
+          <MapPin className="h-3 w-3 text-brand" /> Banex Mall, Lekki, Lagos
+        </span>
       </div>
 
       {/* Delivery row */}

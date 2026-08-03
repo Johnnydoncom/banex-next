@@ -47,13 +47,15 @@ export default function AdminOrderDetailPage({ params }: { params: Promise<{ id:
         setOrder(res.data?.order ?? null)
         toast.success("Order marked as processing")
       } else if (newStatus === "transit") {
+        const mp = order.fulfillment_type === "mall_pickup"
         const res = await updateAdminOrderStatus(id, "transit", token)
         setOrder(res.data?.order ?? null)
-        toast.success("Order marked as in transit")
+        toast.success(mp ? "Order marked ready for pickup" : "Order marked as in transit")
       } else if (newStatus === "deliver") {
+        const mp = order.fulfillment_type === "mall_pickup"
         const res = await updateAdminOrderStatus(id, "deliver", token)
         setOrder(res.data?.order ?? null)
-        toast.success("Order marked as delivered")
+        toast.success(mp ? "Order marked as picked up" : "Order marked as delivered")
       }
     } catch (err: any) {
       toast.error(err.message || "Failed to update status")
@@ -100,8 +102,12 @@ export default function AdminOrderDetailPage({ params }: { params: Promise<{ id:
     )
   }
 
-  // Mall-pickup orders are never "in transit" — hide only that one option for them.
+  // For mall pickup the "transit" step means "ready for pickup" and delivered means
+  // "picked up" — the backend REQUIRES this step (an order must be marked ready before
+  // it can be marked picked up), so the option must be present for pickup orders too.
   const isMallPickup = order.fulfillment_type === "mall_pickup"
+  const transitLabel = isMallPickup ? "Mark Ready for Pickup" : "Mark In Transit"
+  const deliverLabel = isMallPickup ? "Mark Picked Up" : "Mark Delivered"
 
   // An order can span multiple sellers — collect the distinct sellers from items
   // so admin can jump straight to a seller's page.
@@ -130,9 +136,10 @@ export default function AdminOrderDetailPage({ params }: { params: Promise<{ id:
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="process">Mark Processing</SelectItem>
-              {/* Mall pickup is never "in transit" — hide only this option for pickup orders */}
-              {!isMallPickup && <SelectItem value="transit">Mark In Transit</SelectItem>}
-              <SelectItem value="deliver">Mark Delivered</SelectItem>
+              {/* Present for BOTH delivery and mall pickup — pickup requires this
+                  "ready for pickup" step before it can be marked picked up. */}
+              <SelectItem value="transit">{transitLabel}</SelectItem>
+              <SelectItem value="deliver">{deliverLabel}</SelectItem>
               <SelectItem value="cancelled">Cancel Order</SelectItem>
             </SelectContent>
           </Select>

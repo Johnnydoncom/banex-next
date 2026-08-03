@@ -57,7 +57,21 @@ async function handleProxy(req: NextRequest, { params }: { params: Promise<{ pat
     }
 
     const response = await fetch(targetUrl, fetchOptions)
-    
+
+    const upstreamType = response.headers.get("content-type") || ""
+
+    // Non-JSON responses (file downloads: payment proofs, receipts, images/PDFs)
+    // must be streamed through byte-for-byte — JSON-parsing them corrupts binary.
+    if (!upstreamType.includes("application/json") && !upstreamType.includes("text/")) {
+      const buffer = await response.arrayBuffer()
+      const passHeaders = new Headers()
+      passHeaders.set("Content-Type", upstreamType || "application/octet-stream")
+      const disposition = response.headers.get("content-disposition")
+      if (disposition) passHeaders.set("Content-Disposition", disposition)
+      passHeaders.set("Cache-Control", "no-store, no-cache, must-revalidate")
+      return new NextResponse(buffer, { status: response.status, headers: passHeaders })
+    }
+
     // We get the content as text so we can parse it to JSON safely
     const textData = await response.text()
     let data = null
