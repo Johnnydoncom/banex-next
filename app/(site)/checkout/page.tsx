@@ -383,13 +383,13 @@ export default function CheckoutPage() {
                           <span className="mt-2 text-[11px] font-medium text-foreground">{addr.phone}</span>
                         </button>
                       ))}
-                      <Button variant="ghost" type="button"
+                      <button type="button"
                         onClick={() => setShowNewAddress(true)}
                         className="flex flex-col items-center justify-center gap-2 rounded-xl border border-dashed border-border p-4 text-muted-foreground hover:border-brand hover:text-brand"
                       >
                         <Plus className="h-5 w-5" />
                         <span className="text-sm font-medium">Add New Address</span>
-                      </Button>
+                      </button>
                     </div>
                   ) : (
                     <div className="grid gap-3 sm:grid-cols-2">
