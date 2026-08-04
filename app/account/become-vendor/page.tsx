@@ -28,7 +28,7 @@ export default function BecomeVendorPage() {
     phone: "",
     category_id: "",
     description: "",
-    location: "",
+    location: "Banex Mall, Lekki, Lagos",
     floor: "",
     shop_no: "",
     operating_hours: "",
@@ -97,7 +97,7 @@ export default function BecomeVendorPage() {
     if (!form.phone.trim()) return toast.error("Phone number is required")
     if (!form.email.trim()) return toast.error("Email is required")
     if (!form.category_id) return toast.error("Please select a business category")
-    if (!form.location) return toast.error("Please select your shop location")
+    // if (!form.location) return toast.error("Please select your shop location")
     if (!form.floor.trim()) return toast.error("Floor is required")
     if (!form.shop_no.trim()) return toast.error("Shop number is required")
 
@@ -109,7 +109,7 @@ export default function BecomeVendorPage() {
       formData.append("email", form.email)
       formData.append("phone", form.phone)
       formData.append("category_id", form.category_id)
-      formData.append("location", form.location)
+      formData.append("location", "Banex Mall, Lekki, Lagos")
       formData.append("floor", form.floor)
       formData.append("shop_no", form.shop_no)
       if (form.description) formData.append("description", form.description)
@@ -155,63 +155,63 @@ export default function BecomeVendorPage() {
     const isApproved = existingApp.status === "approved"
     const isPending = existingApp.status === "pending"
     const isRejected = existingApp.status === "rejected"
-    
+
     return (
       <div className="mx-auto max-w-2xl pb-12">
         <div className="rounded-2xl border border-border bg-card p-8 text-center space-y-6">
           <div className="relative mx-auto flex h-24 w-24 items-center justify-center">
             {isApproved ? (
               <div className="rounded-full bg-emerald-500/15 p-4">
-                 <CheckCircle2 className="h-12 w-12 text-emerald-500" />
+                <CheckCircle2 className="h-12 w-12 text-emerald-500" />
               </div>
             ) : isPending ? (
               <div className="rounded-full bg-amber-500/15 p-4">
-                 <Clock className="h-12 w-12 text-amber-500" />
+                <Clock className="h-12 w-12 text-amber-500" />
               </div>
             ) : isRejected ? (
               <div className="rounded-full bg-rose-500/15 p-4">
-                 <X className="h-12 w-12 text-rose-500" />
+                <X className="h-12 w-12 text-rose-500" />
               </div>
             ) : (
               <div className="rounded-full bg-brand/15 p-4">
-                 <Store className="h-12 w-12 text-brand" />
+                <Store className="h-12 w-12 text-brand" />
               </div>
             )}
           </div>
-          
+
           <div>
             <h2 className="font-display text-2xl font-bold">
               {isApproved ? "Application Approved!" : isPending ? "Application Pending" : isRejected ? "Application Rejected" : `Application Status: ${existingApp.status}`}
             </h2>
             <p className="mt-2 text-sm text-muted-foreground leading-relaxed max-w-md mx-auto">
-              {isApproved ? "Congratulations! Your seller application has been approved. You can now access the vendor dashboard." : 
-               isPending ? "Your application is currently under review. We will notify you once a decision has been made." : 
-               isRejected ? "Unfortunately, your application has been rejected at this time." : "Your application has been received."}
+              {isApproved ? "Congratulations! Your seller application has been approved. You can now access the vendor dashboard." :
+                isPending ? "Your application is currently under review. We will notify you once a decision has been made." :
+                  isRejected ? "Unfortunately, your application has been rejected at this time." : "Your application has been received."}
             </p>
           </div>
 
           <div className="mx-auto max-w-sm rounded-xl border border-border bg-surface p-4 text-left">
-             <h3 className="text-sm font-semibold mb-3">Application Details</h3>
-             <div className="space-y-2 text-sm">
-                <div className="flex justify-between">
-                   <span className="text-muted-foreground">Shop Name</span>
-                   <span className="font-medium">{existingApp.shop_name}</span>
+            <h3 className="text-sm font-semibold mb-3">Application Details</h3>
+            <div className="space-y-2 text-sm">
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Shop Name</span>
+                <span className="font-medium">{existingApp.shop_name}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Location</span>
+                <span className="font-medium">{existingApp.store_location || existingApp.location}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Status</span>
+                <span className="font-medium capitalize">{existingApp.status}</span>
+              </div>
+              {existingApp.rejection_reason && (
+                <div className="pt-2 mt-2 border-t border-border">
+                  <span className="text-muted-foreground block mb-1">Reason:</span>
+                  <span className="font-medium text-rose-500">{existingApp.rejection_reason}</span>
                 </div>
-                <div className="flex justify-between">
-                   <span className="text-muted-foreground">Location</span>
-                   <span className="font-medium">{existingApp.store_location || existingApp.location}</span>
-                </div>
-                <div className="flex justify-between">
-                   <span className="text-muted-foreground">Status</span>
-                   <span className="font-medium capitalize">{existingApp.status}</span>
-                </div>
-                {existingApp.rejection_reason && (
-                  <div className="pt-2 mt-2 border-t border-border">
-                     <span className="text-muted-foreground block mb-1">Reason:</span>
-                     <span className="font-medium text-rose-500">{existingApp.rejection_reason}</span>
-                  </div>
-                )}
-             </div>
+              )}
+            </div>
           </div>
         </div>
       </div>
@@ -382,10 +382,8 @@ export default function BecomeVendorPage() {
               <MapPin className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
               <Input
                 type="text"
-                required
                 value={form.location}
-                onChange={(e) => update("location", e.target.value)}
-                placeholder="e.g. Plot 10"
+                readOnly
                 className="w-full rounded-xl border border-border bg-background pl-9 pr-4 py-2.5 text-sm focus:border-brand focus:outline-none focus:ring-1 focus:ring-brand"
               />
             </div>
