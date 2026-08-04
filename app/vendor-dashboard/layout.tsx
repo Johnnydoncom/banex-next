@@ -7,7 +7,7 @@ import { useRoles } from "@/hooks/use-roles"
 
 export default function VendorDashboardLayout({ children }: { children: React.ReactNode }) {
   const { user } = useAuth()
-  const { isVendor, loading } = useRoles()
+  const { isVendor, isAdmin, loading } = useRoles()
 
   const name =
     ((user as any)?.name as string | undefined) ||
@@ -22,7 +22,9 @@ export default function VendorDashboardLayout({ children }: { children: React.Re
       accent="emerald"
       guard={() => {
         if (loading) return null
-        return isVendor ? { ok: true, redirectTo: "" } : { ok: false, redirectTo: "/account/profile" }
+        if (isVendor) return { ok: true, redirectTo: "" }
+        // Admins belong in the admin console; everyone else in the customer area.
+        return { ok: false, redirectTo: isAdmin ? "/admin" : "/account" }
       }}
       nav={[
         { to: "/vendor-dashboard", label: "Overview", icon: LayoutDashboard, exact: true },

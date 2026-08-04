@@ -7,7 +7,7 @@ import { useRoles } from "@/hooks/use-roles"
 
 export default function AccountLayout({ children }: { children: React.ReactNode }) {
   const { user } = useAuth()
-  const { isVendor } = useRoles()
+  const { isVendor, isAdmin, loading } = useRoles()
   
   const name =
     ((user as any)?.name as string | undefined) ||
@@ -39,6 +39,12 @@ export default function AccountLayout({ children }: { children: React.ReactNode 
       subtitle={`Hi, ${name}`}
       accent="brand"
       nav={navItems as any}
+      guard={() => {
+        if (loading) return null
+        // Admins are confined to the admin console — keep them out of the
+        // customer dashboard. Customers and vendors both belong here.
+        return isAdmin ? { ok: false, redirectTo: "/admin" } : { ok: true, redirectTo: "" }
+      }}
     >
       {children}
     </DashboardLayout>

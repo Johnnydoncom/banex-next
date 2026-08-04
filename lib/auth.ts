@@ -26,6 +26,9 @@ export const authOptions: NextAuthOptions = {
             id: credentials.id as string,
             name: credentials.name as string,
             email: credentials.email as string,
+            role: "user",
+            hasStore: false,
+            storeStatus: null,
             accessToken: credentials.token as string,
           }
         }
@@ -59,6 +62,9 @@ export const authOptions: NextAuthOptions = {
               name: user.name ?? user.full_name ?? "",
               email: user.email,
               role: user.type,
+              // Vendor/seller status — used for role-based dashboard access.
+              hasStore: !!user.has_store,
+              storeStatus: user.store_status ?? null,
               accessToken: token,
             }
           }
@@ -97,6 +103,8 @@ export const authOptions: NextAuthOptions = {
             (account as any).backendToken = backendToken;
             (account as any).backendUserId = backendUser?.id ? String(backendUser.id) : user.id;
             (account as any).backendUserType = backendUser?.type;
+            (account as any).backendUserHasStore = !!backendUser?.has_store;
+            (account as any).backendUserStoreStatus = backendUser?.store_status ?? null;
             return true;
           }
           return false; // Deny sign-in if Laravel backend fails or no token returned
@@ -115,11 +123,15 @@ export const authOptions: NextAuthOptions = {
           token.accessToken = (account as any).backendToken;
           token.id = (account as any).backendUserId;
           token.role = (account as any).backendUserType;
+          token.hasStore = (account as any).backendUserHasStore;
+          token.storeStatus = (account as any).backendUserStoreStatus;
         }
       } else if (user) {
         token.accessToken = (user as typeof user & { accessToken: string }).accessToken
         token.id = user.id
         token.role = (user as any).role
+        token.hasStore = (user as any).hasStore
+        token.storeStatus = (user as any).storeStatus
       }
       return token
     },
@@ -128,6 +140,8 @@ export const authOptions: NextAuthOptions = {
         ; (session as typeof session & { accessToken: string }).accessToken = token.accessToken as string
           ; (session.user as typeof session.user & { id: string }).id = token.id as string
           ; (session.user as any).role = token.role as string
+          ; (session.user as any).hasStore = token.hasStore as boolean
+          ; (session.user as any).storeStatus = token.storeStatus as string | null
       }
       return session
     },
