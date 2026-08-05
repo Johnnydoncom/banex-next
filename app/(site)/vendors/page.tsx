@@ -3,6 +3,7 @@ import { Store, Bike, MapPin } from "lucide-react"
 import { PageShell } from "@/components/PageShell"
 import { MallVendorCard } from "@/components/MallVendorCard"
 import { fetchGenericSellers, GenericSeller, fetchGenericCategories } from "@/lib/generic-api"
+import { Pagination, buildQuery } from "@/components/Pagination"
 import { VendorFilters } from "./components/VendorFilters"
 import { buildMetadata } from "@/lib/seo/metadata"
 import { JsonLd } from "@/lib/seo/JsonLdComponent"
@@ -24,13 +25,17 @@ export default async function VendorsPage({
   const resolvedSearchParams = await searchParams
   const q = typeof resolvedSearchParams.q === "string" ? resolvedSearchParams.q.toLowerCase() : ""
   const cat = typeof resolvedSearchParams.cat === "string" ? resolvedSearchParams.cat : "all"
+  const pageParam = typeof resolvedSearchParams.page === "string" ? Math.max(1, parseInt(resolvedSearchParams.page, 10) || 1) : 1
+  const PER_PAGE = 12
 
   let sellers: GenericSeller[] = []
   let categoriesData: any = {}
-  
+
   try {
+    // Filtering (q/cat) is done here, so pull the full set of sellers to filter
+    // against, then paginate the filtered result below.
     const [sellersData, catData] = await Promise.all([
-      fetchGenericSellers(),
+      fetchGenericSellers({ per_page: 100 }),
       fetchGenericCategories()
     ])
     sellers = sellersData?.sellers || []
@@ -52,6 +57,11 @@ export default async function VendorsPage({
     }
     return true
   })
+
+  // Paginate the filtered list.
+  const lastPage = Math.max(1, Math.ceil(filteredSellers.length / PER_PAGE))
+  const currentPage = Math.min(pageParam, lastPage)
+  const pagedSellers = filteredSellers.slice((currentPage - 1) * PER_PAGE, currentPage * PER_PAGE)
 
   const vendorsJsonLd = [
     breadcrumbSchema([
@@ -88,7 +98,7 @@ export default async function VendorsPage({
       </div>
 
       <div className="mt-8 grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
-        {filteredSellers.map((v, i) => (
+        {pagedSellers.map((v) => (
           <MallVendorCard key={v.id} vendor={v} />
         ))}
       </div>
@@ -97,6 +107,13 @@ export default async function VendorsPage({
           No vendors match these filters.
         </div>
       )}
+      <Pagination
+        currentPage={currentPage}
+        lastPage={lastPage}
+        total={filteredSellers.length}
+        perPage={PER_PAGE}
+        hrefForPage={(n) => `/vendors${buildQuery({ q: q || undefined, cat: cat !== "all" ? cat : undefined, page: n > 1 ? n : undefined })}`}
+      />
     </PageShell>
   )
 }

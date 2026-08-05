@@ -87,9 +87,8 @@ export function ProductSellerCard({ product, sellerProduct, isBestPrice, index }
       whileInView={{ opacity: 1, y: 0 }}
       viewport={{ once: true }}
       transition={{ delay: index * 0.05 }}
-      className={`rounded-2xl border bg-card p-5 transition-colors ${
-        isBestPrice ? "border-brand/60 shadow-soft" : "border-border"
-      }`}
+      className={`rounded-2xl border bg-card p-5 transition-colors ${isBestPrice ? "border-brand/60 shadow-soft" : "border-border"
+        }`}
     >
       <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
         <div>
@@ -146,14 +145,14 @@ export function ProductSellerCard({ product, sellerProduct, isBestPrice, index }
                 </a>
               </>
             )}
-            <Button variant="ghost" type="button"
+            {/* <Button variant="ghost" type="button"
               onClick={() => {
                 setQuoteOpen(!quoteOpen)
               }}
               className="inline-flex items-center gap-1.5 rounded-full border border-border bg-background px-3 py-2 text-xs font-medium hover:border-brand hover:text-brand"
             >
               <FileText className="h-3.5 w-3.5" /> Quote
-            </Button>
+            </Button> */}
           </div>
         </div>
       </div>

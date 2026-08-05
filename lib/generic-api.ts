@@ -117,6 +117,8 @@ export async function fetchGenericProducts(params?: {
   sort?: string
   min_price?: number
   max_price?: number
+  page?: number
+  per_page?: number
 }) {
   const searchParams: Record<string, any> = {}
   if (params?.q) searchParams["filter[search]"] = params.q
@@ -125,6 +127,8 @@ export async function fetchGenericProducts(params?: {
   if (params?.seller_id) searchParams["filter[seller_id]"] = params.seller_id
   if (params?.min_price !== undefined) searchParams["filter[min_price]"] = params.min_price
   if (params?.max_price !== undefined) searchParams["filter[max_price]"] = params.max_price
+  if (params?.page) searchParams["page"] = params.page
+  if (params?.per_page) searchParams["per_page"] = params.per_page
   // Map the UI sort keys to the API's `sort` values (verified live: price, -price,
   // -created_at, -is_featured, -rating_average,-reviews_count). Falls back to the
   // raw value if an already-API sort string is passed.
@@ -152,12 +156,23 @@ export async function fetchGenericProduct(slug: string) {
   return res.data
 }
 
-export async function fetchGenericSellers() {
-  const res = await apiGet<ApiEnvelope<{ sellers: GenericSeller[]; pagination: Pagination }>>("/generic/sellers")
+export async function fetchGenericSellers(params?: { page?: number; per_page?: number }) {
+  const searchParams: Record<string, any> = {}
+  if (params?.page) searchParams["page"] = params.page
+  if (params?.per_page) searchParams["per_page"] = params.per_page
+  const res = await apiGet<ApiEnvelope<{ sellers: GenericSeller[]; pagination: Pagination }>>("/generic/sellers", {
+    params: searchParams,
+  })
   return res.data
 }
 
-export async function fetchGenericSeller(slug: string) {
-  const res = await apiGet<ApiEnvelope<{ seller: GenericSeller; products: GenericProduct[]; pagination: Pagination }>>(`/generic/sellers/${slug}`)
+export async function fetchGenericSeller(slug: string, params?: { page?: number; per_page?: number }) {
+  const searchParams: Record<string, any> = {}
+  if (params?.page) searchParams["page"] = params.page
+  if (params?.per_page) searchParams["per_page"] = params.per_page
+  const res = await apiGet<ApiEnvelope<{ seller: GenericSeller; products: GenericProduct[]; pagination: Pagination }>>(
+    `/generic/sellers/${slug}`,
+    { params: searchParams },
+  )
   return res.data
 }

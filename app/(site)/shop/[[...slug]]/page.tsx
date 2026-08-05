@@ -1,6 +1,7 @@
 import Link from "next/link"
 import { Suspense } from "react"
 import { ApiProductCard } from "@/components/ApiProductCard"
+import { Pagination, buildQuery } from "@/components/Pagination"
 import { ShopHeaderFilters, ShopSidebarFilters } from "./components/ShopFilters"
 import { fetchGenericCategories, fetchGenericCategory, fetchGenericProducts, fetchGenericSeller, fetchGenericSellers, GenericCategory, GenericProduct, GenericSeller } from "@/lib/generic-api"
 import type { Metadata } from "next"
@@ -56,6 +57,8 @@ export default async function ShopPage({
   const sort = typeof resolvedSearchParams.sort === "string" ? resolvedSearchParams.sort : undefined
   const vendorParam = typeof resolvedSearchParams.vendor === "string" ? resolvedSearchParams.vendor : undefined
   const maxPriceParam = typeof resolvedSearchParams.max_price === "string" ? Number(resolvedSearchParams.max_price) : undefined
+  const pageParam = typeof resolvedSearchParams.page === "string" ? Math.max(1, parseInt(resolvedSearchParams.page, 10) || 1) : 1
+  const PER_PAGE = 12
 
   // Fetch API data
   let categoriesData: any = {}
@@ -79,6 +82,8 @@ export default async function ShopPage({
       seller_id: activeSellerId,
       sort,
       max_price: maxPriceParam,
+      page: pageParam,
+      per_page: PER_PAGE,
     }) || {}
   } catch (e) {
     console.error("[shop] Failed to fetch data:", e)
@@ -92,12 +97,11 @@ export default async function ShopPage({
   // but if it has deeper details like subcategories, we might need it.
   const activeCategory = categorySlug !== "all" ? categories.find((c: GenericCategory) => c.slug === categorySlug) : undefined
 
-  // Client side filtering handles max price locally in API param, but if API doesn't support max_price yet,
-  // we do a quick local filter fallback on the server.
-  let filteredProducts: GenericProduct[] = productsData.products || []
-  if (maxPriceParam !== undefined) {
-    filteredProducts = filteredProducts.filter((p: GenericProduct) => p.price <= maxPriceParam)
-  }
+  // The API applies all filters (search/category/seller/max_price/sort) AND paginates
+  // server-side, so we render the returned page as-is — no local re-filtering (which
+  // would desync the "showing X of Y" counts and the pager).
+  const filteredProducts: GenericProduct[] = productsData.products || []
+  const pagination = productsData.pagination as { current_page: number; last_page: number; total: number; per_page: number } | undefined
 
   // Active vendor logic
   let activeVendor
@@ -202,7 +206,18 @@ export default async function ShopPage({
 
           <div>
             <p className="mb-5 text-sm text-muted-foreground">
-              Showing <span className="font-semibold text-foreground">{filteredProducts.length}</span> of {productsData.pagination?.total || filteredProducts.length}
+              {pagination && pagination.total > 0 ? (
+                <>
+                  Showing{" "}
+                  <span className="font-semibold text-foreground">
+                    {(pagination.current_page - 1) * pagination.per_page + 1}–
+                    {Math.min(pagination.current_page * pagination.per_page, pagination.total)}
+                  </span>{" "}
+                  of <span className="font-semibold text-foreground">{pagination.total}</span>
+                </>
+              ) : (
+                <>Showing <span className="font-semibold text-foreground">{filteredProducts.length}</span></>
+              )}
             </p>
             {filteredProducts.length === 0 ? (
               <div className="rounded-xl border border-dashed border-border bg-card p-16 text-center">
@@ -210,11 +225,27 @@ export default async function ShopPage({
                 <p className="mt-2 text-sm text-muted-foreground">Try a different search or widen your filters.</p>
               </div>
             ) : (
-              <div className="grid grid-cols-2 gap-3 md:gap-5 lg:grid-cols-3 ">
-                {filteredProducts.map((p: GenericProduct) => (
-                  <ApiProductCard key={p.id} product={p as any} />
-                ))}
-              </div>
+              <>
+                <div className="grid grid-cols-2 gap-3 md:gap-5 lg:grid-cols-3 ">
+                  {filteredProducts.map((p: GenericProduct) => (
+                    <ApiProductCard key={p.id} product={p as any} />
+                  ))}
+                </div>
+                {pagination && (
+                  <Pagination
+                    currentPage={pagination.current_page}
+                    lastPage={pagination.last_page}
+                    total={pagination.total}
+                    perPage={pagination.per_page}
+                    hrefForPage={(n) => {
+                      const path = categorySlug !== "all"
+                        ? `/shop/${categorySlug}${subcategorySlug !== "all" ? `/${subcategorySlug}` : ""}`
+                        : "/shop"
+                      return `${path}${buildQuery({ q, sort, vendor: vendorParam, max_price: maxPriceParam, page: n > 1 ? n : undefined })}`
+                    }}
+                  />
+                )}
+              </>
             )}
           </div>
         </div>

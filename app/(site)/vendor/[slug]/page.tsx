@@ -5,6 +5,7 @@ import {
   Store, Navigation, Package, ChevronLeft, BadgeCheck,
 } from "lucide-react"
 import { ApiProductCard } from "@/components/ApiProductCard"
+import { Pagination, buildQuery } from "@/components/Pagination"
 import { fetchGenericSeller } from "@/lib/generic-api"
 import { VendorOrderAll, VendorQuickOrder } from "./components/VendorActions"
 import type { Metadata } from "next"
@@ -31,11 +32,23 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
   return buildMetadata({ title: "Vendor", path: "/vendors", noindex: true })
 }
 
-export default async function VendorPage({ params }: { params: Promise<{ slug: string }> }) {
+export default async function VendorPage({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ slug: string }>
+  searchParams: Promise<{ [key: string]: string | string[] | undefined }>
+}) {
+  const resolvedSearchParams = await searchParams
+  const pageParam = typeof resolvedSearchParams.page === "string" ? Math.max(1, parseInt(resolvedSearchParams.page, 10) || 1) : 1
+  const VENDOR_PER_PAGE = 12
+
   let sellerData;
+  let slug = ""
   try {
     const resolvedParams = await params
-    sellerData = await fetchGenericSeller(resolvedParams.slug)
+    slug = resolvedParams.slug
+    sellerData = await fetchGenericSeller(slug, { page: pageParam, per_page: VENDOR_PER_PAGE })
   } catch (e) {
     // If not found
   }
@@ -51,6 +64,8 @@ export default async function VendorPage({ params }: { params: Promise<{ slug: s
 
   const vendor = sellerData.seller
   const items = sellerData.products || []
+  const pagination = sellerData.pagination as { current_page: number; last_page: number; total: number; per_page: number } | undefined
+  const totalItems = pagination?.total ?? items.length
 
   const formatNaira = (amount: number) => {
     return new Intl.NumberFormat("en-NG", {
@@ -129,7 +144,7 @@ export default async function VendorPage({ params }: { params: Promise<{ slug: s
       <section className="mx-auto max-w-7xl px-4 md:px-8">
         <div className="grid grid-cols-1 gap-3 rounded-2xl border border-border bg-card p-4 sm:grid-cols-2 md:grid-cols-4 md:p-5">
           <Meta icon={Star} label="Rating" value={`${vendor.rating_average || "New"} · ${vendor.reviews_count || 0} reviews`} />
-          <Meta icon={MapPin} label="In-store" value={vendor.location || "Banex Mall"} />
+          <Meta icon={MapPin} label="In-store" value={"Banex Mall, Lekki Lagos"} />
           <Meta icon={Clock} label="Hours" value="9 AM - 6 PM" />
           <Meta
             icon={Bike}
@@ -176,19 +191,30 @@ export default async function VendorPage({ params }: { params: Promise<{ slug: s
             <h2 className="mt-2 font-display text-2xl font-bold md:text-3xl">In stock today</h2>
           </div>
           <span className="inline-flex items-center gap-1.5 text-xs text-muted-foreground">
-            <Package className="h-3.5 w-3.5 text-brand" /> {items.length} items
+            <Package className="h-3.5 w-3.5 text-brand" /> {totalItems} items
           </span>
         </div>
 
         {items.length ? (
-          <div className="mt-6 grid grid-cols-2 gap-3 md:gap-5 lg:grid-cols-3">
-            {items.map((p) => (
-              <div key={p.id} className="flex flex-col">
-                <ApiProductCard product={p as any} />
-                <VendorQuickOrder item={p} vendor={vendor} />
-              </div>
-            ))}
-          </div>
+          <>
+            <div className="mt-6 grid grid-cols-2 gap-3 md:gap-5 md:grid-cols-3 lg:grid-cols-4">
+              {items.map((p) => (
+                <div key={p.id} className="flex flex-col">
+                  <ApiProductCard product={p as any} />
+                  <VendorQuickOrder item={p} vendor={vendor} />
+                </div>
+              ))}
+            </div>
+            {pagination && (
+              <Pagination
+                currentPage={pagination.current_page}
+                lastPage={pagination.last_page}
+                total={pagination.total}
+                perPage={pagination.per_page}
+                hrefForPage={(n) => `/vendor/${slug}${buildQuery({ page: n > 1 ? n : undefined })}`}
+              />
+            )}
+          </>
         ) : (
           <p className="mt-6 rounded-2xl border border-dashed border-border bg-card p-10 text-center text-sm text-muted-foreground">
             This vendor hasn't listed items online yet — visit them at <strong>{vendor.location || "Banex Mall"}</strong>.
