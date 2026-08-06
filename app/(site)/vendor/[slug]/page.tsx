@@ -158,12 +158,23 @@ export default async function VendorPage({
       <section className="mx-auto max-w-7xl px-4 py-6 md:px-8">
         <div className="flex flex-wrap gap-3">
           <VendorOrderAll items={items} vendor={vendor} />
-          <Link
-            href="/mall-map"
-            className="inline-flex items-center gap-2 rounded-full border border-border bg-card px-5 py-3 text-sm font-semibold hover:border-brand hover:text-brand"
-          >
-            <Navigation className="h-4 w-4" /> Visit in-store
-          </Link>
+          {vendor.website_url ? (
+            <a
+              href={vendor.website_url}
+              target="_blank"
+              rel="noreferrer"
+              className="inline-flex items-center gap-2 rounded-full border border-border bg-card px-5 py-3 text-sm font-semibold hover:border-brand hover:text-brand"
+            >
+              <Navigation className="h-4 w-4" /> Visit in-store
+            </a>
+          ) : (
+            <Link
+              href="/mall-map"
+              className="inline-flex items-center gap-2 rounded-full border border-border bg-card px-5 py-3 text-sm font-semibold hover:border-brand hover:text-brand"
+            >
+              <Navigation className="h-4 w-4" /> Visit in-store
+            </Link>
+          )}
           <a
             href={`tel:${vendor.phone || "+2348000000000"}`}
             className="inline-flex items-center gap-2 rounded-full border border-border bg-card px-5 py-3 text-sm font-semibold hover:border-brand hover:text-brand"

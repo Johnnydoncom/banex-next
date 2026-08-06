@@ -2,7 +2,7 @@
 
 import { useState } from "react"
 import Link from "next/link"
-import { Check, Ban, Store, Edit } from "lucide-react"
+import { Check, Ban, Store, Edit, Plus } from "lucide-react"
 import { DataTable, type Column } from "@/components/DataTable"
 import { StatusBadge } from "@/components/StatusBadge"
 import { ConfirmDialog } from "@/components/ConfirmDialog"
@@ -150,7 +150,7 @@ export default function AdminSellersPage() {
   return (
     <div className="space-y-6">
       {/* Header & Tabs */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex gap-1 rounded-xl bg-surface/60 p-1 w-full max-w-lg">
           {tabs.map((t) => (
 
@@ -173,13 +173,13 @@ export default function AdminSellersPage() {
             </Button>
           ))}
         </div>
-        {/* <Link
+        <Link
           href="/admin/users/sellers/new"
-          className="inline-flex items-center gap-2 rounded-xl bg-brand px-4 py-2 text-sm font-bold text-white transition-colors hover:bg-brand-deep"
+          className="inline-flex flex-none items-center justify-center gap-2 rounded-xl bg-brand px-4 py-2.5 text-sm font-bold text-white transition-colors hover:bg-brand-deep"
         >
           <Plus className="h-4 w-4" />
           Add Seller
-        </Link> */}
+        </Link>
       </div>
 
       {loading ? (

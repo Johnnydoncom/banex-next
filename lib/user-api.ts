@@ -337,6 +337,17 @@ export async function userFetchOrder(id: string) {
   return res.data?.order
 }
 
+// Buyer confirms they've received the order — POST /user/orders/:orderId/mark-complete.
+// Only allowed while the order is in transit (out for delivery / ready for pickup);
+// it moves the order to delivered/received. Keyed by order id (not reference).
+export async function userMarkOrderComplete(orderId: string) {
+  const res = await apiPost<ApiEnvelope<{ order: OrderData }>>(
+    `${PROXY_BASE}/user/orders/${orderId}/mark-complete`,
+    {},
+  )
+  return res.data?.order ?? null
+}
+
 // ─── ORDER TRACKING ───────────────────────────────────────────────────────────
 // GET /user/orders/:reference/tracking — keyed by the order REFERENCE (e.g.
 // "OR1782908533425398EC8CC4"), not the id. Requires an authenticated session.

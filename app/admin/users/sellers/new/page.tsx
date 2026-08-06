@@ -29,6 +29,7 @@ export default function AdminNewSellerPage() {
     phone: "",
     category_id: "",
     description: "",
+    website_url: "",
     location: "",
     floor: "",
     shop_no: "",
@@ -96,6 +97,7 @@ export default function AdminNewSellerPage() {
     if (form.phone) formData.append("phone", form.phone)
     if (form.category_id) formData.append("category_id", form.category_id)
     if (form.description) formData.append("description", form.description)
+    if (form.website_url) formData.append("website_url", form.website_url)
     if (form.location) formData.append("location", form.location)
     if (form.floor) formData.append("floor", form.floor)
     if (form.shop_no) formData.append("shop_no", form.shop_no)
@@ -260,6 +262,17 @@ export default function AdminNewSellerPage() {
                   className="rounded-xl px-3 py-2.5 focus-visible:border-brand focus-visible:ring-brand"
                   placeholder="e.g. Mon-Sat: 9AM - 6PM"
                 />
+              </div>
+              <div className="col-span-2">
+                <Label className="mb-1.5 block text-xs font-semibold text-foreground">Website / Storefront URL</Label>
+                <Input
+                  type="url"
+                  value={form.website_url}
+                  onChange={(e) => update("website_url", e.target.value)}
+                  className="rounded-xl px-3 py-2.5 focus-visible:border-brand focus-visible:ring-brand"
+                  placeholder="https://example.com"
+                />
+                <p className="mt-1 text-xs text-muted-foreground">Used for the “Visit in-store” link on the storefront.</p>
               </div>
             </div>
           </section>

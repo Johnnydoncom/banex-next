@@ -62,6 +62,7 @@ export type GenericSeller = {
   delivery_fee?: number | null
   delivery_currency?: string
   whatsapp?: string | null
+  website_url?: string | null
 }
 
 export type Pagination = {

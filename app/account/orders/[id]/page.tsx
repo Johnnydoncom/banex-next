@@ -5,14 +5,15 @@ import { useParams, useRouter } from "next/navigation"
 import Link from "next/link"
 import {
   ChevronLeft, Printer, AlertTriangle, Truck, MapPin,
-  Loader2, CreditCard, CheckCircle2, Clock, XCircle, RefreshCw
+  Loader2, CreditCard, CheckCircle2, Clock, XCircle, RefreshCw, PackageCheck
 } from "lucide-react"
+import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { useAuth } from "@/hooks/use-auth"
 import {
   userFetchOrder, userInitializeOrderPayment, userCheckoutVerifyPayment,
-  userFetchPaymentMethods,
+  userFetchPaymentMethods, userMarkOrderComplete,
   type OrderData, type PaymentMethodData
 } from "@/lib/user-api"
 import { formatNaira } from "@/lib/products"
@@ -244,6 +245,22 @@ export default function OrderDetailsPage() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState("")
   const [paymentMethods, setPaymentMethods] = useState<PaymentMethodData[]>([])
+  const [marking, setMarking] = useState(false)
+
+  const handleMarkReceived = useCallback(async () => {
+    if (!order) return
+    if (!window.confirm("Confirm you've received this order? This completes the order and releases payment to the seller.")) return
+    setMarking(true)
+    try {
+      const updated = await userMarkOrderComplete(order.id)
+      if (updated) setOrder(updated)
+      toast.success("Thank you! Your order is confirmed as received.")
+    } catch (err: any) {
+      toast.error(err?.message || "Could not confirm receipt. Please try again.")
+    } finally {
+      setMarking(false)
+    }
+  }, [order])
 
   const loadOrder = useCallback(async (orderId: string) => {
     setError("")
@@ -386,6 +403,35 @@ export default function OrderDetailsPage() {
               proceed automatically once payment is verified — no further action is needed.
             </p>
           </div>
+        </div>
+      )}
+
+      {/* ── Confirm receipt (buyer marks the order as received) ── */}
+      {(order.status ?? "").toLowerCase() === "intransit" && (
+        <div className="flex flex-col gap-4 rounded-2xl border border-emerald-300 bg-gradient-to-br from-emerald-50 to-teal-50 p-5 dark:border-emerald-800/50 dark:from-emerald-950/30 dark:to-teal-950/30 sm:flex-row sm:items-center sm:justify-between print:hidden">
+          <div className="flex items-start gap-3">
+            <div className="flex h-9 w-9 flex-none items-center justify-center rounded-full bg-emerald-500/15">
+              <PackageCheck className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />
+            </div>
+            <div>
+              <h3 className="font-display font-bold text-emerald-900 dark:text-emerald-300">
+                {order.fulfillment_type === "mall_pickup" ? "Picked up your order?" : "Received your order?"}
+              </h3>
+              <p className="mt-1 text-sm text-emerald-800/80 dark:text-emerald-400/80">
+                Confirm you&apos;ve got your item{order.items && order.items.length > 1 ? "s" : ""} so we can complete the
+                order and release payment to the seller. Only confirm once it&apos;s in your hands.
+              </p>
+            </div>
+          </div>
+          <Button
+            type="button"
+            onClick={handleMarkReceived}
+            disabled={marking}
+            className="h-auto flex-none gap-2 rounded-full bg-emerald-600 px-6 py-3 text-sm font-bold text-white hover:bg-emerald-700 disabled:opacity-60"
+          >
+            {marking ? <Loader2 className="h-4 w-4 animate-spin" /> : <PackageCheck className="h-4 w-4" />}
+            {marking ? "Confirming…" : "Confirm receipt"}
+          </Button>
         </div>
       )}
 

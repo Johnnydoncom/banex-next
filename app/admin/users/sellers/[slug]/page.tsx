@@ -39,6 +39,7 @@ export default function AdminEditSellerPage() {
     phone: "",
     category_id: "",
     description: "",
+    website_url: "",
     location: "",
     floor: "",
     shop_no: "",
@@ -91,6 +92,7 @@ export default function AdminEditSellerPage() {
           phone: s.phone || "",
           category_id: s.category_id || "",
           description: s.description || "",
+          website_url: s.website_url || "",
           location: s.location || "",
           floor: s.floor || "",
           shop_no: s.shop_no || "",
@@ -147,6 +149,8 @@ export default function AdminEditSellerPage() {
     if (form.phone) formData.append("phone", form.phone)
     if (form.category_id) formData.append("category_id", form.category_id)
     if (form.description) formData.append("description", form.description)
+    // Always sent so an admin can clear it (empty string → null server-side).
+    formData.append("website_url", form.website_url)
     if (form.location) formData.append("location", form.location)
     if (form.floor) formData.append("floor", form.floor)
     if (form.shop_no) formData.append("shop_no", form.shop_no)
@@ -330,6 +334,17 @@ export default function AdminEditSellerPage() {
                   onChange={(e) => update("operating_hours", e.target.value)}
                   className="rounded-xl px-3 py-2.5 focus-visible:border-brand focus-visible:ring-brand"
                 />
+              </div>
+              <div className="col-span-2">
+                <Label className="mb-1.5 block text-xs font-semibold text-foreground">Website / Storefront URL</Label>
+                <Input
+                  type="url"
+                  value={form.website_url}
+                  onChange={(e) => update("website_url", e.target.value)}
+                  className="rounded-xl px-3 py-2.5 focus-visible:border-brand focus-visible:ring-brand"
+                  placeholder="https://example.com"
+                />
+                <p className="mt-1 text-xs text-muted-foreground">Used for the “Visit in-store” link on the storefront.</p>
               </div>
             </div>
           </section>
