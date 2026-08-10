@@ -15,7 +15,8 @@ import {
 } from "@/lib/admin-api"
 import { RichTextEditor } from "@/components/RichTextEditor"
 import { LocationSelect } from "@/components/LocationSelect"
-import { VariantsEditor, emptyVariantRow, appendVariants, validateVariants, type VariantRow } from "@/components/VariantsEditor"
+import { VariantsEditor, emptyVariantRow, appendVariants, validateVariants, type VariantRow, type AttrKey } from "@/components/VariantsEditor"
+import { subcategoriesOf, findCategory } from "@/lib/categories"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -46,6 +47,7 @@ export default function AdminNewProductPage() {
   const [specifications, setSpecifications] = useState([{ key: "", value: "" }])
   const [hasVariants, setHasVariants] = useState(false)
   const [variantRows, setVariantRows] = useState<VariantRow[]>([emptyVariantRow(true)])
+  const [variantAttrs, setVariantAttrs] = useState<AttrKey[]>(["color"])
 
   const [images, setImages] = useState<{ file: File; preview: string }[]>([])
   const [primaryImageIndex, setPrimaryImageIndex] = useState(0)
@@ -58,6 +60,16 @@ export default function AdminNewProductPage() {
   const steps = ["Basic", "Images", "Pricing", "Specs", "Review"]
 
   const update = (key: string, value: any) => setForm((f) => ({ ...f, [key]: value }))
+
+  // A product is categorised under a SUBcategory of its seller's (root) category.
+  const selectedSeller = sellers.find((s) => s.id === form.seller_id)
+  const sellerRoot = findCategory(categories, selectedSeller?.category_id)
+  const sellerSubcats = subcategoriesOf(categories, selectedSeller?.category_id)
+  const allowedCategories = sellerSubcats.length ? sellerSubcats : sellerRoot ? [sellerRoot] : []
+
+  // Changing the seller resets the category, since categories are seller-scoped.
+  const onSellerChange = (sellerId: string) =>
+    setForm((f) => ({ ...f, seller_id: sellerId, category_id: "" }))
 
   const addSpecification = () => setSpecifications(prev => [...prev, { key: "", value: "" }])
   const removeSpecification = (index: number) => setSpecifications(prev => prev.filter((_, i) => i !== index))
@@ -125,7 +137,7 @@ export default function AdminNewProductPage() {
     if (!session?.accessToken) return
 
     if (hasVariants) {
-      const err = validateVariants(variantRows)
+      const err = validateVariants(variantRows, variantAttrs)
       if (err) return toast.error(err)
     }
     setSubmitting(true)
@@ -138,7 +150,7 @@ export default function AdminNewProductPage() {
       formData.append("description", form.description)
       // Variable products carry per-variant price/stock; simple products send them flat.
       if (hasVariants) {
-        appendVariants(formData, variantRows)
+        appendVariants(formData, variantRows, variantAttrs)
       } else {
         formData.append("price", form.price)
         formData.append("stock_quantity", form.stock_quantity)
@@ -243,23 +255,27 @@ export default function AdminNewProductPage() {
             </div>
             <div className="grid gap-4 sm:grid-cols-2">
               <div>
-                <Label htmlFor="product-category" className="mb-1.5 block text-xs text-muted-foreground">Category</Label>
-                <Select value={form.category_id} onValueChange={(v) => update("category_id", v)}>
-                  <SelectTrigger id="product-category" className="h-auto rounded-xl px-4 py-2.5"><SelectValue placeholder="Select category" /></SelectTrigger>
+                <Label htmlFor="product-seller" className="mb-1.5 block text-xs text-muted-foreground">Seller</Label>
+                <Select value={form.seller_id} onValueChange={onSellerChange}>
+                  <SelectTrigger id="product-seller" className="h-auto rounded-xl px-4 py-2.5"><SelectValue placeholder="Assign to seller" /></SelectTrigger>
                   <SelectContent>
-                    {categories.map((c) => (
-                      <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
+                    {sellers.map((s) => (
+                      <SelectItem key={s.id} value={s.id}>{s.shop_name}</SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
               </div>
               <div>
-                <Label htmlFor="product-seller" className="mb-1.5 block text-xs text-muted-foreground">Seller</Label>
-                <Select value={form.seller_id} onValueChange={(v) => update("seller_id", v)}>
-                  <SelectTrigger id="product-seller" className="h-auto rounded-xl px-4 py-2.5"><SelectValue placeholder="Assign to seller" /></SelectTrigger>
+                <Label htmlFor="product-category" className="mb-1.5 block text-xs text-muted-foreground">
+                  Category{sellerRoot ? ` (under ${sellerRoot.name})` : ""}
+                </Label>
+                <Select value={form.category_id} onValueChange={(v) => update("category_id", v)} disabled={!form.seller_id}>
+                  <SelectTrigger id="product-category" className="h-auto rounded-xl px-4 py-2.5">
+                    <SelectValue placeholder={form.seller_id ? "Select category" : "Select a seller first"} />
+                  </SelectTrigger>
                   <SelectContent>
-                    {sellers.map((s) => (
-                      <SelectItem key={s.id} value={s.id}>{s.shop_name}</SelectItem>
+                    {allowedCategories.map((c) => (
+                      <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
@@ -325,7 +341,7 @@ export default function AdminNewProductPage() {
               </>
             )}
             <div className="sm:col-span-2">
-              <VariantsEditor enabled={hasVariants} onToggle={setHasVariants} rows={variantRows} onChange={setVariantRows} />
+              <VariantsEditor enabled={hasVariants} onToggle={setHasVariants} rows={variantRows} onChange={setVariantRows} attrs={variantAttrs} onAttrsChange={setVariantAttrs} />
             </div>
             <div className="sm:col-span-2">
               <Label htmlFor="product-weight" className="mb-1.5 block text-xs text-muted-foreground">Weight (kg)</Label>

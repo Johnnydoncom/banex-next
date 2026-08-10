@@ -124,21 +124,44 @@ function FilterContent({
           {categories.map((c: any) => {
             const count = c.listings_count || 0
             const active = categorySlug === c.slug
+            const children = (c.children || []) as any[]
             return (
-              <Button variant="ghost" type="button"
-                key={c.slug}
-                onClick={() => router.push(`/shop/${c.slug}`)}
-                className={`flex items-center justify-between gap-2 rounded-md px-3 py-2 text-left text-sm transition-colors ${active
-                  ? "bg-brand-soft/30 font-medium text-brand-deep"
-                  : "text-muted-foreground hover:bg-surface hover:text-foreground"
-                  }`}
-              >
-                <span className="flex items-center gap-2">
-                  <span className="text-muted-foreground">•</span>
-                  {c.name}
-                </span>
-                <span className="text-[10px] text-muted-foreground">{count}</span>
-              </Button>
+              <div key={c.slug}>
+                <Button variant="ghost" type="button"
+                  onClick={() => router.push(`/shop/${c.slug}`)}
+                  className={`flex w-full items-center justify-between gap-2 rounded-md px-3 py-2 text-left text-sm transition-colors ${active
+                    ? "bg-brand-soft/30 font-medium text-brand-deep"
+                    : "text-muted-foreground hover:bg-surface hover:text-foreground"
+                    }`}
+                >
+                  <span className="flex items-center gap-2">
+                    <span className="text-muted-foreground">•</span>
+                    {c.name}
+                  </span>
+                  <span className="text-[10px] text-muted-foreground">{count}</span>
+                </Button>
+                {/* Subcategories, shown when the parent department is selected */}
+                {active && children.length > 0 && (
+                  <div className="ml-4 mt-1 flex flex-col gap-0.5 border-l border-border pl-2">
+                    {children.map((sub: any) => {
+                      const subActive = subcategorySlug === sub.slug
+                      return (
+                        <Button variant="ghost" type="button"
+                          key={sub.slug}
+                          onClick={() => router.push(`/shop/${c.slug}/${sub.slug}`)}
+                          className={`flex items-center justify-between gap-2 rounded-md px-3 py-1.5 text-left text-xs transition-colors ${subActive
+                            ? "bg-brand-soft/30 font-medium text-brand-deep"
+                            : "text-muted-foreground hover:bg-surface hover:text-foreground"
+                            }`}
+                        >
+                          <span>{sub.name}</span>
+                          <span className="text-[10px] text-muted-foreground">{sub.listings_count || 0}</span>
+                        </Button>
+                      )
+                    })}
+                  </div>
+                )}
+              </div>
             )
           })}
         </div>

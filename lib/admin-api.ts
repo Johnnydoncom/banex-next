@@ -88,6 +88,7 @@ async function proxyFetchFormData<T>(path: string, token: string, method = "POST
 
 export type AdminCategory = {
   id: string
+  parent_id: string | null
   name: string
   slug: string
   icon: string
@@ -97,6 +98,8 @@ export type AdminCategory = {
   created_at: { item: string }
   updated_at: { item: string }
   image_url: string | null
+  parent?: { id: string; name: string; slug: string } | null
+  children?: AdminCategory[]
 }
 
 type AdminCategoriesData = {

@@ -9,14 +9,15 @@ import {
   sellerUpdateStock, sellerDeleteProduct, sellerPricingPreview,
   type SellerProduct, type PricingSummary
 } from "@/lib/seller-api"
-import { useSellerProducts, useCategories } from "@/hooks/use-swr-data"
+import { useSellerProducts, useCategories, useSellerApplication } from "@/hooks/use-swr-data"
+import { subcategoriesOf, findCategory } from "@/lib/categories"
 import { formatNaira } from "@/lib/products"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { Button } from "@/components/ui/button"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Switch } from "@/components/ui/switch"
-import { VariantsEditor, variantsFromProduct, appendVariants, validateVariants, type VariantRow } from "@/components/VariantsEditor"
+import { VariantsEditor, variantsFromProduct, inferAttrs, appendVariants, validateVariants, type VariantRow, type AttrKey } from "@/components/VariantsEditor"
 type ProductForm = {
   name: string
   brand: string
@@ -68,6 +69,13 @@ export default function VendorProductsPage() {
 
   const { products: fetchedProducts, loading: productsLoading, mutate: mutateProducts } = useSellerProducts(token)
   const { categories } = useCategories()
+  const { profile } = useSellerApplication(token)
+
+  // Sellers are limited to the subcategories of their assigned (root) category, so a
+  // product can only be listed under the vendor's own department.
+  const rootCategory = findCategory(categories, profile?.category_id)
+  const subCats = subcategoriesOf(categories, profile?.category_id)
+  const allowedCategories = subCats.length ? subCats : rootCategory ? [rootCategory] : categories
 
   const [products, setProducts] = useState<SellerProduct[] | null>(null)
   const loading = productsLoading && products === null
@@ -89,6 +97,7 @@ export default function VendorProductsPage() {
   const [deletedImageIds, setDeletedImageIds] = useState<string[]>([])
   const [hasVariants, setHasVariants] = useState(false)
   const [variantRows, setVariantRows] = useState<VariantRow[]>([])
+  const [variantAttrs, setVariantAttrs] = useState<AttrKey[]>(["color"])
 
   // Stock update modal
   const [stockModalProduct, setStockModalProduct] = useState<SellerProduct | null>(null)
@@ -140,6 +149,7 @@ export default function VendorProductsPage() {
     setDeletedImageIds([])
     setHasVariants(false)
     setVariantRows([])
+    setVariantAttrs(["color"])
     setPricingPreview(null)
     setShowModal(true)
   }
@@ -167,6 +177,7 @@ export default function VendorProductsPage() {
     const variable = !!p.has_variants && (p.variants?.length ?? 0) > 0
     setHasVariants(variable)
     setVariantRows(variable ? variantsFromProduct(p.variants) : [])
+    setVariantAttrs(variable ? inferAttrs(p.variants) : ["color"])
     setPricingPreview(null)
     setShowModal(true)
   }
@@ -230,7 +241,7 @@ export default function VendorProductsPage() {
       return
     }
     if (hasVariants) {
-      const err = validateVariants(variantRows)
+      const err = validateVariants(variantRows, variantAttrs)
       if (err) { toast.error(err); return }
     }
     setSaving(true)
@@ -242,7 +253,7 @@ export default function VendorProductsPage() {
       fd.append("description", form.description)
       // Variable products carry per-variant price/stock; simple products send them flat.
       if (hasVariants) {
-        appendVariants(fd, variantRows)
+        appendVariants(fd, variantRows, variantAttrs)
       } else {
         fd.append("price", form.price)
         fd.append("stock_quantity", form.stock_quantity)
@@ -511,15 +522,18 @@ export default function VendorProductsPage() {
                 <F label="Brand">
                   <Input value={form.brand} onChange={(e) => setForm((f) => ({ ...f, brand: e.target.value }))} placeholder="e.g. Samsung" />
                 </F>
-                <F label="Category *">
+                <F label={rootCategory ? `Category * (under ${rootCategory.name})` : "Category *"}>
                   <Select value={form.category_id} onValueChange={(val) => setForm((f) => ({ ...f, category_id: val }))}>
                     <SelectTrigger>
                       <SelectValue placeholder="Select..." />
                     </SelectTrigger>
                     <SelectContent>
-                      {categories.map((c) => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
+                      {allowedCategories.map((c) => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
                     </SelectContent>
                   </Select>
+                  {rootCategory && subCats.length === 0 && (
+                    <p className="mt-1 text-[11px] text-muted-foreground">No subcategories yet — using {rootCategory.name}.</p>
+                  )}
                 </F>
               </div>
               <div className={`grid gap-4 ${hasVariants ? "grid-cols-1" : "grid-cols-3"}`}>
@@ -538,7 +552,7 @@ export default function VendorProductsPage() {
                 </F>
               </div>
 
-              <VariantsEditor enabled={hasVariants} onToggle={setHasVariants} rows={variantRows} onChange={setVariantRows} />
+              <VariantsEditor enabled={hasVariants} onToggle={setHasVariants} rows={variantRows} onChange={setVariantRows} attrs={variantAttrs} onAttrsChange={setVariantAttrs} />
 
 
               {/* Pricing preview panel */}

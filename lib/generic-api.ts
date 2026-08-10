@@ -12,13 +12,15 @@ type ApiEnvelope<T> = {
 // ─── Types ────────────────────────────────────────────────────────────────────
 export type GenericCategory = {
   id: string
+  parent_id: string | null
   name: string
   slug: string
   icon: string | null
   sort_order: number
   listings_count: number
   image_url: string | null
-  subcategories?: { name: string; slug: string }[] // Assuming simple subcategories for UI
+  children?: GenericCategory[] // nested subcategories (present on /generic/categories)
+  subcategories?: { name: string; slug: string }[] // legacy, unused
 }
 
 // A purchasable variant of a product. Every product has at least one (the default).

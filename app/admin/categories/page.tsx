@@ -9,13 +9,18 @@ import { toast } from "sonner"
 import { useSession } from "next-auth/react"
 import { deleteAdminCategory, type AdminCategory } from "@/lib/admin-api"
 import { useAdminCategories } from "@/hooks/use-swr-data"
+import { flattenCategories } from "@/lib/categories"
 import { Button } from "@/components/ui/button"
 
 export default function AdminCategoriesPage() {
   const { data: session } = useSession()
   const token = session?.accessToken as string | undefined
   const { categories, loading, mutate } = useAdminCategories(token)
-  
+
+  // Flatten roots + subcategories into a single list so the whole hierarchy is
+  // visible and manageable (parents first, children indented under them).
+  const flatRows = flattenCategories(categories as AdminCategory[]).map((r) => ({ ...r.node, _depth: r.depth }))
+
   const [deleteId, setDeleteId] = useState<string | null>(null)
   const [deleting, setDeleting] = useState(false)
 
@@ -35,17 +40,23 @@ export default function AdminCategoriesPage() {
     }
   }
 
-  const columns: Column<AdminCategory>[] = [
+  const columns: Column<AdminCategory & { _depth?: number }>[] = [
     {
       key: "name",
       label: "Name",
       sortable: true,
       render: (c) => (
-        <div>
-          <Link href={`/admin/categories/${c.id}`} className="font-semibold hover:text-brand">
-            {c.name}
-          </Link>
-          <p className="text-[11px] text-muted-foreground">/{c.slug}</p>
+        <div className="flex items-center gap-2" style={{ paddingLeft: (c._depth ?? 0) * 20 }}>
+          {(c._depth ?? 0) > 0 && <span className="text-muted-foreground/50">└</span>}
+          <div>
+            <Link href={`/admin/categories/${c.id}`} className="font-semibold hover:text-brand">
+              {c.name}
+            </Link>
+            <p className="text-[11px] text-muted-foreground">
+              /{c.slug}
+              {(c._depth ?? 0) > 0 && <span className="ml-1 rounded bg-surface px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wide">Subcategory</span>}
+            </p>
+          </div>
         </div>
       ),
     },
@@ -105,11 +116,11 @@ export default function AdminCategoriesPage() {
       ) : (
         <DataTable
           columns={columns}
-          data={categories}
+          data={flatRows}
           rowKey={(c) => c.id}
           searchPlaceholder="Search categories…"
           searchFilter={(c, q) => c.name.toLowerCase().includes(q) || c.slug.toLowerCase().includes(q)}
-          pageSize={15}
+          pageSize={30}
         />
       )}
 

@@ -76,9 +76,12 @@ export default async function ShopPage({
     const sellers = sellersData.sellers || []
     const activeSellerId = vendorParam ? sellers.find((s: GenericSeller) => s.slug === vendorParam)?.id : undefined
 
+    // Filter by the most specific selection: a subcategory when chosen, else the department.
+    const effectiveCategory =
+      subcategorySlug !== "all" ? subcategorySlug : categorySlug !== "all" ? categorySlug : undefined
     productsData = await fetchGenericProducts({
       q,
-      category: categorySlug !== "all" ? categorySlug : undefined,
+      category: effectiveCategory,
       seller_id: activeSellerId,
       sort,
       max_price: maxPriceParam,

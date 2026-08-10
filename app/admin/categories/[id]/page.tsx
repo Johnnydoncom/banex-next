@@ -6,7 +6,9 @@ import { useRouter } from "next/navigation"
 import { ArrowLeft, Save, Loader2 } from "lucide-react"
 import { toast } from "sonner"
 import { useSession } from "next-auth/react"
-import { fetchAdminCategory, createAdminCategory, updateAdminCategory, deleteAdminCategory } from "@/lib/admin-api"
+import { fetchAdminCategory, createAdminCategory, updateAdminCategory, deleteAdminCategory, type AdminCategory } from "@/lib/admin-api"
+import { useAdminCategories } from "@/hooks/use-swr-data"
+import { rootCategories } from "@/lib/categories"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -25,7 +27,12 @@ export default function AdminCategoryEditPage({ params }: { params: Promise<{ id
     icon: "box",
     sort_order: "1",
     is_active: "true",
+    parent_id: "",
   })
+
+  // Root categories the new/edited category can be nested under.
+  const { categories: allCategories } = useAdminCategories(session?.accessToken as string | undefined)
+  const parentOptions = rootCategories(allCategories as AdminCategory[]).filter((c) => c.id !== id)
   
   const [loading, setLoading] = useState(!isNew)
   const [saving, setSaving] = useState(false)
@@ -49,6 +56,7 @@ export default function AdminCategoryEditPage({ params }: { params: Promise<{ id
         icon: cat.icon || "box",
         sort_order: cat.sort_order?.toString() || "1",
         is_active: cat.is_active ? "true" : "false",
+        parent_id: cat.parent_id || "",
       })
     } catch (err: any) {
       toast.error(err.message || "Failed to load category")
@@ -71,6 +79,10 @@ export default function AdminCategoryEditPage({ params }: { params: Promise<{ id
       fd.append("icon", form.icon)
       fd.append("sort_order", String(parseInt(form.sort_order, 10) || 0))
       fd.append("is_active", form.is_active === "true" ? "1" : "0")
+      // Send parent_id only when nesting under a root — omitting it keeps/creates a
+      // top-level category. (The API rejects an empty parent_id and enforces a
+      // 2-level hierarchy: a category with subcategories can't itself be nested.)
+      if (form.parent_id) fd.append("parent_id", form.parent_id)
 
       if (isNew) {
         await createAdminCategory(fd, session.accessToken)
@@ -127,6 +139,19 @@ export default function AdminCategoryEditPage({ params }: { params: Promise<{ id
           <div>
             <Label htmlFor="cat-slug" className="mb-1.5 block text-xs text-muted-foreground">Slug</Label>
             <Input id="cat-slug" type="text" value={form.slug} onChange={(e) => update("slug", e.target.value)} className="rounded-xl px-4 py-2.5 focus-visible:border-brand focus-visible:ring-brand" />
+          </div>
+          <div>
+            <Label htmlFor="cat-parent" className="mb-1.5 block text-xs text-muted-foreground">Parent Category</Label>
+            <Select value={form.parent_id || "none"} onValueChange={(v) => update("parent_id", v === "none" ? "" : v)}>
+              <SelectTrigger id="cat-parent" className="rounded-xl px-4 py-2.5 h-auto"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="none">None (top-level category)</SelectItem>
+                {parentOptions.map((c) => (
+                  <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <p className="mt-1 text-[11px] text-muted-foreground">Choose a parent to make this a subcategory. Leave as top-level for a department.</p>
           </div>
           <div>
             <Label htmlFor="cat-icon" className="mb-1.5 block text-xs text-muted-foreground">Icon (lucide name)</Label>
