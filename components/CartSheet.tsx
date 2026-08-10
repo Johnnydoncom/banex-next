@@ -56,6 +56,15 @@ export function CartSheet() {
                   )}
                   <div className="flex flex-1 flex-col">
                     <p className="line-clamp-1 text-sm font-semibold">{it.productName}</p>
+                    {it.variantAttributes && Object.keys(it.variantAttributes).length > 0 && (
+                      <p className="mt-0.5 flex flex-wrap gap-1">
+                        {Object.entries(it.variantAttributes).map(([k, v]) => (
+                          <span key={k} className="rounded-full bg-surface px-2 py-0.5 text-[10px] font-medium capitalize text-muted-foreground">
+                            {v}
+                          </span>
+                        ))}
+                      </p>
+                    )}
                     <p className="text-[11px] text-muted-foreground">Sold by {it.sellerName}</p>
                     <div className="mt-auto flex items-center justify-between">
                       <div className="inline-flex items-center rounded-full border border-border">

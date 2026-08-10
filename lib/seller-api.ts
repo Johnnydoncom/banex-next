@@ -137,11 +137,15 @@ export type SellerProduct = {
   category: { id: string; name: string; slug: string } | null
   stock_quantity?: number
   weight_kg?: number | string
+  has_variants?: boolean
+  variants?: import("./generic-api").ProductVariant[]
 }
 
 export type SellerOrderItem = {
   id: string
   product_id: string
+  product_variant_id?: string | null
+  variant_attributes?: Record<string, string> | string[] | null
   seller_id: string
   status: "paid" | "accepted" | "declined" | "delivered" | "disputed"
   decline_reason: string | null

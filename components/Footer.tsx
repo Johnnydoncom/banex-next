@@ -38,13 +38,19 @@ export function Footer({ settings }: { settings?: ResolvedSiteSettings }) {
             <ul className="mt-4 space-y-2 text-sm text-muted-foreground">
               <li><Link href="/help" className="hover:text-brand">Help center</Link></li>
               <li><Link href="/contact" className="hover:text-brand">Contact</Link></li>
+              <li><Link href="/privacy" className="hover:text-brand">Privacy policy</Link></li>
+              <li><Link href="/terms" className="hover:text-brand">Terms of service</Link></li>
             </ul>
           </div>
         </div>
         <div className="mt-12 h-px w-full bg-border" />
-        <p className="mt-6 text-center text-xs text-muted-foreground">
-          © {new Date().getFullYear()} {siteName}. Made with care in Nigeria.
-        </p>
+        <div className="mt-6 flex flex-col items-center justify-between gap-3 text-xs text-muted-foreground sm:flex-row">
+          <p>© {new Date().getFullYear()} {siteName}. Made with care in Nigeria.</p>
+          <div className="flex items-center gap-4">
+            <Link href="/privacy" className="hover:text-brand">Privacy</Link>
+            <Link href="/terms" className="hover:text-brand">Terms</Link>
+          </div>
+        </div>
       </div>
     </footer>
   )

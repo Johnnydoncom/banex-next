@@ -19,6 +19,7 @@ import {
 import { formatNaira } from "@/lib/products"
 import { BankTransferUploadScreen } from "@/components/BankTransferUpload"
 import { OrderTracker } from "@/components/OrderTracker"
+import { VariantTags } from "@/components/VariantTags"
 
 function parseDate(raw: string | { item: string } | undefined): string {
   if (!raw) return ""
@@ -460,6 +461,7 @@ export default function OrderDetailsPage() {
                 </div>
                 <div className="flex flex-1 flex-col justify-center min-w-0">
                   <p className="font-semibold text-sm line-clamp-2">{it.product_name}</p>
+                  <VariantTags attributes={it.variant_attributes} className="mt-1" />
                   <p className="mt-0.5 text-[11px] text-muted-foreground">
                     Sold by {it.seller_shop_name || "Unknown Seller"}
                   </p>

@@ -19,6 +19,8 @@ export default function WishlistPage() {
     cart.add({
       id: `${i.productId}-${i.sellerId ?? "vendor"}`,
       productId: i.productId,
+      productVariantId: null, // saved-item quick-add uses the product's default variant
+      variantAttributes: null,
       productSlug: i.productSlug,
       productName: i.productName,
       productImage: i.productImage ?? "",

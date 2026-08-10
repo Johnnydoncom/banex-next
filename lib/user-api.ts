@@ -19,6 +19,18 @@ type ApiEnvelope<T> = {
 export type CartItemData = {
   id: string            // Server cart-item ID
   product_id: string
+  product_variant_id: string | null
+  // {color,size} object, or `[]` when the variant has no attributes (simple product)
+  variant_attributes?: Record<string, string> | string[] | null
+  variant?: {
+    id: string
+    sku: string | null
+    attributes: Record<string, string> | string[] | null
+    price: number
+    stock_quantity: number
+    in_stock: boolean
+    is_default: boolean
+  } | null
   product: {
     id: string
     name: string
@@ -109,6 +121,8 @@ export type OrderData = {
   items: {
     id: string
     product_id?: string
+    product_variant_id?: string | null
+    variant_attributes?: Record<string, string> | string[] | null
     seller_id?: string
     product_name: string
     primary_image_url?: string | null  // API field (not product_image)
@@ -173,26 +187,26 @@ export async function userFetchCart() {
   return res.data?.cart
 }
 
-export async function userAddToCart(productId: string, quantity: number) {
-  // Correct endpoint: POST /user/cart/items  (NOT /user/cart)
-  const res = await apiPost<ApiEnvelope<{ cart: CartData }>>(`${PROXY_BASE}/user/cart/items`, {
-    product_id: productId,
+export async function userAddToCart(productId: string, quantity: number, productVariantId?: string | null) {
+  // POST /user/cart/items — include product_variant_id when the product has variants
+  // (omit it and the backend uses the product's default variant).
+  const body: Record<string, any> = { product_id: productId, quantity }
+  if (productVariantId) body.product_variant_id = productVariantId
+  const res = await apiPost<ApiEnvelope<{ cart: CartData }>>(`${PROXY_BASE}/user/cart/items`, body)
+  return res.data?.cart
+}
+
+export async function userUpdateCartQty(productVariantId: string, quantity: number) {
+  // BREAKING (variants): the path segment is the product_variant_id, NOT the product id.
+  const res = await apiPut<ApiEnvelope<{ cart: CartData }>>(`${PROXY_BASE}/user/cart/items/${productVariantId}`, {
     quantity,
   })
   return res.data?.cart
 }
 
-export async function userUpdateCartQty(productId: string, quantity: number) {
-  // Correct: uses productId in path (NOT the cart-item uuid)
-  const res = await apiPut<ApiEnvelope<{ cart: CartData }>>(`${PROXY_BASE}/user/cart/items/${productId}`, {
-    quantity,
-  })
-  return res.data?.cart
-}
-
-export async function userRemoveFromCart(productId: string) {
-  // Correct: uses productId in path (NOT the cart-item uuid)
-  const res = await apiDelete<ApiEnvelope<{ cart: CartData }>>(`${PROXY_BASE}/user/cart/items/${productId}`)
+export async function userRemoveFromCart(productVariantId: string) {
+  // BREAKING (variants): the path segment is the product_variant_id, NOT the product id.
+  const res = await apiDelete<ApiEnvelope<{ cart: CartData }>>(`${PROXY_BASE}/user/cart/items/${productVariantId}`)
   return res.data?.cart
 }
 
@@ -202,7 +216,9 @@ export async function userClearCart() {
   return res.data?.cart
 }
 
-export async function userSyncCart(items: { product_id: string; quantity: number }[]) {
+export async function userSyncCart(
+  items: { product_id: string; product_variant_id?: string | null; quantity: number }[],
+) {
   const res = await apiPost<ApiEnvelope<{ cart: CartData }>>(`${PROXY_BASE}/user/cart/sync`, { items })
   return res.data?.cart
 }

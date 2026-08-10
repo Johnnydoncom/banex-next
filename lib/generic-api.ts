@@ -21,6 +21,29 @@ export type GenericCategory = {
   subcategories?: { name: string; slug: string }[] // Assuming simple subcategories for UI
 }
 
+// A purchasable variant of a product. Every product has at least one (the default).
+// `attributes` is an object like { color: "Red", size: "M" }; the API serialises an
+// empty attribute set as `[]`, so normalise with `variantAttributes()` before use.
+// Only `color` and `size` attributes are supported.
+export type ProductVariant = {
+  id: string
+  sku: string | null
+  attributes: Record<string, string> | string[] | null
+  price: number
+  stock_quantity: number
+  in_stock: boolean
+  is_default: boolean
+  sort_order: number
+}
+
+/** Normalise a variant/cart `attributes` value (which may be `[]`) to an object. */
+export function variantAttributes(
+  attrs: Record<string, string> | string[] | null | undefined,
+): Record<string, string> {
+  if (!attrs || Array.isArray(attrs)) return {}
+  return attrs
+}
+
 export type GenericProduct = {
   id: string
   name: string
@@ -30,6 +53,8 @@ export type GenericProduct = {
   currency: string
   location: string | null
   in_stock: boolean
+  has_variants?: boolean
+  variants?: ProductVariant[]
   rating_average: number | null
   reviews_count: number
   is_featured: boolean

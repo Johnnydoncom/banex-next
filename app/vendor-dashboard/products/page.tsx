@@ -16,6 +16,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { Button } from "@/components/ui/button"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Switch } from "@/components/ui/switch"
+import { VariantsEditor, variantsFromProduct, appendVariants, validateVariants, type VariantRow } from "@/components/VariantsEditor"
 type ProductForm = {
   name: string
   brand: string
@@ -86,6 +87,8 @@ export default function VendorProductsPage() {
   const [saving, setSaving] = useState(false)
   const [previewImages, setPreviewImages] = useState<PreviewImg[]>([])
   const [deletedImageIds, setDeletedImageIds] = useState<string[]>([])
+  const [hasVariants, setHasVariants] = useState(false)
+  const [variantRows, setVariantRows] = useState<VariantRow[]>([])
 
   // Stock update modal
   const [stockModalProduct, setStockModalProduct] = useState<SellerProduct | null>(null)
@@ -135,6 +138,8 @@ export default function VendorProductsPage() {
     setForm(defaultForm())
     setPreviewImages([])
     setDeletedImageIds([])
+    setHasVariants(false)
+    setVariantRows([])
     setPricingPreview(null)
     setShowModal(true)
   }
@@ -159,6 +164,9 @@ export default function VendorProductsPage() {
     })
     setPreviewImages(p.images?.map((i) => ({ url: i.url, id: i.id })) ?? [])
     setDeletedImageIds([])
+    const variable = !!p.has_variants && (p.variants?.length ?? 0) > 0
+    setHasVariants(variable)
+    setVariantRows(variable ? variantsFromProduct(p.variants) : [])
     setPricingPreview(null)
     setShowModal(true)
   }
@@ -217,9 +225,13 @@ export default function VendorProductsPage() {
 
   async function handleSave() {
     if (!token) return
-    if (!form.name || !form.price || !form.category_id) {
+    if (!form.name || !form.category_id || (!hasVariants && !form.price)) {
       toast.error("Name, price, and category are required")
       return
+    }
+    if (hasVariants) {
+      const err = validateVariants(variantRows)
+      if (err) { toast.error(err); return }
     }
     setSaving(true)
     try {
@@ -228,8 +240,13 @@ export default function VendorProductsPage() {
       fd.append("brand", form.brand)
       fd.append("category_id", form.category_id)
       fd.append("description", form.description)
-      fd.append("price", form.price)
-      fd.append("stock_quantity", form.stock_quantity)
+      // Variable products carry per-variant price/stock; simple products send them flat.
+      if (hasVariants) {
+        appendVariants(fd, variantRows)
+      } else {
+        fd.append("price", form.price)
+        fd.append("stock_quantity", form.stock_quantity)
+      }
       fd.append("weight_kg", form.weight_kg)
       fd.append("location", form.location)
       fd.append("delivery_estimate", form.delivery_estimate)
@@ -505,17 +522,24 @@ export default function VendorProductsPage() {
                   </Select>
                 </F>
               </div>
-              <div className="grid grid-cols-3 gap-4">
-                <F label="Price (₦) *">
-                  <Input type="number" value={form.price} onChange={(e) => setForm((f) => ({ ...f, price: e.target.value }))} placeholder="0" />
-                </F>
-                <F label="Stock Qty">
-                  <Input type="number" value={form.stock_quantity} onChange={(e) => setForm((f) => ({ ...f, stock_quantity: e.target.value }))} placeholder="0" />
-                </F>
+              <div className={`grid gap-4 ${hasVariants ? "grid-cols-1" : "grid-cols-3"}`}>
+                {!hasVariants && (
+                  <>
+                    <F label="Price (₦) *">
+                      <Input type="number" value={form.price} onChange={(e) => setForm((f) => ({ ...f, price: e.target.value }))} placeholder="0" />
+                    </F>
+                    <F label="Stock Qty">
+                      <Input type="number" value={form.stock_quantity} onChange={(e) => setForm((f) => ({ ...f, stock_quantity: e.target.value }))} placeholder="0" />
+                    </F>
+                  </>
+                )}
                 <F label="Weight (kg)">
                   <Input type="number" step="0.1" value={form.weight_kg} onChange={(e) => setForm((f) => ({ ...f, weight_kg: e.target.value }))} placeholder="0.5" />
                 </F>
               </div>
+
+              <VariantsEditor enabled={hasVariants} onToggle={setHasVariants} rows={variantRows} onChange={setVariantRows} />
+
 
               {/* Pricing preview panel */}
               {(pricingPreview || loadingPreview) && (

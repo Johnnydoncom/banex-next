@@ -224,6 +224,8 @@ export type AdminProduct = {
   is_authentic_only: boolean
   in_stock: boolean
   stock_quantity: number
+  has_variants?: boolean
+  variants?: import("./generic-api").ProductVariant[]
   delivery_estimate: string | null
   specifications: string[]
   rating_average: number | null
@@ -506,6 +508,8 @@ export async function markAdminPayoutPaid(orderItemIds: string[], token: string,
 export type AdminOrderItem = {
   id: string
   product_id: string
+  product_variant_id?: string | null
+  variant_attributes?: Record<string, string> | string[] | null
   seller_id: string
   status: string
   decline_reason?: string | null

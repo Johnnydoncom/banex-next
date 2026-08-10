@@ -56,6 +56,8 @@ export function ProductSellerCard({ product, sellerProduct, isBestPrice, index }
     add({
       id: `${sellerProduct.id}-${s.id}`,
       productId: sellerProduct.id,
+      productVariantId: sellerProduct.variants?.find((v) => v.is_default)?.id ?? null,
+      variantAttributes: null,
       productSlug: sellerProduct.slug,
       productName: sellerProduct.name,
       productImage: primaryImg,
@@ -71,6 +73,8 @@ export function ProductSellerCard({ product, sellerProduct, isBestPrice, index }
     add({
       id: `${sellerProduct.id}-${s.id}`,
       productId: sellerProduct.id,
+      productVariantId: sellerProduct.variants?.find((v) => v.is_default)?.id ?? null,
+      variantAttributes: null,
       productSlug: sellerProduct.slug,
       productName: sellerProduct.name,
       productImage: primaryImg,

@@ -24,6 +24,7 @@ import {
   type AdminProduct,
 } from "@/lib/admin-api"
 import { RichTextEditor } from "@/components/RichTextEditor"
+import { VariantsEditor, variantsFromProduct, appendVariants, validateVariants, type VariantRow } from "@/components/VariantsEditor"
 import { LocationSelect } from "@/components/LocationSelect"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -146,6 +147,8 @@ export default function AdminEditProductPage({
   const [specifications, setSpecifications] = useState<{ key: string; value: string }[]>([
     { key: "", value: "" },
   ])
+  const [hasVariants, setHasVariants] = useState(false)
+  const [variantRows, setVariantRows] = useState<VariantRow[]>([])
 
   // Existing images from the server
   const [existingImages, setExistingImages] = useState<ExistingImage[]>([])
@@ -204,6 +207,11 @@ export default function AdminEditProductPage({
       const p = productRes.data?.product
       if (p) {
         setProduct(p)
+
+        // Hydrate variant editor from the product's variants.
+        const variable = !!p.has_variants && (p.variants?.length ?? 0) > 0
+        setHasVariants(variable)
+        setVariantRows(variable ? variantsFromProduct(p.variants) : [])
 
         setForm({
           name: p.name ?? "",
@@ -298,8 +306,12 @@ export default function AdminEditProductPage({
   const handleSubmit = async () => {
     if (!session?.accessToken) return
     if (!form.name.trim()) { toast.error("Product name is required."); return }
-    if (!form.price || Number(form.price) <= 0) { toast.error("Enter a valid price."); return }
+    if (!hasVariants && (!form.price || Number(form.price) <= 0)) { toast.error("Enter a valid price."); return }
     if (!form.category_id) { toast.error("Please select a category."); return }
+    if (hasVariants) {
+      const err = validateVariants(variantRows)
+      if (err) { toast.error(err); return }
+    }
 
     setSubmitting(true)
     try {
@@ -307,8 +319,13 @@ export default function AdminEditProductPage({
       fd.append("name", form.name)
       fd.append("brand", form.brand)
       fd.append("description", form.description)
-      fd.append("price", form.price)
-      if (form.stock_quantity !== "") fd.append("stock_quantity", form.stock_quantity)
+      // Variable products carry per-variant price/stock; simple products send them flat.
+      if (hasVariants) {
+        appendVariants(fd, variantRows)
+      } else {
+        fd.append("price", form.price)
+        if (form.stock_quantity !== "") fd.append("stock_quantity", form.stock_quantity)
+      }
       fd.append("category_id", form.category_id)
       fd.append("seller_id", form.seller_id)
       fd.append("location", form.location)
@@ -800,37 +817,43 @@ export default function AdminEditProductPage({
             </div>
           </div>
 
+          <VariantsEditor enabled={hasVariants} onToggle={setHasVariants} rows={variantRows} onChange={setVariantRows} />
+
           {/* Pricing & Logistics */}
           <div className="rounded-2xl border border-border bg-card p-6">
             <h2 className="font-display text-base font-semibold mb-4">Pricing & Logistics</h2>
             <div className="grid gap-4 sm:grid-cols-2">
-              <div>
-                <Label className="mb-1.5 block text-xs text-muted-foreground">
-                  Price (₦) <span className="text-rose-500">*</span>
-                </Label>
-                <Input
-                  type="number"
-                  value={form.price}
-                  onChange={(e) => update("price", e.target.value)}
-                  placeholder="350000"
-                  min="0"
-                  className="rounded-xl px-4 py-2.5 focus-visible:border-brand focus-visible:ring-brand"
-                />
-              </div>
-              <div>
-                <Label className="mb-1.5 block text-xs text-muted-foreground">
-                  Stock Quantity
-                </Label>
-                <Input
-                  type="number"
-                  value={form.stock_quantity}
-                  onChange={(e) => update("stock_quantity", e.target.value)}
-                  placeholder="50"
-                  min="0"
-                  className="rounded-xl px-4 py-2.5 focus-visible:border-brand focus-visible:ring-brand"
-                />
-                <p className="mt-1 text-[11px] text-muted-foreground">Manage inventory on behalf of the seller.</p>
-              </div>
+              {!hasVariants && (
+                <>
+                  <div>
+                    <Label className="mb-1.5 block text-xs text-muted-foreground">
+                      Price (₦) <span className="text-rose-500">*</span>
+                    </Label>
+                    <Input
+                      type="number"
+                      value={form.price}
+                      onChange={(e) => update("price", e.target.value)}
+                      placeholder="350000"
+                      min="0"
+                      className="rounded-xl px-4 py-2.5 focus-visible:border-brand focus-visible:ring-brand"
+                    />
+                  </div>
+                  <div>
+                    <Label className="mb-1.5 block text-xs text-muted-foreground">
+                      Stock Quantity
+                    </Label>
+                    <Input
+                      type="number"
+                      value={form.stock_quantity}
+                      onChange={(e) => update("stock_quantity", e.target.value)}
+                      placeholder="50"
+                      min="0"
+                      className="rounded-xl px-4 py-2.5 focus-visible:border-brand focus-visible:ring-brand"
+                    />
+                    <p className="mt-1 text-[11px] text-muted-foreground">Manage inventory on behalf of the seller.</p>
+                  </div>
+                </>
+              )}
               <div>
                 <Label className="mb-1.5 block text-xs text-muted-foreground">
                   Delivery Estimate

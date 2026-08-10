@@ -2,6 +2,7 @@
 
 import { useState } from "react"
 import { Search, Package, ChevronDown, ChevronUp, CheckCircle2, XCircle, ImageOff, MapPin } from "lucide-react"
+import { VariantTags } from "@/components/VariantTags"
 import { useAuth } from "@/hooks/use-auth"
 import { toast } from "sonner"
 import {
@@ -198,6 +199,7 @@ export default function VendorOrdersPage() {
                           {/* Details */}
                           <div className="flex-1 min-w-0">
                             <p className="font-medium text-sm line-clamp-1">{item.product_name}</p>
+                            <VariantTags attributes={item.variant_attributes} className="mt-0.5" />
                             <p className="mt-0.5 text-xs text-muted-foreground">
                               {formatNaira(item.unit_price)} × {item.quantity} = <strong className="text-foreground">{formatNaira(item.line_total)}</strong>
                             </p>

@@ -15,6 +15,7 @@ import {
 } from "@/lib/admin-api"
 import { RichTextEditor } from "@/components/RichTextEditor"
 import { LocationSelect } from "@/components/LocationSelect"
+import { VariantsEditor, emptyVariantRow, appendVariants, validateVariants, type VariantRow } from "@/components/VariantsEditor"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -43,7 +44,9 @@ export default function AdminNewProductPage() {
   })
   
   const [specifications, setSpecifications] = useState([{ key: "", value: "" }])
-  
+  const [hasVariants, setHasVariants] = useState(false)
+  const [variantRows, setVariantRows] = useState<VariantRow[]>([emptyVariantRow(true)])
+
   const [images, setImages] = useState<{ file: File; preview: string }[]>([])
   const [primaryImageIndex, setPrimaryImageIndex] = useState(0)
   
@@ -120,6 +123,11 @@ export default function AdminNewProductPage() {
 
   const handleSubmit = async () => {
     if (!session?.accessToken) return
+
+    if (hasVariants) {
+      const err = validateVariants(variantRows)
+      if (err) return toast.error(err)
+    }
     setSubmitting(true)
 
     try {
@@ -128,8 +136,13 @@ export default function AdminNewProductPage() {
       formData.append("brand", form.brand)
       formData.append("category_id", form.category_id)
       formData.append("description", form.description)
-      formData.append("price", form.price)
-      formData.append("stock_quantity", form.stock_quantity)
+      // Variable products carry per-variant price/stock; simple products send them flat.
+      if (hasVariants) {
+        appendVariants(formData, variantRows)
+      } else {
+        formData.append("price", form.price)
+        formData.append("stock_quantity", form.stock_quantity)
+      }
       formData.append("seller_id", form.seller_id)
       formData.append("weight_kg", form.weight_kg)
       formData.append("location", form.location)
@@ -299,13 +312,20 @@ export default function AdminNewProductPage() {
         {/* Step 2: Pricing & Inventory */}
         {step === 2 && (
           <div className="grid gap-4 sm:grid-cols-2">
-            <div>
-              <Label htmlFor="product-price" className="mb-1.5 block text-xs text-muted-foreground">Price (₦)</Label>
-              <Input id="product-price" type="number" value={form.price} onChange={(e) => update("price", e.target.value)} className="rounded-xl px-4 py-2.5 focus-visible:border-brand focus-visible:ring-brand" placeholder="350000" />
-            </div>
-            <div>
-              <Label htmlFor="product-stock" className="mb-1.5 block text-xs text-muted-foreground">Stock Quantity</Label>
-              <Input id="product-stock" type="number" value={form.stock_quantity} onChange={(e) => update("stock_quantity", e.target.value)} className="rounded-xl px-4 py-2.5 focus-visible:border-brand focus-visible:ring-brand" placeholder="50" />
+            {!hasVariants && (
+              <>
+                <div>
+                  <Label htmlFor="product-price" className="mb-1.5 block text-xs text-muted-foreground">Price (₦)</Label>
+                  <Input id="product-price" type="number" value={form.price} onChange={(e) => update("price", e.target.value)} className="rounded-xl px-4 py-2.5 focus-visible:border-brand focus-visible:ring-brand" placeholder="350000" />
+                </div>
+                <div>
+                  <Label htmlFor="product-stock" className="mb-1.5 block text-xs text-muted-foreground">Stock Quantity</Label>
+                  <Input id="product-stock" type="number" value={form.stock_quantity} onChange={(e) => update("stock_quantity", e.target.value)} className="rounded-xl px-4 py-2.5 focus-visible:border-brand focus-visible:ring-brand" placeholder="50" />
+                </div>
+              </>
+            )}
+            <div className="sm:col-span-2">
+              <VariantsEditor enabled={hasVariants} onToggle={setHasVariants} rows={variantRows} onChange={setVariantRows} />
             </div>
             <div className="sm:col-span-2">
               <Label htmlFor="product-weight" className="mb-1.5 block text-xs text-muted-foreground">Weight (kg)</Label>

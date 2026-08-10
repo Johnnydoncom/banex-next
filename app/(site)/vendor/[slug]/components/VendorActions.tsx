@@ -17,6 +17,8 @@ export function VendorOrderAll({ items, vendor }: { items: GenericProduct[]; ven
     add({
       id: `${item.id}-${vendor.id}`,
       productId: item.id,
+      productVariantId: item.variants?.find((v) => v.is_default)?.id ?? null,
+      variantAttributes: null,
       productSlug: item.slug,
       productName: item.name,
       productImage: item.images?.[0]?.url || "",
@@ -45,6 +47,8 @@ export function VendorQuickOrder({ item, vendor }: { item: GenericProduct; vendo
     add({
       id: `${item.id}-${vendor.id}`,
       productId: item.id,
+      productVariantId: item.variants?.find((v) => v.is_default)?.id ?? null,
+      variantAttributes: null,
       productSlug: item.slug,
       productName: item.name,
       productImage: item.images?.[0]?.url || "",

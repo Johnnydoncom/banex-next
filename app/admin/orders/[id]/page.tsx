@@ -4,6 +4,7 @@ import { use, useEffect, useState } from "react"
 import Link from "next/link"
 import { ArrowLeft, User, Truck, Calendar, ImageOff, Store, ChevronRight } from "lucide-react"
 import { StatusBadge } from "@/components/StatusBadge"
+import { VariantTags } from "@/components/VariantTags"
 import { useAuth } from "@/hooks/use-auth"
 import { fetchAdminOrder, updateAdminOrderStatus, cancelAdminOrder, sellerActionAdminOrder, type AdminOrder } from "@/lib/admin-api"
 import { toast } from "sonner"
@@ -174,6 +175,7 @@ export default function AdminOrderDetailPage({ params }: { params: Promise<{ id:
                   </div>
                   <div className="flex-1 min-w-0">
                     <p className="font-semibold">{item.product_name}</p>
+                    <VariantTags attributes={item.variant_attributes} className="mt-0.5" />
                     {item.seller_id ? (
                       <Link
                         href={`/admin/users/sellers/${item.seller_id}`}
