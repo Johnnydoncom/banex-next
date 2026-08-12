@@ -166,7 +166,6 @@ export default function OrdersPage() {
                         <p className="truncate text-sm font-medium">{it.product_name}</p>
                         <p className="text-[11px] text-muted-foreground">
                           Qty {it.quantity} · {formatNaira(it.unit_price)}
-                          {it.seller_shop_name && ` · ${it.seller_shop_name}`}
                         </p>
                       </div>
                       <p className="text-sm font-semibold">{formatNaira(it.line_total)}</p>

@@ -421,8 +421,7 @@ export function OrderTracker({
                   <div className="min-w-0 flex-1">
                     <p className="truncate text-sm font-semibold text-foreground">{it.product_name}</p>
                     <p className="text-xs text-muted-foreground">
-                      Qty {it.quantity}
-                      {it.seller_shop_name ? ` · ${it.seller_shop_name}` : ""}
+                      Qty {it.quantity} · Banex Mall
                     </p>
                   </div>
                 </li>

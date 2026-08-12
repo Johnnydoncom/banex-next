@@ -534,7 +534,7 @@ export default function CheckoutPage() {
                     <div className="flex-1">
                       <p className="line-clamp-1 text-sm font-medium">{it.productName}</p>
                       <p className="text-[11px] text-muted-foreground">
-                        {it.sellerName} · Qty {it.qty}
+                        Banex Mall · Qty {it.qty}
                       </p>
                     </div>
                     <p className="text-sm font-semibold">{formatNaira(it.price * it.qty)}</p>

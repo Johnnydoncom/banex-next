@@ -65,7 +65,7 @@ export function CartSheet() {
                         ))}
                       </p>
                     )}
-                    <p className="text-[11px] text-muted-foreground">Sold by {it.sellerName}</p>
+                    <p className="text-[11px] text-muted-foreground">Sold by Banex Mall</p>
                     <div className="mt-auto flex items-center justify-between">
                       <div className="inline-flex items-center rounded-full border border-border">
                         <Button variant="ghost" type="button"

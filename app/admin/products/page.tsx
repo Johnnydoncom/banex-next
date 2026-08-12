@@ -5,7 +5,7 @@ import Link from "next/link"
 import Image from "next/image"
 import {
   Plus, Eye, Check, X, Power, PowerOff, Loader2, Edit2,
-  ChevronDown, AlertTriangle, ShieldCheck, ShieldOff, Ban
+  ChevronDown, AlertTriangle, ShieldCheck, ShieldOff, Ban, Store, Boxes
 } from "lucide-react"
 import { DataTable, type Column } from "@/components/DataTable"
 import { StatusBadge } from "@/components/StatusBadge"
@@ -17,11 +17,18 @@ import {
   rejectAdminProduct,
   activateAdminProduct,
   deactivateAdminProduct,
+  updateAdminProductStock,
+  reassignAdminProductSeller,
+  fetchAdminSellers,
   type AdminProduct,
+  type AdminSeller,
 } from "@/lib/admin-api"
 import { useAdminProducts } from "@/hooks/use-swr-data"
 import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 
 type Tab = "all" | "pending" | "active" | "inactive" | "rejected" | "draft"
 
@@ -210,6 +217,47 @@ export default function AdminProductsPage() {
   const [rejectTarget, setRejectTarget] = useState<AdminProduct | null>(null)
   const [rejectLoading, setRejectLoading] = useState(false)
 
+  // Manage owner & stock modal (uses the dedicated reassign-seller / stock endpoints)
+  const [sellers, setSellers] = useState<AdminSeller[]>([])
+  const [manageTarget, setManageTarget] = useState<AdminProduct | null>(null)
+  const [manageStock, setManageStock] = useState("")
+  const [manageSellerId, setManageSellerId] = useState("")
+  const [manageSaving, setManageSaving] = useState(false)
+
+  useEffect(() => {
+    if (!token) return
+    fetchAdminSellers(token).then((r) => setSellers(r.data?.sellers || [])).catch(() => {})
+  }, [token])
+
+  const openManage = (p: AdminProduct) => {
+    setManageTarget(p)
+    setManageStock(String(p.stock_quantity ?? 0))
+    setManageSellerId(p.seller?.id || p.seller_id || "")
+  }
+
+  const saveManage = async () => {
+    if (!manageTarget || !token) return
+    setManageSaving(true)
+    try {
+      // Reassign owner only when it changed.
+      if (manageSellerId && manageSellerId !== (manageTarget.seller?.id || manageTarget.seller_id)) {
+        await reassignAdminProductSeller(manageTarget.id, manageSellerId, token)
+      }
+      // Update stock only when it changed (variant products manage stock per-variant on the edit page).
+      const newStock = parseInt(manageStock, 10)
+      if (!manageTarget.has_variants && !Number.isNaN(newStock) && newStock !== manageTarget.stock_quantity) {
+        await updateAdminProductStock(manageTarget.id, newStock, token)
+      }
+      toast.success("Product updated")
+      setManageTarget(null)
+      mutate()
+    } catch (e: any) {
+      toast.error(e.message || "Failed to update product")
+    } finally {
+      setManageSaving(false)
+    }
+  }
+
   // Tab filtering
   const filtered = products.filter((p) => {
     if (tab === "pending") return p.status === "pending"
@@ -378,6 +426,22 @@ export default function AdminProductsPage() {
       ),
     },
     {
+      key: "owner",
+      label: "Owner",
+      sortable: true,
+      render: (p) =>
+        p.seller ? (
+          <Link
+            href={`/admin/users/sellers/${p.seller.id}`}
+            className="inline-flex items-center gap-1.5 text-xs font-medium text-muted-foreground hover:text-brand hover:underline"
+          >
+            <Store className="h-3.5 w-3.5" /> {p.seller.shop_name}
+          </Link>
+        ) : (
+          <span className="text-xs text-muted-foreground">—</span>
+        ),
+    },
+    {
       key: "status",
       label: "Status",
       sortable: true,
@@ -398,7 +462,19 @@ export default function AdminProductsPage() {
       label: "Actions",
       className: "text-right",
       render: (p) => (
-        <ProductActionButtons product={p} onAction={(action) => triggerAction(p, action)} />
+        <div className="flex items-center justify-end gap-1">
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            onClick={() => openManage(p)}
+            title="Manage owner & stock"
+            className="h-auto w-auto rounded-lg p-1.5 text-muted-foreground hover:bg-surface hover:text-brand"
+          >
+            <Boxes className="h-3.5 w-3.5" />
+          </Button>
+          <ProductActionButtons product={p} onAction={(action) => triggerAction(p, action)} />
+        </div>
       ),
     },
   ]
@@ -521,6 +597,65 @@ export default function AdminProductsPage() {
         onCancel={() => setRejectTarget(null)}
         loading={rejectLoading}
       />
+
+      {/* Manage owner & stock modal */}
+      {manageTarget && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm">
+          <div className="w-full max-w-sm rounded-2xl border border-border bg-card p-6 shadow-2xl">
+            <h3 className="font-display text-lg font-bold">Manage product</h3>
+            <p className="mt-0.5 truncate text-sm text-muted-foreground">{manageTarget.name}</p>
+
+            <div className="mt-5 space-y-4">
+              <div>
+                <Label className="mb-1.5 block text-xs font-semibold text-foreground">Owner (seller)</Label>
+                <Select value={manageSellerId} onValueChange={setManageSellerId}>
+                  <SelectTrigger className="h-auto rounded-xl px-3 py-2.5"><SelectValue placeholder="Select seller" /></SelectTrigger>
+                  <SelectContent>
+                    {sellers.map((s) => (
+                      <SelectItem key={s.id} value={s.id}>{s.shop_name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <p className="mt-1 text-[11px] text-muted-foreground">Reassigns which vendor this product belongs to.</p>
+              </div>
+
+              <div>
+                <Label className="mb-1.5 block text-xs font-semibold text-foreground">Stock quantity</Label>
+                <Input
+                  type="number"
+                  min="0"
+                  value={manageStock}
+                  onChange={(e) => setManageStock(e.target.value)}
+                  disabled={manageTarget.has_variants}
+                  className="rounded-xl px-3 py-2.5"
+                />
+                {manageTarget.has_variants && (
+                  <p className="mt-1 text-[11px] text-muted-foreground">This product has variants — edit stock per variant on the product page.</p>
+                )}
+              </div>
+            </div>
+
+            <div className="mt-6 flex gap-3">
+              <Button
+                type="button"
+                onClick={saveManage}
+                disabled={manageSaving}
+                className="h-auto flex-1 rounded-full bg-gradient-brand py-2.5 text-sm font-semibold text-primary-foreground disabled:opacity-60"
+              >
+                {manageSaving ? <Loader2 className="mx-auto h-4 w-4 animate-spin" /> : "Save"}
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setManageTarget(null)}
+                className="h-auto flex-1 rounded-full bg-card py-2.5 text-sm font-semibold"
+              >
+                Cancel
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

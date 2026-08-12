@@ -9,11 +9,8 @@ export default async function DashboardRedirectPage() {
     redirect("/login")
   }
 
+  // Banex Mall is the single seller — there is no vendor dashboard. Admins go to
+  // the admin console; everyone else to their customer account.
   const userRole = (session?.user as any)?.role
-
-  if (userRole === "vendor") {
-    redirect("/vendor-dashboard")
-  } else {
-    redirect("/account")
-  }
+  redirect(userRole === "admin" ? "/admin" : "/account")
 }

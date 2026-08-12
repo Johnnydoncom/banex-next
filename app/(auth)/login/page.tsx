@@ -58,13 +58,7 @@ function LoginForm() {
     if (callbackUrl) {
       router.push(callbackUrl)
     } else {
-      if (userRole === "vendor") {
-        router.push("/vendor-dashboard")
-      } else if (userRole === "admin") {
-        router.push("/admin")
-      } else {
-        router.push("/account")
-      }
+      router.push(userRole === "admin" ? "/admin" : "/account")
     }
     router.refresh()
   }

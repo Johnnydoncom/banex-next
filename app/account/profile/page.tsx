@@ -1,17 +1,14 @@
 "use client"
 
-import Link from "next/link"
 import { useEffect, useState } from "react"
-import { Store, UserCircle } from "lucide-react"
+import { UserCircle } from "lucide-react"
 import { useAuth } from "@/hooks/use-auth"
-import { useRoles, requestVendorRole } from "@/hooks/use-roles"
 import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 
 export default function ProfilePage() {
   const { user, session } = useAuth()
-  const { isVendor } = useRoles()
   const [profile, setProfile] = useState({ full_name: "", phone: "" })
   const [saving, setSaving] = useState(false)
 
@@ -63,13 +60,6 @@ export default function ProfilePage() {
     } finally {
       setSaving(false)
     }
-  }
-
-  const becomeVendor = async () => {
-    if (!user) return
-    const { error } = await requestVendorRole((user as any).id)
-    if (error) toast.error(error.message)
-    else toast.success("Vendor access granted — open your dashboard!")
   }
 
   return (
@@ -137,43 +127,6 @@ export default function ProfilePage() {
           >
             {saving ? "Saving Changes..." : "Save Changes"}
           </Button>
-        </div>
-      </section>
-
-      {/* Vendor Section */}
-      <section className="rounded-2xl border border-emerald-500/20 bg-gradient-to-br from-emerald-500/5 via-card to-card p-6 shadow-sm">
-        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-          <div className="flex items-start gap-4">
-            <span className="rounded-2xl bg-emerald-500/15 p-3 text-emerald-600 flex-shrink-0 mt-1 sm:mt-0">
-              <Store className="h-6 w-6" />
-            </span>
-            <div>
-              <p className="font-display text-base font-bold text-foreground">
-                {isVendor ? "You are a Verified Vendor" : "Start Selling on Banex Mall"}
-              </p>
-              <p className="mt-1 text-sm text-muted-foreground max-w-md">
-                {isVendor 
-                  ? "Manage your store, view orders, and track your business performance from your vendor dashboard." 
-                  : "Join thousands of sellers. Open your store today and start reaching more customers."}
-              </p>
-            </div>
-          </div>
-          {isVendor ? (
-            <Link 
-              href="/vendor-dashboard" 
-              className="flex-shrink-0 rounded-xl bg-emerald-600 px-5 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-emerald-700 transition-colors"
-            >
-              Go to Dashboard
-            </Link>
-          ) : (
-            <Button
-              type="button"
-              onClick={becomeVendor}
-              className="h-auto flex-shrink-0 rounded-xl bg-emerald-600 px-5 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-emerald-700"
-            >
-              Become a Vendor
-            </Button>
-          )}
         </div>
       </section>
     </div>

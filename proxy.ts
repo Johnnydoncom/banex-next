@@ -7,23 +7,18 @@ const PROTECTED_ROUTES = ["/checkout"]
 /**
  * Next.js proxy (formerly "middleware") — request-time auth + role gating.
  *
- * Role-based dashboard access:
- *   admin    (type === "admin")                    → /admin only
- *   vendor   (type === "user" && approved store)   → /account + /vendor-dashboard
- *   customer (type === "user", no approved store)  → /account only
+ * Banex Mall is the single seller, so there are only two roles:
+ *   admin    (type === "admin")  → /admin only
+ *   customer (everyone else)     → /account
  *
- * Enforced server-side so a signed-in user can never reach a dashboard their role
- * doesn't own (the client-side layout guards are only UX). Relies on the JWT
- * carrying `role`, `hasStore` and `storeStatus` (set in lib/auth.ts).
+ * Enforced server-side so a signed-in user can never reach an area their role
+ * doesn't own (the client-side layout guards are only UX).
  */
 export async function proxy(req: NextRequest) {
   const token = await getToken({ req, secret: process.env.NEXTAUTH_SECRET })
   const { pathname } = req.nextUrl
 
-  const isDashboard =
-    pathname.startsWith("/admin") ||
-    pathname.startsWith("/account") ||
-    pathname.startsWith("/vendor-dashboard")
+  const isDashboard = pathname.startsWith("/admin") || pathname.startsWith("/account")
   const isProtected = isDashboard || PROTECTED_ROUTES.some((route) => pathname.startsWith(route))
 
   // Require sign-in for protected areas.
@@ -33,20 +28,13 @@ export async function proxy(req: NextRequest) {
     return NextResponse.redirect(loginUrl)
   }
 
-  // Role gating for the three dashboards.
+  // Role gating.
   if (token && isDashboard) {
-    const role = (token as { role?: string }).role
-    const hasStore = (token as { hasStore?: boolean }).hasStore === true
-    const storeStatus = (token as { storeStatus?: string | null }).storeStatus
-    const isAdmin = role === "admin"
-    const isVendor = !isAdmin && hasStore && storeStatus === "approved"
+    const isAdmin = (token as { role?: string }).role === "admin"
     const redirect = (to: string) => NextResponse.redirect(new URL(to, req.url))
 
     if (pathname.startsWith("/admin")) {
       if (!isAdmin) return redirect("/account")
-    } else if (pathname.startsWith("/vendor-dashboard")) {
-      if (isAdmin) return redirect("/admin")
-      if (!isVendor) return redirect("/account")
     } else if (pathname.startsWith("/account")) {
       // Admins are confined to the admin console.
       if (isAdmin) return redirect("/admin")
@@ -63,12 +51,5 @@ export async function proxy(req: NextRequest) {
 }
 
 export const config = {
-  matcher: [
-    "/checkout",
-    "/login",
-    "/signup",
-    "/admin/:path*",
-    "/account/:path*",
-    "/vendor-dashboard/:path*",
-  ],
+  matcher: ["/checkout", "/login", "/signup", "/admin/:path*", "/account/:path*"],
 }

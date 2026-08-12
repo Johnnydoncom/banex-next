@@ -463,7 +463,7 @@ export default function OrderDetailsPage() {
                   <p className="font-semibold text-sm line-clamp-2">{it.product_name}</p>
                   <VariantTags attributes={it.variant_attributes} className="mt-1" />
                   <p className="mt-0.5 text-[11px] text-muted-foreground">
-                    Sold by {it.seller_shop_name || "Unknown Seller"}
+                    Sold by Banex Mall
                   </p>
                   {it.status && (
                     <span className={`mt-1 inline-flex w-fit rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide ${it.status === "paid" ? "bg-emerald-500/10 text-emerald-700" : "bg-amber-500/10 text-amber-700"

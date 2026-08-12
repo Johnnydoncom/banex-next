@@ -247,9 +247,37 @@ type AdminProductsData = {
   pagination: { current_page: number; per_page: number; total: number; last_page: number }
 }
 
-export async function fetchAdminProducts(token: string, status?: string) {
-  const qs = status ? `?filter[status]=${status}` : ""
+export async function fetchAdminProducts(token: string, status?: string, sellerId?: string) {
+  const params = new URLSearchParams()
+  if (status) params.set("filter[status]", status)
+  if (sellerId) params.set("filter[seller_id]", sellerId)
+  const qs = params.toString() ? `?${params.toString()}` : ""
   return proxyFetch<AdminProductsData>(`/admin/products${qs}`, token)
+}
+
+// Products owned by a specific seller (owner). GET /admin/sellers/:id/products
+export async function fetchAdminSellerProducts(sellerId: string, token: string, page = 1) {
+  return proxyFetch<AdminProductsData>(`/admin/sellers/${sellerId}/products?page=${page}`, token)
+}
+
+// Update ONLY a product's stock. PATCH /admin/products/:id/stock  { stock_quantity }
+export async function updateAdminProductStock(id: string, stockQuantity: number, token: string) {
+  return proxyFetch<{ product: AdminProduct }>(
+    `/admin/products/${id}/stock`,
+    token,
+    "PATCH",
+    { stock_quantity: stockQuantity },
+  )
+}
+
+// Reassign a product to a different seller/owner. POST /admin/products/:id/reassign-seller { seller_id }
+export async function reassignAdminProductSeller(id: string, sellerId: string, token: string) {
+  return proxyFetch<{ product: AdminProduct }>(
+    `/admin/products/${id}/reassign-seller`,
+    token,
+    "POST",
+    { seller_id: sellerId },
+  )
 }
 
 export async function fetchAdminProduct(id: string, token: string) {
@@ -583,6 +611,17 @@ export async function updateAdminOrderStatus(id: string, action: "process" | "tr
 export async function sellerActionAdminOrder(orderId: string, itemId: string, action: "accept" | "decline", token: string, reason?: string) {
   const body = action === "decline" && reason ? { reason } : undefined
   return proxyFetch<{ order: AdminOrder }>(`/admin/orders/${orderId}/items/${itemId}/${action}`, token, "POST", body)
+}
+
+// Accept ALL paid items on an order at once (Banex acts on behalf of every seller).
+// POST /admin/orders/:id/accept-paid-items  (no body)
+export async function acceptAdminOrderPaidItems(orderId: string, token: string) {
+  return proxyFetch<{ order: AdminOrder }>(`/admin/orders/${orderId}/accept-paid-items`, token, "POST")
+}
+
+// Decline ALL paid items on an order at once. POST /admin/orders/:id/decline-paid-items { reason } (required)
+export async function declineAdminOrderPaidItems(orderId: string, reason: string, token: string) {
+  return proxyFetch<{ order: AdminOrder }>(`/admin/orders/${orderId}/decline-paid-items`, token, "POST", { reason })
 }
 
 // ─── Admin Revenue ────────────────────────────────────────────────────────────

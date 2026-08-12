@@ -14,8 +14,10 @@ import {
   toggleAdminSellerSuspension,
   fetchAdminWhatsAppContacts,
   fetchAdminSellerTiers,
+  fetchAdminSellerProducts,
   AdminCategory,
   AdminSeller,
+  AdminProduct,
   AdminWhatsAppContact,
   AdminSellerTier,
 } from "@/lib/admin-api"
@@ -56,6 +58,7 @@ export default function AdminEditSellerPage() {
   const [categories, setCategories] = useState<AdminCategory[]>([])
   const [contacts, setContacts] = useState<AdminWhatsAppContact[]>([])
   const [tiers, setTiers] = useState<AdminSellerTier[]>([])
+  const [sellerProducts, setSellerProducts] = useState<AdminProduct[]>([])
   const [loadingData, setLoadingData] = useState(true)
   const [submitting, setSubmitting] = useState(false)
 
@@ -73,16 +76,18 @@ export default function AdminEditSellerPage() {
   const loadData = async (token: string) => {
     try {
       setLoadingData(true)
-      const [catsRes, sellerRes, contactsRes, tiersRes] = await Promise.all([
+      const [catsRes, sellerRes, contactsRes, tiersRes, productsRes] = await Promise.all([
         fetchAdminCategories(token),
         fetchAdminSeller(id, token),
         fetchAdminWhatsAppContacts(token),
         fetchAdminSellerTiers(token),
+        fetchAdminSellerProducts(id, token).catch(() => null),
       ])
 
       setCategories(catsRes.data?.categories || [])
       setContacts(contactsRes.data?.whatsapp_contacts || [])
       setTiers(tiersRes.data?.seller_tiers || [])
+      setSellerProducts(productsRes?.data?.products || [])
 
       const s = sellerRes.data?.seller
       if (s) {
@@ -347,6 +352,33 @@ export default function AdminEditSellerPage() {
                 <p className="mt-1 text-xs text-muted-foreground">Used for the “Visit in-store” link on the storefront.</p>
               </div>
             </div>
+          </section>
+
+          {/* Products owned by this seller */}
+          <section className="rounded-2xl border border-border bg-card shadow-sm">
+            <div className="flex items-center justify-between border-b border-border px-6 py-4">
+              <h2 className="flex items-center gap-2 font-display text-lg font-bold">
+                <Store className="h-4 w-4 text-brand" /> Products ({sellerProducts.length})
+              </h2>
+              <Link href={`/admin/products/new`} className="text-xs font-semibold text-brand hover:underline">
+                + Add product
+              </Link>
+            </div>
+            {sellerProducts.length === 0 ? (
+              <p className="px-6 py-8 text-center text-sm text-muted-foreground">No products assigned to this seller yet.</p>
+            ) : (
+              <ul className="divide-y divide-border">
+                {sellerProducts.map((p) => (
+                  <li key={p.id} className="flex items-center justify-between gap-3 px-6 py-3">
+                    <Link href={`/admin/products/${p.id}`} className="min-w-0 flex-1 truncate text-sm font-medium hover:text-brand">
+                      {p.name}
+                    </Link>
+                    <span className="flex-none text-xs text-muted-foreground">Stock: {p.stock_quantity ?? 0}</span>
+                    <StatusBadge status={p.status} className="flex-none px-2 py-0.5 text-[10px]" />
+                  </li>
+                ))}
+              </ul>
+            )}
           </section>
         </div>
 

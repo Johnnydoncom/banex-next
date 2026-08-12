@@ -6,7 +6,7 @@ import { ArrowLeft, User, Truck, Calendar, ImageOff, Store, ChevronRight } from 
 import { StatusBadge } from "@/components/StatusBadge"
 import { VariantTags } from "@/components/VariantTags"
 import { useAuth } from "@/hooks/use-auth"
-import { fetchAdminOrder, updateAdminOrderStatus, cancelAdminOrder, sellerActionAdminOrder, type AdminOrder } from "@/lib/admin-api"
+import { fetchAdminOrder, updateAdminOrderStatus, cancelAdminOrder, sellerActionAdminOrder, acceptAdminOrderPaidItems, declineAdminOrderPaidItems, type AdminOrder } from "@/lib/admin-api"
 import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
@@ -23,6 +23,40 @@ export default function AdminOrderDetailPage({ params }: { params: Promise<{ id:
   const [itemAction, setItemAction] = useState<{ itemId: string; action: "accept" | "decline" } | null>(null)
   const [declineReason, setDeclineReason] = useState("")
   const [itemActioning, setItemActioning] = useState(false)
+  const [paidActioning, setPaidActioning] = useState(false)
+  const [declineAllOpen, setDeclineAllOpen] = useState(false)
+  const [declineAllReason, setDeclineAllReason] = useState("")
+
+  async function handleAcceptPaidItems() {
+    if (!token) return
+    setPaidActioning(true)
+    try {
+      const res = await acceptAdminOrderPaidItems(id, token)
+      setOrder(res.data?.order ?? null)
+      toast.success("All paid items accepted")
+    } catch (err: any) {
+      toast.error(err.message || "Failed to accept paid items")
+    } finally {
+      setPaidActioning(false)
+    }
+  }
+
+  async function handleDeclinePaidItems() {
+    if (!token) return
+    if (!declineAllReason.trim()) { toast.error("Please provide a reason"); return }
+    setPaidActioning(true)
+    try {
+      const res = await declineAdminOrderPaidItems(id, declineAllReason.trim(), token)
+      setOrder(res.data?.order ?? null)
+      toast.success("All paid items declined")
+      setDeclineAllOpen(false)
+      setDeclineAllReason("")
+    } catch (err: any) {
+      toast.error(err.message || "Failed to decline paid items")
+    } finally {
+      setPaidActioning(false)
+    }
+  }
 
   useEffect(() => {
     if (!token) return
@@ -156,6 +190,37 @@ export default function AdminOrderDetailPage({ params }: { params: Promise<{ id:
         </div>
         <StatusBadge status={order.status} className="px-3 py-1 text-xs" />
       </div>
+
+      {/* Order-level paid-item actions — Banex accepts/declines on behalf of sellers */}
+      {order.items?.some((i) => i.status === "paid") && (
+        <div className="flex flex-col gap-3 rounded-2xl border border-amber-300 bg-amber-50 p-4 dark:border-amber-800/50 dark:bg-amber-950/20 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <p className="font-semibold text-amber-900 dark:text-amber-300">Paid items awaiting confirmation</p>
+            <p className="mt-0.5 text-xs text-amber-800/80 dark:text-amber-400/80">
+              Accept to fulfil these items, or decline (with a reason) to refund the customer.
+            </p>
+          </div>
+          <div className="flex flex-none gap-2">
+            <Button
+              type="button"
+              onClick={handleAcceptPaidItems}
+              disabled={paidActioning}
+              className="h-auto rounded-full bg-emerald-600 px-4 py-2 text-xs font-semibold text-white hover:bg-emerald-700 disabled:opacity-60"
+            >
+              Accept all paid items
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setDeclineAllOpen(true)}
+              disabled={paidActioning}
+              className="h-auto rounded-full border-rose-300 bg-rose-50 px-4 py-2 text-xs font-semibold text-rose-700 hover:bg-rose-100 dark:border-rose-900/50 dark:bg-rose-950/30"
+            >
+              Decline all
+            </Button>
+          </div>
+        </div>
+      )}
 
       <div className="grid gap-6 lg:grid-cols-3">
         {/* Items List */}
@@ -338,6 +403,43 @@ export default function AdminOrderDetailPage({ params }: { params: Promise<{ id:
                 type="button"
                 variant="outline"
                 onClick={() => { setItemAction(null); setDeclineReason("") }}
+                className="h-auto flex-1 rounded-full bg-card py-2.5 text-sm font-semibold"
+              >
+                Cancel
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Decline all paid items modal */}
+      {declineAllOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm">
+          <div className="w-full max-w-sm rounded-2xl border border-border bg-card p-6 shadow-2xl">
+            <h3 className="font-display text-lg font-bold">Decline all paid items</h3>
+            <p className="mt-1 text-sm text-muted-foreground">
+              This declines every paid item on the order and refunds the customer. Provide a reason.
+            </p>
+            <Textarea
+              value={declineAllReason}
+              onChange={(e) => setDeclineAllReason(e.target.value)}
+              placeholder="Reason for declining…"
+              rows={3}
+              className="mt-4 resize-none rounded-xl px-3 py-2 focus-visible:border-brand focus-visible:ring-brand"
+            />
+            <div className="mt-6 flex gap-3">
+              <Button
+                type="button"
+                onClick={handleDeclinePaidItems}
+                disabled={paidActioning || !declineAllReason.trim()}
+                className="h-auto flex-1 rounded-full bg-rose-600 py-2.5 text-sm font-semibold text-white hover:bg-rose-700 disabled:opacity-60"
+              >
+                {paidActioning ? "Declining…" : "Confirm decline"}
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => { setDeclineAllOpen(false); setDeclineAllReason("") }}
                 className="h-auto flex-1 rounded-full bg-card py-2.5 text-sm font-semibold"
               >
                 Cancel
