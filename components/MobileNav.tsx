@@ -2,7 +2,7 @@
 
 import Link from "next/link"
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger, SheetClose } from "@/components/ui/sheet"
-import { Menu, ChevronRight, Store, Truck, HelpCircle, User, MapPin, Smartphone, Laptop, Sofa, Shirt, Sparkles, Dumbbell, Baby, PawPrint, Apple, Briefcase, Car, Home } from "lucide-react"
+import { Menu, ChevronRight, Store, Truck, HelpCircle, Smartphone, Laptop, Sofa, Shirt, Sparkles, Dumbbell, Baby, PawPrint, Apple, Briefcase, Car, Home } from "lucide-react"
 import { GenericCategory } from "@/lib/generic-api"
 
 // Helper to map backend icon string to a Lucide component
@@ -45,20 +45,9 @@ export function MobileNav({ categories }: { categories: GenericCategory[] }) {
             <p className="text-[11px] font-semibold uppercase tracking-widest text-brand-deep">Browse</p>
             <ul className="mt-3 divide-y divide-border/60 rounded-xl border border-border bg-card">
               <SheetClose asChild>
-                <Link href="/vendors" className="flex items-center justify-between px-4 py-3 text-sm font-semibold text-brand-deep">
-                  <span className="flex items-center gap-3"><Store className="h-4 w-4 text-brand" /> Mall vendors</span>
+                <Link href="/shop" className="flex items-center justify-between px-4 py-3 text-sm font-semibold text-brand-deep">
+                  <span className="flex items-center gap-3"><Store className="h-4 w-4 text-brand" /> All listings</span>
                   <ChevronRight className="h-4 w-4 text-muted-foreground" />
-                </Link>
-              </SheetClose>
-              <SheetClose asChild>
-                <Link href="/mall-map" className="flex items-center justify-between px-4 py-3 text-sm font-semibold text-brand-deep">
-                  <span className="flex items-center gap-3"><MapPin className="h-4 w-4 text-brand" /> Mall map</span>
-                  <ChevronRight className="h-4 w-4 text-muted-foreground" />
-                </Link>
-              </SheetClose>
-              <SheetClose asChild>
-                <Link href="/shop" className="flex items-center justify-between px-4 py-3 text-sm font-medium">
-                  All listings <ChevronRight className="h-4 w-4 text-muted-foreground" />
                 </Link>
               </SheetClose>
               {categories.map((c) => {
@@ -84,9 +73,6 @@ export function MobileNav({ categories }: { categories: GenericCategory[] }) {
             <p className="text-[11px] font-semibold uppercase tracking-widest text-brand-deep">Account &amp; support</p>
             <ul className="mt-3 space-y-1 text-sm">
               {[
-                { href: "/sell", icon: Store, label: "Sell on Banex" },
-                { href: "/become-seller", icon: User, label: "Become a seller" },
-                { href: "/top-sellers", icon: User, label: "Top sellers" },
                 { href: "/track-order", icon: Truck, label: "Track order" },
                 { href: "/delivery", icon: Truck, label: "Delivery" },
                 { href: "/returns", icon: HelpCircle, label: "Returns" },

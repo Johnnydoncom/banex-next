@@ -12,17 +12,16 @@ export function Footer({ settings }: { settings?: ResolvedSiteSettings }) {
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src={logoSrc} alt={siteName} className="h-14 w-auto" width={220} height={110} />
             <p className="mt-4 max-w-md text-sm leading-relaxed text-muted-foreground">
-              Nigeria&apos;s friendly marketplace. Buy and sell anything from verified sellers across the country.
+              Nigeria&apos;s friendly marketplace — shop authentic products from Banex Mall with escrow
+              protection and same-hour delivery.
             </p>
           </div>
           <div>
             <h4 className="text-xs font-semibold uppercase tracking-widest text-brand-deep">The mall</h4>
             <ul className="mt-4 space-y-2 text-sm text-muted-foreground">
-              <li><Link href="/vendors" className="hover:text-brand">All vendors</Link></li>
-              <li><Link href="/mall-map" className="hover:text-brand">Mall map</Link></li>
               <li><Link href="/shop" className="hover:text-brand">Shop online</Link></li>
-              <li><Link href="/top-sellers" className="hover:text-brand">Top vendors</Link></li>
-              <li><Link href="/sell" className="hover:text-brand">Become a tenant</Link></li>
+              <li><Link href="/help" className="hover:text-brand">Help center</Link></li>
+              <li><Link href="/contact" className="hover:text-brand">Contact us</Link></li>
             </ul>
           </div>
           <div>

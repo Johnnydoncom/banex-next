@@ -4,7 +4,7 @@ import Link from "next/link"
 import { usePathname } from "next/navigation"
 import {
   Search, ShoppingBag, User, Heart, MapPin, LogIn, UserPlus,
-  Package, Settings, LifeBuoy, Store, HeartOff, LogOut, UserCircle,
+  Package, Settings, LifeBuoy, HeartOff, LogOut, UserCircle,
 } from "lucide-react"
 import { useCart } from "@/components/CartContext"
 import { useWishlist } from "@/components/WishlistContext"
@@ -51,10 +51,8 @@ export function HeaderClient({ categories, settings }: { categories: GenericCate
             Delivering across Nigeria
           </div>
           <div className="flex items-center gap-5">
-            <Link href="/mall-map" className="hover:text-foreground">Mall map</Link>
-            <Link href="/vendors" className="hover:text-foreground">Vendors</Link>
+            <Link href="/shop" className="hover:text-foreground">Shop</Link>
             <Link href="/help" className="hover:text-foreground">Help</Link>
-            <Link href="/sell" className="hover:text-foreground">Sell on Banex</Link>
             <Link href="/track-order" className="hover:text-foreground">Track order</Link>
           </div>
         </div>
@@ -222,9 +220,6 @@ export function HeaderClient({ categories, settings }: { categories: GenericCate
                     <Link href="/track-order" className="flex items-center gap-2"><Package className="h-4 w-4 text-brand" /> Track order</Link>
                   </DropdownMenuItem>
                   <DropdownMenuItem asChild>
-                    <Link href="/sell" className="flex items-center gap-2"><Store className="h-4 w-4 text-brand" /> Sell on Banex</Link>
-                  </DropdownMenuItem>
-                  <DropdownMenuItem asChild>
                     <Link href="/help" className="flex items-center gap-2"><LifeBuoy className="h-4 w-4 text-brand" /> Help center</Link>
                   </DropdownMenuItem>
                   <DropdownMenuItem asChild>
@@ -252,16 +247,10 @@ export function HeaderClient({ categories, settings }: { categories: GenericCate
       <nav className="border-t border-border/60 bg-card/60">
         <div className="mx-auto flex container items-center gap-1 overflow-x-auto py-2 text-sm">
           <Link
-            href="/vendors"
+            href="/shop"
             className="whitespace-nowrap rounded-full bg-brand-soft/30 px-3.5 py-1.5 font-semibold text-brand-deep transition-colors hover:bg-brand-soft/50"
           >
-            🏬 Vendors
-          </Link>
-          <Link
-            href="/shop"
-            className="whitespace-nowrap rounded-full px-3.5 py-1.5 font-medium text-foreground transition-colors hover:bg-surface hover:text-brand"
-          >
-            All
+            🛍 All listings
           </Link>
           {categories.slice(0, 7).map((c) => (
             <Link

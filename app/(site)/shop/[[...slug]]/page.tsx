@@ -3,7 +3,7 @@ import { Suspense } from "react"
 import { ApiProductCard } from "@/components/ApiProductCard"
 import { Pagination, buildQuery } from "@/components/Pagination"
 import { ShopHeaderFilters, ShopSidebarFilters } from "./components/ShopFilters"
-import { fetchGenericCategories, fetchGenericCategory, fetchGenericProducts, fetchGenericSeller, fetchGenericSellers, GenericCategory, GenericProduct, GenericSeller } from "@/lib/generic-api"
+import { fetchGenericCategories, fetchGenericCategory, fetchGenericProducts, GenericCategory, GenericProduct } from "@/lib/generic-api"
 import type { Metadata } from "next"
 import { buildMetadata } from "@/lib/seo/metadata"
 import { JsonLd } from "@/lib/seo/JsonLdComponent"
@@ -55,7 +55,6 @@ export default async function ShopPage({
   // Ensure these are strings
   const q = typeof resolvedSearchParams.q === "string" ? resolvedSearchParams.q : undefined
   const sort = typeof resolvedSearchParams.sort === "string" ? resolvedSearchParams.sort : undefined
-  const vendorParam = typeof resolvedSearchParams.vendor === "string" ? resolvedSearchParams.vendor : undefined
   const maxPriceParam = typeof resolvedSearchParams.max_price === "string" ? Number(resolvedSearchParams.max_price) : undefined
   const pageParam = typeof resolvedSearchParams.page === "string" ? Math.max(1, parseInt(resolvedSearchParams.page, 10) || 1) : 1
   const PER_PAGE = 12
@@ -63,18 +62,9 @@ export default async function ShopPage({
   // Fetch API data
   let categoriesData: any = {}
   let productsData: any = {}
-  let sellersData: any = {}
 
   try {
-    const [cData, sData] = await Promise.all([
-      fetchGenericCategories(),
-      fetchGenericSellers()
-    ])
-    categoriesData = cData || {}
-    sellersData = sData || {}
-
-    const sellers = sellersData.sellers || []
-    const activeSellerId = vendorParam ? sellers.find((s: GenericSeller) => s.slug === vendorParam)?.id : undefined
+    categoriesData = (await fetchGenericCategories()) || {}
 
     // Filter by the most specific selection: a subcategory when chosen, else the department.
     const effectiveCategory =
@@ -82,7 +72,6 @@ export default async function ShopPage({
     productsData = await fetchGenericProducts({
       q,
       category: effectiveCategory,
-      seller_id: activeSellerId,
       sort,
       max_price: maxPriceParam,
       page: pageParam,
@@ -93,27 +82,14 @@ export default async function ShopPage({
   }
 
   const categories: GenericCategory[] = categoriesData.categories || []
-  const sellers = sellersData.sellers || []
   const totalListingsCount = categoriesData.total_listings_count || 0
 
-  // Actually, fetchGenericCategory doesn't need to be fetched if we just find it in categories array,
-  // but if it has deeper details like subcategories, we might need it.
   const activeCategory = categorySlug !== "all" ? categories.find((c: GenericCategory) => c.slug === categorySlug) : undefined
 
-  // The API applies all filters (search/category/seller/max_price/sort) AND paginates
-  // server-side, so we render the returned page as-is — no local re-filtering (which
-  // would desync the "showing X of Y" counts and the pager).
+  // The API applies all filters (search/category/max_price/sort) AND paginates server-side,
+  // so we render the returned page as-is — no local re-filtering.
   const filteredProducts: GenericProduct[] = productsData.products || []
   const pagination = productsData.pagination as { current_page: number; last_page: number; total: number; per_page: number } | undefined
-
-  // Active vendor logic
-  let activeVendor
-  if (vendorParam) {
-    try {
-      const v = await fetchGenericSeller(vendorParam)
-      activeVendor = v.seller
-    } catch (e) { }
-  }
 
   const shopJsonLd = [
     breadcrumbSchema([
@@ -181,26 +157,10 @@ export default async function ShopPage({
       </section>
 
       <section className="mx-auto max-w-7xl px-4 py-10 md:px-8">
-        {activeVendor && (
-          <div className="mb-5 flex flex-wrap items-center gap-3 rounded-2xl border border-brand/40 bg-brand-soft/15 p-4 text-sm">
-            {activeVendor.cover_image_url && (
-              <img src={activeVendor.cover_image_url} alt={activeVendor.shop_name} className="h-10 w-10 rounded-lg object-cover" />
-            )}
-            <div className="flex-1">
-              <p className="font-display text-sm font-semibold">Showing {activeVendor.shop_name}'s shop</p>
-              <p className="text-xs text-muted-foreground">{activeVendor.location || "Banex Mall"}</p>
-            </div>
-            <Link href={`/vendor/${activeVendor.slug}`} className="rounded-full border border-border bg-card px-3 py-1.5 text-xs font-medium hover:border-brand hover:text-brand">
-              Open storefront
-            </Link>
-            <Link href="/shop" className="text-xs font-medium text-brand hover:underline">Clear</Link>
-          </div>
-        )}
         <div className="grid gap-8 lg:grid-cols-[280px_1fr]">
           <Suspense fallback={<div className="h-96 animate-pulse rounded-xl bg-surface" />}>
             <ShopSidebarFilters
               categories={categories}
-              sellers={sellers}
               categorySlug={categorySlug}
               subcategorySlug={subcategorySlug}
               totalListingsCount={totalListingsCount}
@@ -244,7 +204,7 @@ export default async function ShopPage({
                       const path = categorySlug !== "all"
                         ? `/shop/${categorySlug}${subcategorySlug !== "all" ? `/${subcategorySlug}` : ""}`
                         : "/shop"
-                      return `${path}${buildQuery({ q, sort, vendor: vendorParam, max_price: maxPriceParam, page: n > 1 ? n : undefined })}`
+                      return `${path}${buildQuery({ q, sort, max_price: maxPriceParam, page: n > 1 ? n : undefined })}`
                     }}
                   />
                 )}

@@ -4,6 +4,7 @@ import {
   ShieldCheck,
   Bike,
   Store,
+  BadgeCheck,
   Search,
   MapPin,
   Clock,
@@ -21,9 +22,8 @@ import {
   Briefcase,
   type LucideIcon,
 } from "lucide-react"
-import { MallVendorCard } from "@/components/MallVendorCard"
 import { ApiProductCard } from "@/components/ApiProductCard"
-import { fetchGenericHome, GenericCategory, GenericSeller } from "@/lib/generic-api"
+import { fetchGenericHome, GenericCategory } from "@/lib/generic-api"
 import { buildMetadata } from "@/lib/seo/metadata"
 import { JsonLd } from "@/lib/seo/JsonLdComponent"
 import { itemListSchema } from "@/lib/seo/jsonld"
@@ -126,10 +126,8 @@ export default async function Home() {
   }
 
   const categories = data?.categories ?? []
-  const mallVendors = data?.mall_vendors ?? []
   const featuredListings = data?.featured_listings ?? []
   const popularListings = data?.popular_listings ?? []
-  const openVendors = mallVendors.filter((v: GenericSeller) => v.is_open).length
 
   const homeJsonLd = [
     ...(categories.length
@@ -173,9 +171,8 @@ export default async function Home() {
               <span className="text-gradient-brand">delivered in an hour.</span>
             </h1>
             <p className="mt-5 max-w-md text-base leading-relaxed text-muted-foreground">
-              Shop from {mallVendors.length > 0 ? `${mallVendors.length}+` : "100+"} vendors inside Banex Mall —
-              phones, fashion, groceries, beauty, electronics — and our riders bring it to your door,
-              same-hour, across the city.
+              Everything inside Banex Mall — phones, fashion, groceries, beauty, electronics — and our
+              riders bring it to your door, same-hour, across the city.
             </p>
 
             <form action="/shop" className="mt-7 max-w-xl">
@@ -214,13 +211,11 @@ export default async function Home() {
                 <Bike className="h-3.5 w-3.5 text-brand" /> Same-hour rider delivery
               </span>
               <span className="inline-flex items-center gap-1.5">
-                <Store className="h-3.5 w-3.5 text-brand" /> {mallVendors.length || "100"}+ mall tenants
+                <BadgeCheck className="h-3.5 w-3.5 text-brand" /> 100% authentic products
               </span>
               <span className="inline-flex items-center gap-1.5">
                 <MapPin className="h-3.5 w-3.5 text-brand" />
-                <Link href="/mall-map" className="hover:text-brand">
-                  In-mall pickup available
-                </Link>
+                In-mall pickup available
               </span>
             </div>
           </div>
@@ -241,14 +236,14 @@ export default async function Home() {
                     Live from the mall
                   </p>
                   <p className="font-display text-lg font-bold text-foreground">
-                    {openVendors} shops open now
+                    Open now · delivering
                   </p>
                 </div>
                 <Link
-                  href="/mall-map"
+                  href="/shop"
                   className="inline-flex items-center gap-1 rounded-full bg-gradient-brand px-3 py-1.5 text-[11px] font-semibold text-primary-foreground"
                 >
-                  Mall map <ArrowRight className="h-3 w-3" />
+                  Shop now <ArrowRight className="h-3 w-3" />
                 </Link>
               </div>
             </div>
@@ -262,7 +257,7 @@ export default async function Home() {
           {[
             { icon: ShieldCheck, t: "Escrow protected", s: "Held until delivery" },
             { icon: Bike, t: "Same-hour delivery", s: "Banex riders citywide" },
-            { icon: Store, t: "Real mall tenants", s: "Visit shops in person" },
+            { icon: BadgeCheck, t: "Authentic only", s: "Genuine products" },
             { icon: Clock, t: "In-mall pickup", s: "Ready in 15 min" },
           ].map(({ icon: Icon, t, s }) => (
             <div key={t} className="flex items-center gap-3">
@@ -294,32 +289,6 @@ export default async function Home() {
           <div className="mt-7 grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6">
             {categories.map((cat) => (
               <CategoryCard key={cat.id} cat={cat} />
-            ))}
-          </div>
-        </section>
-      )}
-
-      {/* Mall Vendors rail */}
-      {mallVendors.length > 0 && (
-        <section className="mx-auto max-w-7xl px-4 py-12 md:px-8">
-          <div className="flex items-end justify-between">
-            <div>
-              <p className="text-xs font-semibold uppercase tracking-widest text-brand-deep">
-                Tenant prominence
-              </p>
-              <h2 className="mt-2 font-display text-3xl font-bold md:text-4xl">Mall vendors</h2>
-              <p className="mt-2 max-w-xl text-sm text-muted-foreground">
-                Anchor and premium tenants of Banex Mall — order in for same-hour rider delivery, or
-                visit them in-store.
-              </p>
-            </div>
-            <Link href="/vendors" className="hidden text-sm font-medium text-brand hover:underline md:inline-flex">
-              All vendors <ArrowRight className="ml-1 inline h-4 w-4" />
-            </Link>
-          </div>
-          <div className="mt-7 grid grid-cols-2 gap-5 md:grid-cols-3 lg:grid-cols-4">
-            {mallVendors.slice(0, 8).map((v) => (
-              <MallVendorCard key={v.id} vendor={v} />
             ))}
           </div>
         </section>
@@ -367,8 +336,8 @@ export default async function Home() {
         </section>
       )}
 
-      {/* Seller CTA */}
-      <section id="sellers" className="mx-auto max-w-7xl px-4 pb-20 md:px-8">
+      {/* Shop-with-confidence CTA */}
+      <section className="mx-auto max-w-7xl px-4 pb-20 md:px-8">
         <div className="relative overflow-hidden rounded-3xl border border-border bg-gradient-brand p-10 text-primary-foreground md:p-16">
           <div
             className="absolute inset-0 opacity-20"
@@ -376,23 +345,23 @@ export default async function Home() {
           />
           <div className="relative grid gap-8 md:grid-cols-2 md:items-center">
             <div>
-              <p className="text-xs font-semibold uppercase tracking-widest opacity-80">For sellers</p>
+              <p className="text-xs font-semibold uppercase tracking-widest opacity-80">Shop with confidence</p>
               <h2 className="mt-3 font-display text-3xl font-extrabold leading-tight md:text-5xl">
-                Reach thousands of buyers across Nigeria.
+                Everything you love about Banex Mall — now delivered.
               </h2>
               <p className="mt-4 max-w-md text-sm opacity-90">
-                List anything from a phone to a property — set your price, get verified, and get paid
-                securely. Zero setup fees.
+                Authentic products, escrow-protected payments and same-hour rider delivery across the
+                city. What you order is what arrives.
               </p>
             </div>
             <div className="flex flex-col gap-3 md:items-end">
               <Link
-                href="/become-seller"
+                href="/shop"
                 className="inline-flex items-center gap-2 rounded-full bg-card px-6 py-3 text-sm font-semibold text-brand-deep shadow-soft hover:scale-[1.02]"
               >
-                Start selling <ArrowRight className="h-4 w-4" />
+                Start shopping <ArrowRight className="h-4 w-4" />
               </Link>
-              <p className="text-xs opacity-80">Approved within 48 hours</p>
+              <p className="text-xs opacity-80">Escrow-protected · 7-day buyer protection</p>
             </div>
           </div>
         </div>

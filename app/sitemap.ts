@@ -2,7 +2,6 @@ import type { MetadataRoute } from "next"
 import { absoluteUrl } from "@/lib/seo/config"
 import {
   fetchGenericCategories,
-  fetchGenericSellers,
   fetchGenericProducts,
 } from "@/lib/generic-api"
 
@@ -19,11 +18,6 @@ export const revalidate = 3600
 const STATIC_PATHS: { path: string; priority: number; freq: MetadataRoute.Sitemap[number]["changeFrequency"] }[] = [
   { path: "/", priority: 1.0, freq: "daily" },
   { path: "/shop", priority: 0.9, freq: "daily" },
-  { path: "/vendors", priority: 0.8, freq: "daily" },
-  { path: "/top-sellers", priority: 0.6, freq: "weekly" },
-  { path: "/mall-map", priority: 0.5, freq: "monthly" },
-  { path: "/sell", priority: 0.6, freq: "monthly" },
-  { path: "/become-seller", priority: 0.6, freq: "monthly" },
   { path: "/delivery", priority: 0.4, freq: "monthly" },
   { path: "/returns", priority: 0.4, freq: "monthly" },
   { path: "/help", priority: 0.5, freq: "monthly" },
@@ -57,9 +51,8 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     priority: s.priority,
   }))
 
-  const [categoriesRes, sellersRes, products] = await Promise.all([
+  const [categoriesRes, products] = await Promise.all([
     fetchGenericCategories().catch(() => null),
-    fetchGenericSellers().catch(() => null),
     collectProducts(),
   ])
 
@@ -71,14 +64,6 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       priority: 0.8,
     })) ?? []
 
-  const vendorEntries: MetadataRoute.Sitemap =
-    sellersRes?.sellers?.map((v) => ({
-      url: absoluteUrl(`/vendor/${v.slug}`),
-      lastModified: now,
-      changeFrequency: "weekly",
-      priority: 0.7,
-    })) ?? []
-
   const productEntries: MetadataRoute.Sitemap = products.map((p) => ({
     url: absoluteUrl(`/product/${p.slug}`),
     lastModified: p.updated ? new Date(p.updated) : now,
@@ -86,5 +71,5 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     priority: 0.7,
   }))
 
-  return [...staticEntries, ...categoryEntries, ...vendorEntries, ...productEntries]
+  return [...staticEntries, ...categoryEntries, ...productEntries]
 }

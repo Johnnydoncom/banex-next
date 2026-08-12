@@ -4,7 +4,7 @@ import { Star, Truck, ShieldCheck, BadgeCheck, ChevronLeft } from "lucide-react"
 import { fetchGenericProduct } from "@/lib/generic-api"
 import { ProductImageGallery } from "./components/ProductImageGallery"
 import { ProductActionButtons } from "./components/ProductActionButtons"
-import { ProductSellerCard } from "./components/ProductSellerCard"
+import { ProductContactButtons } from "./components/ProductContactButtons"
 import { ProductDescription } from "./components/ProductDescription"
 import type { Metadata } from "next"
 import { buildMetadata } from "@/lib/seo/metadata"
@@ -58,11 +58,9 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
     )
   }
 
-  const { product, comparable_products } = data
-  // Combine main product and comparables to form the seller list.
-  const allSellers = [product, ...comparable_products].filter((p) => p.seller)
-  const sortedSellers = allSellers.sort((a, b) => a.price - b.price)
-  const lowest = sortedSellers[0]?.price || product.price
+  const { product } = data
+  // Banex Mall is the single seller — the product's own price is the price.
+  const lowest = product.price
 
   const formatNaira = (amount: number) => {
     return new Intl.NumberFormat("en-NG", {
@@ -90,9 +88,7 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
       inStock: product.in_stock,
       ratingValue: product.rating_average,
       reviewCount: product.reviews_count,
-      sellers: allSellers
-        .filter((p) => p.seller)
-        .map((p) => ({ name: p.seller!.shop_name, price: p.price })),
+      sellers: [{ name: "Banex Mall", price: product.price }],
     }),
     breadcrumbSchema([
       { name: "Home", path: "/" },
@@ -129,30 +125,27 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
 
           <div className="mt-6 flex items-end gap-3">
             <div>
-              <p className="text-[10px] uppercase tracking-widest text-muted-foreground">Lowest price</p>
+              <p className="text-[10px] uppercase tracking-widest text-muted-foreground">Price</p>
               <p className="font-display text-3xl font-bold text-foreground md:text-4xl">{formatNaira(lowest)}</p>
             </div>
-            <span className="rounded-full border border-brand/40 bg-brand-soft/20 px-3 py-1 text-xs font-medium text-brand-deep">
-              {allSellers.length} sellers
-            </span>
+            {product.in_stock ? (
+              <span className="rounded-full border border-emerald-500/40 bg-emerald-500/10 px-3 py-1 text-xs font-medium text-emerald-700 dark:text-emerald-400">
+                In stock
+              </span>
+            ) : (
+              <span className="rounded-full border border-red-300 bg-red-100 px-3 py-1 text-xs font-medium text-red-600">
+                Out of stock
+              </span>
+            )}
           </div>
 
           {/* Action buttons (client interactivity extracted) */}
-          <ProductActionButtons product={sortedSellers[0] || product} />
+          <ProductActionButtons product={product} />
 
-          <dl className="mt-8 grid grid-cols-2 gap-4 border-t border-border pt-6 text-sm sm:grid-cols-4">
-            {product.specifications?.map((spec, i) => {
-              const [k, v] = spec.split("=>").map((s) => s.trim())
-              return (
-                <div key={i}>
-                  <dt className="text-[10px] uppercase tracking-widest text-muted-foreground">{k || "Detail"}</dt>
-                  <dd className="mt-1 text-foreground">{v || spec}</dd>
-                </div>
-              )
-            })}
-          </dl>
+          {/* Contact Banex Mall about this listing */}
+          <ProductContactButtons product={product} />
 
-          <div className="mt-6 flex flex-wrap gap-2 text-xs text-muted-foreground">
+          <div className="mt-8 flex flex-wrap gap-2 border-t border-border pt-6 text-xs text-muted-foreground">
             <span className="inline-flex items-center gap-1.5 rounded-full border border-border bg-surface px-3 py-1.5">
               <ShieldCheck className="h-3.5 w-3.5 text-brand" /> Escrow protected
             </span>
@@ -172,31 +165,23 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
         <ProductDescription html={product.description || null} />
       </section>
 
-
-      {/* Seller comparison + contact */}
-      <section className="mx-auto max-w-7xl px-4 pb-20 md:px-8">
-        <div className="flex items-end justify-between">
-          <div>
-            <p className="text-xs font-semibold uppercase tracking-widest text-brand-deep">Compare sellers</p>
-            <h2 className="mt-2 font-display text-2xl font-bold md:text-3xl">
-              {allSellers.length} sellers · contact, bid or buy
-            </h2>
-          </div>
-          <p className="hidden text-xs text-muted-foreground md:block">Sorted by lowest price</p>
-        </div>
-
-        <div className="mt-6 space-y-3">
-          {sortedSellers.map((sellerProduct, i) => (
-            <ProductSellerCard
-              key={sellerProduct.seller?.id || i}
-              product={product}
-              sellerProduct={sellerProduct}
-              isBestPrice={sellerProduct.price === lowest}
-              index={i}
-            />
-          ))}
-        </div>
-      </section>
+      {/* Specifications */}
+      {product.specifications && product.specifications.length > 0 && (
+        <section className="mx-auto max-w-7xl px-4 pb-20 md:px-8">
+          <h2 className="mb-6 font-display text-xl font-bold md:text-2xl">Specifications</h2>
+          <dl className="grid grid-cols-1 overflow-hidden rounded-2xl border border-border bg-card sm:grid-cols-2 lg:grid-cols-3">
+            {product.specifications.map((spec, i) => {
+              const [k, v] = spec.split("=>").map((s) => s.trim())
+              return (
+                <div key={i} className="border-b border-border p-4 last:border-b-0 sm:[&:nth-last-child(-n+1)]:border-b-0 md:even:border-l">
+                  <dt className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">{k || "Detail"}</dt>
+                  <dd className="mt-1 text-sm font-medium text-foreground">{v || spec}</dd>
+                </div>
+              )
+            })}
+          </dl>
+        </section>
+      )}
     </div>
   )
 }

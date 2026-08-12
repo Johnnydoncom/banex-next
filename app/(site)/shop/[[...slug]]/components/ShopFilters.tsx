@@ -3,8 +3,7 @@
 import { useRouter, useSearchParams, usePathname } from "next/navigation"
 import { Search, SlidersHorizontal, MapPin } from "lucide-react"
 import { useDebouncedCallback } from "use-debounce"
-import { GenericCategory, GenericSeller } from "@/lib/generic-api"
-import { VendorSidebar } from "@/components/VendorSidebar"
+import { GenericCategory } from "@/lib/generic-api"
 
 export const SORTS = [
   { value: "featured", label: "Featured" },
@@ -81,7 +80,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 
 interface ShopSidebarFiltersProps {
   categories: GenericCategory[]
-  sellers: GenericSeller[]
   categorySlug: string
   subcategorySlug: string
   totalListingsCount: number
@@ -89,7 +87,6 @@ interface ShopSidebarFiltersProps {
 
 function FilterContent({
   categories,
-  sellers,
   categorySlug,
   subcategorySlug,
   totalListingsCount,
@@ -97,7 +94,6 @@ function FilterContent({
   router,
   pathname,
   maxPrice,
-  vendorSlug,
   handlePriceChange
 }: any) {
   return (
@@ -199,18 +195,6 @@ function FilterContent({
         </p>
         <p className="mt-2 text-xs text-muted-foreground">Banex Mall · Same-hour rider delivery citywide</p>
       </div>
-
-      <VendorSidebar
-        sellers={sellers}
-        selectedSlug={vendorSlug}
-        onSelect={(slug) => {
-          const params = new URLSearchParams(searchParams)
-          if (slug) params.set("vendor", slug)
-          else params.delete("vendor")
-          router.push(`${pathname}?${params.toString()}`)
-        }}
-        filterCategory={categorySlug !== "all" ? categorySlug : undefined}
-      />
     </div>
   )
 }
@@ -221,7 +205,6 @@ export function ShopSidebarFilters(props: ShopSidebarFiltersProps) {
   const searchParams = useSearchParams()
 
   const maxPrice = Number(searchParams.get("max_price")) || 20_000_000
-  const vendorSlug = searchParams.get("vendor") || undefined
 
   const handlePriceChange = useDebouncedCallback((price: number) => {
     const params = new URLSearchParams(searchParams)
@@ -235,7 +218,6 @@ export function ShopSidebarFilters(props: ShopSidebarFiltersProps) {
     router,
     pathname,
     maxPrice,
-    vendorSlug,
     handlePriceChange
   }
 
