@@ -15,7 +15,8 @@ import { Button } from "@/components/ui/button"
 export default function AdminCategoriesPage() {
   const { data: session } = useSession()
   const token = session?.accessToken as string | undefined
-  const { categories, loading, mutate } = useAdminCategories(token)
+  // Include inactive categories so admins can see/manage the full set.
+  const { categories, loading, mutate } = useAdminCategories(token, true)
 
   // Flatten roots + subcategories into a single list so the whole hierarchy is
   // visible and manageable (parents first, children indented under them).
@@ -49,9 +50,14 @@ export default function AdminCategoriesPage() {
         <div className="flex items-center gap-2" style={{ paddingLeft: (c._depth ?? 0) * 20 }}>
           {(c._depth ?? 0) > 0 && <span className="text-muted-foreground/50">└</span>}
           <div>
-            <Link href={`/admin/categories/${c.id}`} className="font-semibold hover:text-brand">
-              {c.name}
-            </Link>
+            <span className="flex items-center gap-2">
+              <Link href={`/admin/categories/${c.id}`} className="font-semibold hover:text-brand">
+                {c.name}
+              </Link>
+              {!c.is_active && (
+                <span className="rounded-full bg-amber-500/15 px-2 py-0.5 text-[9px] font-semibold uppercase tracking-wide text-amber-600">Inactive</span>
+              )}
+            </span>
             <p className="text-[11px] text-muted-foreground">
               /{c.slug}
               {(c._depth ?? 0) > 0 && <span className="ml-1 rounded bg-surface px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wide">Subcategory</span>}

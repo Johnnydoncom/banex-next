@@ -416,10 +416,10 @@ export function useAdminProducts(token: string | undefined) {
   }
 }
 
-export function useAdminCategories(token: string | undefined) {
+export function useAdminCategories(token: string | undefined, includeInactive = false) {
   const { data, error, isLoading, mutate } = useSWR(
-    token ? SWR_KEYS.adminCategories(token) : null,
-    ([, t]) => fetchAdminCategories(t),
+    token ? [...SWR_KEYS.adminCategories(token), includeInactive] : null,
+    ([, t]) => fetchAdminCategories(t, includeInactive),
     { revalidateOnFocus: false }
   )
   return {

@@ -46,6 +46,12 @@ function LoginForm() {
     setLoading(false)
 
     if (result?.error) {
+      // Unverified account: the backend re-sent an OTP → send them to verify.
+      if (result.error === "EMAIL_UNVERIFIED") {
+        toast.info("Please verify your email — we've sent you a new code.")
+        router.push(`/otp?email=${encodeURIComponent(parsed.data.email)}`)
+        return
+      }
       toast.error(result.error)
       return
     }

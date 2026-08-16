@@ -107,8 +107,10 @@ type AdminCategoriesData = {
   total_listings_count: number
 }
 
-export async function fetchAdminCategories(token: string) {
-  return proxyFetch<AdminCategoriesData>("/admin/categories", token)
+export async function fetchAdminCategories(token: string, includeInactive = false) {
+  // `include_inactive=1` also returns deactivated categories (admin management view).
+  const qs = includeInactive ? "?include_inactive=1" : ""
+  return proxyFetch<AdminCategoriesData>(`/admin/categories${qs}`, token)
 }
 
 export async function fetchAdminCategory(id: string, token: string) {
@@ -248,11 +250,31 @@ type AdminProductsData = {
 }
 
 export async function fetchAdminProducts(token: string, status?: string, sellerId?: string) {
-  const params = new URLSearchParams()
-  if (status) params.set("filter[status]", status)
-  if (sellerId) params.set("filter[seller_id]", sellerId)
-  const qs = params.toString() ? `?${params.toString()}` : ""
-  return proxyFetch<AdminProductsData>(`/admin/products${qs}`, token)
+  // The admin catalogue view filters/tabs client-side, so it needs the FULL list —
+  // the API defaults to 15 per page, so walk every page and concatenate.
+  const buildQs = (page: number) => {
+    const params = new URLSearchParams()
+    if (status) params.set("filter[status]", status)
+    if (sellerId) params.set("filter[seller_id]", sellerId)
+    params.set("per_page", "100")
+    params.set("page", String(page))
+    return `?${params.toString()}`
+  }
+
+  const first = await proxyFetch<AdminProductsData>(`/admin/products${buildQs(1)}`, token)
+  const lastPage = first.data?.pagination?.last_page ?? 1
+  if (lastPage <= 1) return first
+
+  const rest = await Promise.all(
+    Array.from({ length: lastPage - 1 }, (_, i) =>
+      proxyFetch<AdminProductsData>(`/admin/products${buildQs(i + 2)}`, token),
+    ),
+  )
+  const products = [
+    ...(first.data?.products ?? []),
+    ...rest.flatMap((r) => r.data?.products ?? []),
+  ]
+  return { ...first, data: { ...first.data, products } } as typeof first
 }
 
 // Products owned by a specific seller (owner). GET /admin/sellers/:id/products
@@ -397,6 +419,62 @@ export async function toggleUserVerification(id: string, token: string) {
 
 export async function toggleUserSuspension(id: string, token: string) {
   return proxyFetch<{ user: AdminUser }>(`/admin/users/${id}/toggle-suspension`, token, "POST")
+}
+
+// ─── Admin Staff (Administrators & Roles) ─────────────────────────────────────
+// Dedicated admin-management endpoints (distinct from /admin/users, which is customers).
+export type AdminRole = { name: string; label: string; permissions: string[] }
+
+export type AdminStaff = {
+  id: string
+  full_name: string
+  email: string
+  phone: string | null
+  type: string
+  roles: string[]
+  role: string | null
+  role_label: string | null
+  is_super_admin: boolean
+  email_verified_at: { item: string } | null
+  is_suspended: boolean
+  suspended_at: { item: string } | null
+  created_at: { item: string }
+}
+
+type AdminStaffData = {
+  admins: AdminStaff[]
+  pagination: { current_page: number; per_page: number; total: number; last_page: number }
+}
+
+export async function fetchAdminRoles(token: string) {
+  return proxyFetch<{ roles: AdminRole[]; permissions: string[] }>("/admin/roles", token)
+}
+
+export async function fetchAdmins(token: string) {
+  return proxyFetch<AdminStaffData>("/admin/admins?per_page=100", token)
+}
+
+export async function fetchAdmin(id: string, token: string) {
+  return proxyFetch<{ admin: AdminStaff }>(`/admin/admins/${id}`, token)
+}
+
+export async function createAdmin(
+  data: { name: string; email: string; password: string; role: string; phone?: string },
+  token: string,
+) {
+  return proxyFetch<{ admin: AdminStaff }>("/admin/admins", token, "POST", data)
+}
+
+export async function updateAdmin(
+  id: string,
+  data: { name?: string; email?: string; role?: string; phone?: string; password?: string },
+  token: string,
+) {
+  return proxyFetch<{ admin: AdminStaff }>(`/admin/admins/${id}`, token, "PUT", data)
+}
+
+export async function toggleAdminSuspension(id: string, token: string) {
+  return proxyFetch<{ admin: AdminStaff }>(`/admin/admins/${id}/toggle-suspension`, token, "POST")
 }
 
 // ─── Admin WhatsApp Contacts (Extended) ───────────────────────────────────────

@@ -1,6 +1,7 @@
 import { Header } from "@/components/Header"
 import { Footer } from "@/components/Footer"
 import { MobileBottomNav } from "@/components/MobileBottomNav"
+import { FloatingWhatsApp } from "@/components/FloatingWhatsApp"
 import { getSiteSettings } from "@/lib/site-settings"
 
 /**
@@ -22,6 +23,7 @@ export default async function SiteLayout({ children }: { children: React.ReactNo
       <Header settings={settings} />
       <main className="flex-1">{children}</main>
       <Footer settings={settings} />
+      <FloatingWhatsApp />
       <MobileBottomNav />
     </div>
   )

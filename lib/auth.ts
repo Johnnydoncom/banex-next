@@ -50,6 +50,11 @@ export const authOptions: NextAuthOptions = {
           console.info("LoginData: ", data)
 
           if (!res.ok || !data?.success) {
+            // Code 206 = email not verified; the backend has just re-sent an OTP.
+            // Signal the login page to route the user to the verification screen.
+            if (data?.code === 206) {
+              throw new Error("EMAIL_UNVERIFIED")
+            }
             throw new Error(data?.message || "Invalid email or password")
           }
 
