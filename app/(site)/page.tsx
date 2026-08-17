@@ -192,18 +192,6 @@ export default async function Home() {
                   Search <ArrowRight className="h-4 w-4" />
                 </Button>
               </div>
-              <div className="mt-3 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
-                <span>Popular:</span>
-                {["Jollof rice", "iPhone", "Sneakers", "Groceries"].map((t) => (
-                  <Link
-                    key={t}
-                    href={`/shop?q=${t}`}
-                    className="rounded-full border border-border bg-card px-3 py-1 hover:border-brand hover:text-brand"
-                  >
-                    {t}
-                  </Link>
-                ))}
-              </div>
             </form>
 
             <div className="mt-6 flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
