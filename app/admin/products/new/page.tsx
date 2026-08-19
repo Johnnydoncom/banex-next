@@ -10,8 +10,10 @@ import {
   fetchAdminCategories,
   fetchAdminSellers,
   createAdminProduct,
+  pricingPreviewAdminProduct,
   AdminCategory,
   AdminSeller,
+  type PricingSummary,
 } from "@/lib/admin-api"
 import { RichTextEditor } from "@/components/RichTextEditor"
 import { LocationSelect } from "@/components/LocationSelect"
@@ -22,6 +24,9 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+
+const fmtNaira = (n: number) =>
+  new Intl.NumberFormat("en-NG", { style: "currency", currency: "NGN", maximumFractionDigits: 0 }).format(n || 0)
 
 export default function AdminNewProductPage() {
   const router = useRouter()
@@ -56,10 +61,29 @@ export default function AdminNewProductPage() {
   const [sellers, setSellers] = useState<AdminSeller[]>([])
   const [loadingData, setLoadingData] = useState(true)
   const [submitting, setSubmitting] = useState(false)
+  const [pricingPreview, setPricingPreview] = useState<PricingSummary | null>(null)
 
   const steps = ["Basic", "Images", "Pricing", "Specs", "Review"]
 
   const update = (key: string, value: any) => setForm((f) => ({ ...f, [key]: value }))
+
+  // Live commission preview for a simple product once a seller + price are set.
+  useEffect(() => {
+    const price = Number(form.price)
+    if (hasVariants || !form.seller_id || !price || price <= 0 || !session?.accessToken) {
+      setPricingPreview(null)
+      return
+    }
+    const t = setTimeout(async () => {
+      try {
+        const res = await pricingPreviewAdminProduct({ seller_id: form.seller_id, price }, session.accessToken as string)
+        setPricingPreview(res.data?.pricing_summary ?? null)
+      } catch {
+        setPricingPreview(null)
+      }
+    }, 400)
+    return () => clearTimeout(t)
+  }, [form.price, form.seller_id, hasVariants, session?.accessToken])
 
   // A product is categorised under a SUBcategory of its seller's (root) category.
   const selectedSeller = sellers.find((s) => s.id === form.seller_id)
@@ -338,6 +362,26 @@ export default function AdminNewProductPage() {
                   <Label htmlFor="product-stock" className="mb-1.5 block text-xs text-muted-foreground">Stock Quantity</Label>
                   <Input id="product-stock" type="number" value={form.stock_quantity} onChange={(e) => update("stock_quantity", e.target.value)} className="rounded-xl px-4 py-2.5 focus-visible:border-brand focus-visible:ring-brand" placeholder="50" />
                 </div>
+                {/* Live commission preview */}
+                {pricingPreview && (
+                  <div className="sm:col-span-2 rounded-xl border border-brand/30 bg-brand-soft/10 p-4">
+                    <p className="text-[11px] font-semibold uppercase tracking-widest text-brand-deep">Pricing breakdown</p>
+                    <div className="mt-2 grid grid-cols-3 gap-3 text-sm">
+                      <div>
+                        <p className="text-[10px] uppercase text-muted-foreground">Listing price</p>
+                        <p className="font-display font-bold">{fmtNaira(pricingPreview.listing_price)}</p>
+                      </div>
+                      <div>
+                        <p className="text-[10px] uppercase text-muted-foreground">Commission ({pricingPreview.commission_percent_label})</p>
+                        <p className="font-display font-bold text-rose-600">−{fmtNaira(pricingPreview.commission_amount)}</p>
+                      </div>
+                      <div>
+                        <p className="text-[10px] uppercase text-muted-foreground">Seller receives</p>
+                        <p className="font-display font-bold text-emerald-600">{fmtNaira(pricingPreview.seller_receives)}</p>
+                      </div>
+                    </div>
+                  </div>
+                )}
               </>
             )}
             <div className="sm:col-span-2">

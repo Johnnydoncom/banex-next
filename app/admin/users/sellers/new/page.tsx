@@ -9,9 +9,11 @@ import { useSession } from "next-auth/react"
 import {
   fetchAdminCategories,
   fetchAdminWhatsAppContacts,
+  fetchAdminUsers,
   storeAdminSeller,
   AdminCategory,
   AdminWhatsAppContact,
+  type AdminUser,
 } from "@/lib/admin-api"
 import { RichTextEditor } from "@/components/RichTextEditor"
 import { Button } from "@/components/ui/button"
@@ -37,11 +39,13 @@ export default function AdminNewSellerPage() {
     tier: "standard",
     is_kyc_verified: false,
     whatsapp_contact_id: "", // Note: might not be strictly required for create, but good to have
+    user_id: "", // link this store to an existing user account (they get vendor-dashboard access)
   })
 
   const [coverImage, setCoverImage] = useState<{ file: File; preview: string } | null>(null)
   const [categories, setCategories] = useState<AdminCategory[]>([])
   const [contacts, setContacts] = useState<AdminWhatsAppContact[]>([])
+  const [users, setUsers] = useState<AdminUser[]>([])
   const [loadingData, setLoadingData] = useState(true)
   const [submitting, setSubmitting] = useState(false)
 
@@ -56,12 +60,14 @@ export default function AdminNewSellerPage() {
   const loadData = async (token: string) => {
     try {
       setLoadingData(true)
-      const [catsRes, contactsRes] = await Promise.all([
+      const [catsRes, contactsRes, usersRes] = await Promise.all([
         fetchAdminCategories(token),
         fetchAdminWhatsAppContacts(token),
+        fetchAdminUsers(token, { has_seller: 0 }), // users without a store yet
       ])
       setCategories(catsRes.data?.categories || [])
       setContacts(contactsRes.data?.whatsapp_contacts || [])
+      setUsers(usersRes.data?.users || [])
     } catch (err: any) {
       toast.error(err.message || "Failed to load categories")
     } finally {
@@ -105,6 +111,7 @@ export default function AdminNewSellerPage() {
     formData.append("tier", form.tier)
     formData.append("is_kyc_verified", form.is_kyc_verified ? "1" : "0")
     if (form.whatsapp_contact_id) formData.append("whatsapp_contact_id", form.whatsapp_contact_id)
+    if (form.user_id) formData.append("user_id", form.user_id)
 
     if (coverImage?.file) {
       formData.append("cover_image", coverImage.file)
@@ -196,6 +203,19 @@ export default function AdminNewSellerPage() {
                     </SelectContent>
                   </Select>
                 </div>
+              </div>
+
+              <div>
+                <Label className="mb-1.5 block text-xs font-semibold text-foreground">Link to User Account</Label>
+                <Select value={form.user_id} onValueChange={(v) => update("user_id", v)}>
+                  <SelectTrigger className="h-auto rounded-xl px-3 py-2.5"><SelectValue placeholder="Select the owner's account" /></SelectTrigger>
+                  <SelectContent>
+                    {users.map((u) => (
+                      <SelectItem key={u.id} value={u.id}>{u.full_name || u.email} — {u.email}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <p className="mt-1 text-[11px] text-muted-foreground">The linked user gets access to the vendor dashboard for this store.</p>
               </div>
 
               <div>

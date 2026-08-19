@@ -162,7 +162,8 @@ export type AdminSeller = {
   rejection_reason: string | null
   products_count: number
   approved_at: { item: string } | null
-  user: { id: string; full_name: string; email: string }
+  user_id?: string | null
+  user: { id: string; full_name: string; email: string } | null
 }
 
 type AdminSellersData = {
@@ -241,6 +242,25 @@ export type AdminProduct = {
   images: { id: string; url: string; sort_order: number; is_primary: boolean }[]
   seller: { id: string; shop_name: string; slug: string }
   category: { id: string; name: string; slug: string; image_url: string | null } | null
+  pricing_summary?: PricingSummary | null
+}
+
+// Commission breakdown: what Banex Mall keeps vs what the seller/owner receives.
+export type PricingSummary = {
+  listing_price: number
+  commission_percent: number
+  commission_percent_label: string
+  commission_amount: number
+  seller_receives: number
+  currency: string
+}
+
+// Preview the commission split for a price before saving. POST /admin/products/pricing-preview
+export async function pricingPreviewAdminProduct(
+  data: { seller_id: string; price: number },
+  token: string,
+) {
+  return proxyFetch<{ pricing_summary: PricingSummary }>("/admin/products/pricing-preview", token, "POST", data)
 }
 
 

@@ -52,6 +52,7 @@ export function HeaderClient({ categories, settings }: { categories: GenericCate
           </div>
           <div className="flex items-center gap-5">
             <Link href="/shop" className="hover:text-foreground">Shop</Link>
+            <Link href="/vendors" className="hover:text-foreground">Vendors</Link>
             <Link href="/help" className="hover:text-foreground">Help</Link>
             <Link href="/track-order" className="hover:text-foreground">Track order</Link>
           </div>

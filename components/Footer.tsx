@@ -20,6 +20,7 @@ export function Footer({ settings }: { settings?: ResolvedSiteSettings }) {
             <h4 className="text-xs font-semibold uppercase tracking-widest text-brand-deep">The mall</h4>
             <ul className="mt-4 space-y-2 text-sm text-muted-foreground">
               <li><Link href="/shop" className="hover:text-brand">Shop online</Link></li>
+              <li><Link href="/vendors" className="hover:text-brand">Mall vendors</Link></li>
               <li><Link href="/help" className="hover:text-brand">Help center</Link></li>
               <li><Link href="/contact" className="hover:text-brand">Contact us</Link></li>
             </ul>

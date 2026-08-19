@@ -1,17 +1,11 @@
 "use client"
 
 import { useState } from "react"
-import { Search, Package, ChevronDown, ChevronUp, CheckCircle2, XCircle, ImageOff, MapPin } from "lucide-react"
+import { Search, Package, ChevronDown, ChevronUp, ImageOff, MapPin, Info } from "lucide-react"
 import { VariantTags } from "@/components/VariantTags"
 import { useAuth } from "@/hooks/use-auth"
-import { toast } from "sonner"
-import {
-  sellerAcceptOrderItem, sellerDeclineOrderItem,
-  type SellerOrder, type SellerOrderItem
-} from "@/lib/seller-api"
 import { formatNaira } from "@/lib/products"
 import { Input } from "@/components/ui/input"
-import { Textarea } from "@/components/ui/textarea"
 import { Button } from "@/components/ui/button"
 import { useSellerOrders } from "@/hooks/use-swr-data"
 
@@ -34,54 +28,17 @@ function orderDate(val: { item: string } | string | undefined) {
 }
 
 export default function VendorOrdersPage() {
-  const { user, session } = useAuth()
+  const { session } = useAuth()
   const token = (session as any)?.accessToken as string | undefined
 
   const [filter, setFilter] = useState<typeof ORDER_STATUSES[number]>("all")
   const [q, setQ] = useState("")
   const [page, setPage] = useState(1)
 
-  const { orders, pagination, loading, mutate: mutateOrders } = useSellerOrders(token, page)
+  const { orders, pagination, loading } = useSellerOrders(token, page)
   const totalPages = pagination?.last_page ?? 1
 
-  // Expanded row
   const [expanded, setExpanded] = useState<string | null>(null)
-
-  // Decline dialog
-  const [declineState, setDeclineState] = useState<{ orderId: string; itemId: string } | null>(null)
-  const [declineReason, setDeclineReason] = useState("")
-  const [actionLoading, setActionLoading] = useState<string | null>(null)
-
-  async function handleAccept(orderId: string, itemId: string) {
-    if (!token) return
-    setActionLoading(itemId)
-    try {
-      const updated = await sellerAcceptOrderItem(orderId, itemId, token)
-      mutateOrders()
-      toast.success("Order item accepted")
-    } catch (e: any) {
-      toast.error(e.message || "Failed to accept")
-    } finally {
-      setActionLoading(null)
-    }
-  }
-
-  async function handleDecline() {
-    if (!token || !declineState) return
-    if (!declineReason.trim()) { toast.error("Please provide a reason"); return }
-    setActionLoading(declineState.itemId)
-    try {
-      const updated = await sellerDeclineOrderItem(declineState.orderId, declineState.itemId, declineReason, token)
-      mutateOrders()
-      setDeclineState(null)
-      setDeclineReason("")
-      toast.success("Order item declined")
-    } catch (e: any) {
-      toast.error(e.message || "Failed to decline")
-    } finally {
-      setActionLoading(null)
-    }
-  }
 
   const filtered = orders.filter((o) => {
     const matchStatus = filter === "all" || o.items?.some((i) => i.status === filter) || o.status === filter
@@ -95,7 +52,7 @@ export default function VendorOrdersPage() {
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
           <h1 className="font-display text-2xl font-bold">Orders</h1>
-          <p className="text-sm text-muted-foreground">Manage and fulfil your customers' orders.</p>
+          <p className="text-sm text-muted-foreground">Track orders for your products across Banex Mall.</p>
         </div>
         <label className="relative">
           <Search className="pointer-events-none absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
@@ -106,6 +63,12 @@ export default function VendorOrdersPage() {
             className="h-9 w-52 rounded-full bg-card pl-9 pr-3 text-xs"
           />
         </label>
+      </div>
+
+      {/* Read-only notice — vendors view records; Banex Mall manages fulfilment */}
+      <div className="flex items-start gap-2 rounded-xl border border-blue-300/60 bg-blue-50 px-4 py-3 text-xs text-blue-800 dark:border-blue-800/50 dark:bg-blue-950/30 dark:text-blue-300">
+        <Info className="mt-0.5 h-4 w-4 flex-shrink-0" />
+        <span>These are for your records. Order acceptance, fulfilment and delivery are handled centrally by the Banex Mall team.</span>
       </div>
 
       {/* Status filters */}
@@ -119,7 +82,7 @@ export default function VendorOrdersPage() {
                 : "border border-border bg-card text-muted-foreground hover:text-foreground"
               }`}
           >
-            {s === "paid" ? "Pending Action" : s}
+            {s === "paid" ? "Awaiting Banex" : s}
           </Button>
         ))}
       </div>
@@ -137,7 +100,6 @@ export default function VendorOrdersPage() {
         <div className="space-y-3">
           {filtered.map((o) => {
             const isExpanded = expanded === o.id
-            const hasActionable = o.items?.some((i) => i.status === "paid")
             return (
               <div key={o.id} className="rounded-2xl border border-border bg-card overflow-hidden">
                 {/* Order header */}
@@ -147,14 +109,7 @@ export default function VendorOrdersPage() {
                 >
                   <div className="flex items-center gap-4">
                     <div>
-                      <div className="flex items-center gap-2">
-                        <p className="font-display font-semibold text-sm">{o.reference}</p>
-                        {hasActionable && (
-                          <span className="rounded-full bg-amber-500/15 px-2 py-0.5 text-[10px] font-bold text-amber-700">
-                            ACTION NEEDED
-                          </span>
-                        )}
-                      </div>
+                      <p className="font-display font-semibold text-sm">{o.reference}</p>
                       <p className="mt-0.5 text-xs text-muted-foreground">
                         {orderDate(o.created_at as any)} · {o.fulfillment_type === "mall_pickup" ? "Mall Pickup" : "Delivery"}
                         · {o.items?.length ?? 0} item{(o.items?.length ?? 0) !== 1 ? "s" : ""}
@@ -170,7 +125,6 @@ export default function VendorOrdersPage() {
                 {/* Expanded: order items */}
                 {isExpanded && (
                   <div className="border-t border-border">
-                    {/* Delivery address if applicable */}
                     {o.delivery_address && (
                       <div className="flex items-start gap-2 border-b border-border px-5 py-3 text-xs text-muted-foreground">
                         <MapPin className="mt-0.5 h-3.5 w-3.5 flex-shrink-0 text-emerald-600" />
@@ -183,11 +137,9 @@ export default function VendorOrdersPage() {
                       </div>
                     )}
 
-                    {/* Items list */}
                     <ul className="divide-y divide-border">
                       {o.items?.map((item) => (
                         <li key={item.id} className="flex items-center gap-4 px-5 py-4">
-                          {/* Product image */}
                           <div className="relative h-12 w-12 flex-shrink-0 overflow-hidden rounded-lg border border-border bg-surface">
                             {item.primary_image_url ? (
                               <img src={item.primary_image_url} alt={item.product_name} className="h-full w-full object-cover" />
@@ -196,7 +148,6 @@ export default function VendorOrdersPage() {
                             )}
                           </div>
 
-                          {/* Details */}
                           <div className="flex-1 min-w-0">
                             <p className="font-medium text-sm line-clamp-1">{item.product_name}</p>
                             <VariantTags attributes={item.variant_attributes} className="mt-0.5" />
@@ -208,32 +159,10 @@ export default function VendorOrdersPage() {
                             )}
                           </div>
 
-                          {/* Status + actions */}
-                          <div className="flex flex-col items-end gap-2">
-                            <span className={`rounded-full px-2.5 py-1 text-[10px] font-bold uppercase ${itemStatusBadge(item.status)}`}>
-                              {item.status === "paid" ? "Pending" : item.status}
-                            </span>
-                            {item.status === "paid" && (
-                              <div className="flex gap-2">
-                                <Button variant="ghost"
-                                  onClick={() => handleAccept(o.id, item.id)}
-                                  disabled={actionLoading === item.id}
-                                  className="inline-flex items-center gap-1 rounded-full bg-emerald-600 px-3 py-1 text-[11px] font-semibold text-white hover:bg-emerald-700 disabled:opacity-60 transition-colors"
-                                >
-                                  <CheckCircle2 className="h-3 w-3" />
-                                  {actionLoading === item.id ? "…" : "Accept"}
-                                </Button>
-                                <Button variant="ghost"
-                                  onClick={() => { setDeclineState({ orderId: o.id, itemId: item.id }); setDeclineReason("") }}
-                                  disabled={actionLoading === item.id}
-                                  className="inline-flex items-center gap-1 rounded-full border border-rose-500/40 bg-rose-500/10 px-3 py-1 text-[11px] font-semibold text-rose-600 hover:bg-rose-500/20 disabled:opacity-60 transition-colors"
-                                >
-                                  <XCircle className="h-3 w-3" />
-                                  Decline
-                                </Button>
-                              </div>
-                            )}
-                          </div>
+                          {/* Status only — no vendor actions (read-only) */}
+                          <span className={`rounded-full px-2.5 py-1 text-[10px] font-bold uppercase ${itemStatusBadge(item.status)}`}>
+                            {item.status === "paid" ? "Awaiting Banex" : item.status}
+                          </span>
                         </li>
                       ))}
                     </ul>
@@ -263,41 +192,6 @@ export default function VendorOrdersPage() {
           >
             Next
           </Button>
-        </div>
-      )}
-
-      {/* Decline reason dialog */}
-      {declineState && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
-          <div className="w-full max-w-sm rounded-2xl border border-border bg-card p-6 shadow-2xl">
-            <div className="flex h-12 w-12 items-center justify-center rounded-full bg-rose-500/10">
-              <XCircle className="h-5 w-5 text-rose-600" />
-            </div>
-            <h3 className="mt-4 font-display text-lg font-bold">Decline Order Item</h3>
-            <p className="mt-1 text-sm text-muted-foreground">Please provide a reason for declining this item.</p>
-            <Textarea
-              value={declineReason}
-              onChange={(e) => setDeclineReason(e.target.value)}
-              className="mt-3"
-              rows={3}
-              placeholder="e.g. Item is out of stock"
-            />
-            <div className="mt-4 flex gap-3">
-              <Button variant="ghost"
-                onClick={handleDecline}
-                disabled={!!actionLoading}
-                className="flex-1 rounded-full bg-rose-600 py-2.5 text-sm font-semibold text-white hover:bg-rose-700 disabled:opacity-60 transition-colors"
-              >
-                {actionLoading ? "Declining…" : "Decline Item"}
-              </Button>
-              <Button variant="ghost"
-                onClick={() => { setDeclineState(null); setDeclineReason("") }}
-                className="flex-1 rounded-full border border-border bg-card py-2.5 text-sm font-semibold hover:border-foreground/30 transition-colors"
-              >
-                Cancel
-              </Button>
-            </div>
-          </div>
         </div>
       )}
     </div>

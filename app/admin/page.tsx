@@ -252,7 +252,7 @@ export default function AdminOverview() {
                   <div className="min-w-0 flex-1">
                     <p className="truncate text-sm font-semibold">{seller.shop_name}</p>
                     <p className="text-[11px] text-muted-foreground">
-                      {seller.user.full_name} · {seller.products_count} products
+                      {seller.user?.full_name ?? "Unlinked"} · {seller.products_count} products
                     </p>
                   </div>
                   <div className="text-right">

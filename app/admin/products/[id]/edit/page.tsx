@@ -837,6 +837,22 @@ export default function AdminEditProductPage({
           {/* Pricing & Logistics */}
           <div className="rounded-2xl border border-border bg-card p-6">
             <h2 className="font-display text-base font-semibold mb-4">Pricing & Logistics</h2>
+            {product?.pricing_summary && (
+              <div className="mb-4 flex flex-wrap items-center gap-x-6 gap-y-2 rounded-xl border border-brand/30 bg-brand-soft/10 p-4 text-sm">
+                <div>
+                  <p className="text-[10px] uppercase text-muted-foreground">Listing price</p>
+                  <p className="font-display font-bold">₦{product.pricing_summary.listing_price.toLocaleString()}</p>
+                </div>
+                <div>
+                  <p className="text-[10px] uppercase text-muted-foreground">Commission ({product.pricing_summary.commission_percent_label})</p>
+                  <p className="font-display font-bold text-rose-600">−₦{product.pricing_summary.commission_amount.toLocaleString()}</p>
+                </div>
+                <div>
+                  <p className="text-[10px] uppercase text-muted-foreground">Seller receives</p>
+                  <p className="font-display font-bold text-emerald-600">₦{product.pricing_summary.seller_receives.toLocaleString()}</p>
+                </div>
+              </div>
+            )}
             <div className="grid gap-4 sm:grid-cols-2">
               {!hasVariants && (
                 <>

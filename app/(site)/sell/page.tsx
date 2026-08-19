@@ -60,7 +60,7 @@ export default function SellPage() {
         <h2 className="font-display text-3xl font-extrabold md:text-4xl">Ready to start selling?</h2>
         <p className="mt-3 max-w-md text-sm opacity-90">Create your seller account in minutes. We'll guide you through your first listing.</p>
         <div className="mt-6 flex flex-wrap gap-3">
-          <Link href="/account" className="inline-flex items-center gap-2 rounded-full bg-card px-6 py-3 text-sm font-semibold text-brand-deep shadow-soft">
+          <Link href="/account/become-vendor" className="inline-flex items-center gap-2 rounded-full bg-card px-6 py-3 text-sm font-semibold text-brand-deep shadow-soft">
             Become a seller <ArrowRight className="h-4 w-4" />
           </Link>
           <Link href="/top-sellers" className="inline-flex items-center gap-2 rounded-full border border-white/40 px-6 py-3 text-sm font-semibold">

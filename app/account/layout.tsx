@@ -1,13 +1,13 @@
 "use client"
 
-import { LayoutDashboard, Package, Truck, Heart, MapPin, UserCircle, Settings } from "lucide-react"
+import { LayoutDashboard, Package, Truck, Heart, MapPin, UserCircle, Settings, Store } from "lucide-react"
 import { DashboardLayout } from "@/components/DashboardLayout"
 import { useAuth } from "@/hooks/use-auth"
 import { useRoles } from "@/hooks/use-roles"
 
 export default function AccountLayout({ children }: { children: React.ReactNode }) {
   const { user } = useAuth()
-  const { isAdmin, loading } = useRoles()
+  const { isAdmin, isVendor, loading } = useRoles()
 
   const name =
     ((user as any)?.name as string | undefined) ||
@@ -15,7 +15,6 @@ export default function AccountLayout({ children }: { children: React.ReactNode 
     user?.email?.split("@")[0] ||
     "Shopper"
 
-  // Banex Mall is the single seller — customers have no vendor tools.
   const navItems = [
     { to: "/account", label: "Overview", icon: LayoutDashboard, exact: true },
     { to: "/account/orders", label: "Orders", icon: Package },
@@ -23,6 +22,10 @@ export default function AccountLayout({ children }: { children: React.ReactNode 
     { to: "/account/wishlist", label: "Wishlist", icon: Heart },
     { to: "/account/addresses", label: "Addresses", icon: MapPin },
     { to: "/account/profile", label: "Profile", icon: UserCircle },
+    // Approved vendors get a shortcut to their merchant dashboard; other users can apply.
+    isVendor
+      ? { to: "/vendor-dashboard", label: "Vendor Dashboard", icon: Store }
+      : { to: "/account/become-vendor", label: "Become a Vendor", icon: Store },
     { to: "/account/settings", label: "Settings", icon: Settings },
   ]
 
