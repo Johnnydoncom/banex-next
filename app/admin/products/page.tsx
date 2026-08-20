@@ -5,8 +5,9 @@ import Link from "next/link"
 import Image from "next/image"
 import {
   Plus, Eye, Check, X, Power, PowerOff, Loader2, Edit2,
-  ChevronDown, AlertTriangle, ShieldCheck, ShieldOff, Ban, Store, Boxes
+  ChevronDown, AlertTriangle, ShieldCheck, ShieldOff, Ban, Store, Boxes, Copy, Upload
 } from "lucide-react"
+import { useRouter } from "next/navigation"
 import { DataTable, type Column } from "@/components/DataTable"
 import { StatusBadge } from "@/components/StatusBadge"
 import { ConfirmDialog } from "@/components/ConfirmDialog"
@@ -19,6 +20,7 @@ import {
   deactivateAdminProduct,
   updateAdminProductStock,
   reassignAdminProductSeller,
+  duplicateAdminProduct,
   fetchAdminSellers,
   type AdminProduct,
   type AdminSeller,
@@ -205,6 +207,7 @@ function ProductActionButtons({
 export default function AdminProductsPage() {
   const { data: session } = useSession()
   const token = session?.accessToken as string | undefined
+  const router = useRouter()
   const [tab, setTab] = useState<Tab>("all")
 
   const { products, loading, mutate } = useAdminProducts(token)
@@ -223,6 +226,40 @@ export default function AdminProductsPage() {
   const [manageStock, setManageStock] = useState("")
   const [manageSellerId, setManageSellerId] = useState("")
   const [manageSaving, setManageSaving] = useState(false)
+
+  // Duplicate modal — the endpoint clones the source but requires a new name + image(s)
+  const [dupTarget, setDupTarget] = useState<AdminProduct | null>(null)
+  const [dupName, setDupName] = useState("")
+  const [dupImages, setDupImages] = useState<File[]>([])
+  const [dupSaving, setDupSaving] = useState(false)
+
+  const openDuplicate = (p: AdminProduct) => {
+    setDupTarget(p)
+    setDupName(`${p.name} (Copy)`)
+    setDupImages([])
+  }
+
+  const handleDuplicate = async () => {
+    if (!token || !dupTarget) return
+    if (!dupName.trim()) return toast.error("Enter a name for the duplicate.")
+    if (dupImages.length === 0) return toast.error("Upload at least one image for the duplicate.")
+    setDupSaving(true)
+    try {
+      const fd = new FormData()
+      fd.append("name", dupName.trim())
+      dupImages.forEach((f) => fd.append("images[]", f))
+      const res = await duplicateAdminProduct(dupTarget.id, fd, token)
+      toast.success("Product duplicated as a draft.")
+      const newId = res.data?.product?.id
+      setDupTarget(null)
+      if (newId) router.push(`/admin/products/${newId}/edit`)
+      else mutate()
+    } catch (e: any) {
+      toast.error(e.message || "Failed to duplicate product")
+    } finally {
+      setDupSaving(false)
+    }
+  }
 
   useEffect(() => {
     if (!token) return
@@ -473,6 +510,16 @@ export default function AdminProductsPage() {
           >
             <Boxes className="h-3.5 w-3.5" />
           </Button>
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            onClick={() => openDuplicate(p)}
+            title="Duplicate product"
+            className="h-auto w-auto rounded-lg p-1.5 text-muted-foreground hover:bg-surface hover:text-brand"
+          >
+            <Copy className="h-3.5 w-3.5" />
+          </Button>
           <ProductActionButtons product={p} onAction={(action) => triggerAction(p, action)} />
         </div>
       ),
@@ -652,6 +699,40 @@ export default function AdminProductsPage() {
               >
                 Cancel
               </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Duplicate product modal */}
+      {dupTarget && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm">
+          <div className="w-full max-w-md rounded-2xl border border-border bg-card p-6 shadow-2xl">
+            <h3 className="flex items-center gap-2 font-display text-lg font-bold"><Copy className="h-4 w-4 text-brand" /> Duplicate Product</h3>
+            <p className="mt-1 text-xs text-muted-foreground">
+              Clones price, category, specifications, variants and owner from “{dupTarget.name}”. Give the copy a name and upload its image(s). It's created as a draft.
+            </p>
+            <div className="mt-4 space-y-3">
+              <div>
+                <Label className="mb-1.5 block text-xs font-semibold">New Name</Label>
+                <Input value={dupName} onChange={(e) => setDupName(e.target.value)} className="rounded-xl px-3 py-2.5" />
+              </div>
+              <div>
+                <Label className="mb-1.5 block text-xs font-semibold">Images</Label>
+                <label className="flex cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed border-border bg-surface py-6 transition-colors hover:border-brand hover:bg-brand-soft/20">
+                  <Upload className="mb-1.5 h-5 w-5 text-muted-foreground" />
+                  <span className="text-xs font-medium text-muted-foreground">
+                    {dupImages.length ? `${dupImages.length} image${dupImages.length > 1 ? "s" : ""} selected` : "Click to upload image(s)"}
+                  </span>
+                  <Input type="file" accept="image/*" multiple className="hidden" onChange={(e) => setDupImages(Array.from(e.target.files || []))} />
+                </label>
+              </div>
+            </div>
+            <div className="mt-6 flex gap-3">
+              <Button type="button" onClick={handleDuplicate} disabled={dupSaving} className="h-auto flex-1 gap-2 rounded-full bg-brand py-2.5 text-sm font-bold text-white hover:bg-brand-deep disabled:opacity-60">
+                {dupSaving && <Loader2 className="h-4 w-4 animate-spin" />} Duplicate
+              </Button>
+              <Button type="button" variant="outline" onClick={() => setDupTarget(null)} className="h-auto flex-1 rounded-full py-2.5 text-sm font-semibold">Cancel</Button>
             </div>
           </div>
         </div>

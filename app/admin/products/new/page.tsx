@@ -18,7 +18,7 @@ import {
 import { RichTextEditor } from "@/components/RichTextEditor"
 import { LocationSelect } from "@/components/LocationSelect"
 import { VariantsEditor, emptyVariantRow, appendVariants, validateVariants, type VariantRow, type AttrKey } from "@/components/VariantsEditor"
-import { subcategoriesOf, findCategory } from "@/lib/categories"
+import { flattenCategories } from "@/lib/categories"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -85,15 +85,9 @@ export default function AdminNewProductPage() {
     return () => clearTimeout(t)
   }, [form.price, form.seller_id, hasVariants, session?.accessToken])
 
-  // A product is categorised under a SUBcategory of its seller's (root) category.
-  const selectedSeller = sellers.find((s) => s.id === form.seller_id)
-  const sellerRoot = findCategory(categories, selectedSeller?.category_id)
-  const sellerSubcats = subcategoriesOf(categories, selectedSeller?.category_id)
-  const allowedCategories = sellerSubcats.length ? sellerSubcats : sellerRoot ? [sellerRoot] : []
-
-  // Changing the seller resets the category, since categories are seller-scoped.
-  const onSellerChange = (sellerId: string) =>
-    setForm((f) => ({ ...f, seller_id: sellerId, category_id: "" }))
+  // Admin can categorise a product under ANY category (roots + subcategories),
+  // not just the seller's department — the whole tree is offered, flattened.
+  const categoryOptions = flattenCategories(categories)
 
   const addSpecification = () => setSpecifications(prev => [...prev, { key: "", value: "" }])
   const removeSpecification = (index: number) => setSpecifications(prev => prev.filter((_, i) => i !== index))
@@ -280,7 +274,7 @@ export default function AdminNewProductPage() {
             <div className="grid gap-4 sm:grid-cols-2">
               <div>
                 <Label htmlFor="product-seller" className="mb-1.5 block text-xs text-muted-foreground">Seller</Label>
-                <Select value={form.seller_id} onValueChange={onSellerChange}>
+                <Select value={form.seller_id} onValueChange={(v) => update("seller_id", v)}>
                   <SelectTrigger id="product-seller" className="h-auto rounded-xl px-4 py-2.5"><SelectValue placeholder="Assign to seller" /></SelectTrigger>
                   <SelectContent>
                     {sellers.map((s) => (
@@ -290,16 +284,16 @@ export default function AdminNewProductPage() {
                 </Select>
               </div>
               <div>
-                <Label htmlFor="product-category" className="mb-1.5 block text-xs text-muted-foreground">
-                  Category{sellerRoot ? ` (under ${sellerRoot.name})` : ""}
-                </Label>
-                <Select value={form.category_id} onValueChange={(v) => update("category_id", v)} disabled={!form.seller_id}>
+                <Label htmlFor="product-category" className="mb-1.5 block text-xs text-muted-foreground">Category</Label>
+                <Select value={form.category_id} onValueChange={(v) => update("category_id", v)}>
                   <SelectTrigger id="product-category" className="h-auto rounded-xl px-4 py-2.5">
-                    <SelectValue placeholder={form.seller_id ? "Select category" : "Select a seller first"} />
+                    <SelectValue placeholder="Select category" />
                   </SelectTrigger>
                   <SelectContent>
-                    {allowedCategories.map((c) => (
-                      <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
+                    {categoryOptions.map(({ node, depth }) => (
+                      <SelectItem key={node.id} value={node.id}>
+                        {depth > 0 ? `  ${"— ".repeat(depth)}${node.name}` : node.name}
+                      </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>

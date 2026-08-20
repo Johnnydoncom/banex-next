@@ -336,6 +336,13 @@ export async function updateAdminProduct(id: string, formData: FormData, token: 
   return proxyFetchFormData<{ product: AdminProduct }>(`/admin/products/${id}`, token, "POST", formData)
 }
 
+// Clone a product. POST /admin/products/:id/duplicate copies everything (price,
+// category, specs, variants, seller) from the source; the caller supplies a new
+// `name` and at least one `images[]` file. Returns a new DRAFT product.
+export async function duplicateAdminProduct(id: string, formData: FormData, token: string) {
+  return proxyFetchFormData<{ product: AdminProduct }>(`/admin/products/${id}/duplicate`, token, "POST", formData)
+}
+
 /**
  * Product status transitions:
  *  - approved  → POST /admin/products/{id}/approved   (pending → active)
@@ -443,7 +450,7 @@ export async function toggleUserSuspension(id: string, token: string) {
 
 // ─── Admin Staff (Administrators & Roles) ─────────────────────────────────────
 // Dedicated admin-management endpoints (distinct from /admin/users, which is customers).
-export type AdminRole = { name: string; label: string; permissions: string[] }
+export type AdminRole = { id?: number; name: string; label: string; permissions: string[]; is_system?: boolean }
 
 export type AdminStaff = {
   id: string
@@ -468,6 +475,29 @@ type AdminStaffData = {
 
 export async function fetchAdminRoles(token: string) {
   return proxyFetch<{ roles: AdminRole[]; permissions: string[] }>("/admin/roles", token)
+}
+
+export async function fetchAdminRole(name: string, token: string) {
+  return proxyFetch<{ role: AdminRole }>(`/admin/roles/${name}`, token)
+}
+
+export async function createAdminRole(
+  data: { name: string; label?: string; permissions: string[] },
+  token: string,
+) {
+  return proxyFetch<{ role: AdminRole }>("/admin/roles", token, "POST", data)
+}
+
+export async function updateAdminRole(
+  name: string,
+  data: { label?: string; permissions: string[] },
+  token: string,
+) {
+  return proxyFetch<{ role: AdminRole }>(`/admin/roles/${name}`, token, "PUT", data)
+}
+
+export async function deleteAdminRole(name: string, token: string) {
+  return proxyFetch<null>(`/admin/roles/${name}`, token, "DELETE")
 }
 
 export async function fetchAdmins(token: string) {

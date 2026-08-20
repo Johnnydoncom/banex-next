@@ -15,6 +15,7 @@ import {
   TrendingUp,
   Coins,
   Award,
+  KeyRound,
 } from "lucide-react"
 import { AdminShell } from "@/components/AdminShell"
 import { useAuth } from "@/hooks/use-auth"
@@ -55,6 +56,7 @@ export default function AdminDashboardLayout({ children }: { children: React.Rea
         { to: "/admin/users/sellers", label: "Sellers & Vendors", icon: Store, group: "People" },
         { to: "/admin/users/customers", label: "Customers", icon: Users, group: "People" },
         { to: "/admin/users/admins", label: "Administrators", icon: Shield, group: "People" },
+        { to: "/admin/roles", label: "Roles & Permissions", icon: KeyRound, group: "People" },
         
         { to: "/admin/seller-tiers", label: "Seller Tiers", icon: Award, group: "System" },
         { to: "/admin/contacts", label: "WhatsApp Contacts", icon: MessageCircle, group: "System" },
