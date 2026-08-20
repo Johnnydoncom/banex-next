@@ -263,7 +263,7 @@ export default function AdminProductsPage() {
 
   useEffect(() => {
     if (!token) return
-    fetchAdminSellers(token).then((r) => setSellers(r.data?.sellers || [])).catch(() => {})
+    fetchAdminSellers(token).then((r) => setSellers(r.data?.sellers || [])).catch(() => { })
   }, [token])
 
   const openManage = (p: AdminProduct) => {
@@ -420,7 +420,7 @@ export default function AdminProductsPage() {
             <div className="min-w-0">
               <Link
                 href={`/admin/products/${p.id}`}
-                className="truncate text-sm font-semibold hover:text-brand"
+                className="text-sm font-semibold hover:text-brand"
               >
                 {p.name}
               </Link>
@@ -449,13 +449,12 @@ export default function AdminProductsPage() {
       sortable: true,
       render: (p) => (
         <span
-          className={`text-sm font-semibold ${
-            p.stock_quantity <= 0
+          className={`text-sm font-semibold ${p.stock_quantity <= 0
               ? "text-rose-600"
               : p.stock_quantity <= 5
                 ? "text-amber-600"
                 : "text-foreground"
-          }`}
+            }`}
         >
           {p.stock_quantity ?? 0}
           {p.stock_quantity <= 0 && <span className="ml-1 text-[10px] font-medium">(out)</span>}
@@ -580,22 +579,20 @@ export default function AdminProductsPage() {
             variant="ghost"
             key={t.key}
             onClick={() => setTab(t.key)}
-            className={`h-auto rounded-lg px-3 py-2 text-xs font-semibold ${
-              tab === t.key
+            className={`h-auto rounded-lg px-3 py-2 text-xs font-semibold ${tab === t.key
                 ? "bg-card text-foreground shadow-sm"
                 : "text-muted-foreground hover:text-foreground"
-            }`}
+              }`}
           >
             {t.label}
             {t.count > 0 && (
               <span
-                className={`ml-1.5 rounded-full px-1.5 py-0.5 text-[10px] font-bold ${
-                  t.key === "pending"
+                className={`ml-1.5 rounded-full px-1.5 py-0.5 text-[10px] font-bold ${t.key === "pending"
                     ? "bg-amber-500/20 text-amber-700"
                     : t.key === "rejected"
-                    ? "bg-rose-500/15 text-rose-700"
-                    : "bg-brand/15 text-brand"
-                }`}
+                      ? "bg-rose-500/15 text-rose-700"
+                      : "bg-brand/15 text-brand"
+                  }`}
               >
                 {t.count}
               </span>
