@@ -4,14 +4,14 @@ import Link from "next/link"
 import { Star, MapPin, Heart } from "lucide-react"
 import { motion } from "framer-motion"
 import { GenericProduct } from "@/lib/generic-api"
-import { saleInfo } from "@/lib/products"
+import { productSaleInfo } from "@/lib/products"
 import { useWishlist } from "@/components/WishlistContext"
 import { Button } from "@/components/ui/button"
 
 export function ProductCard({ product, index = 0 }: { product: GenericProduct; index?: number }) {
   const { isInWishlist, toggle } = useWishlist()
 
-  const sale = saleInfo(product)
+  const sale = productSaleInfo(product)
   const lowest = product.price
   const categoryName = product.category?.name || "Uncategorized"
   const primaryImg = product.images?.find((img) => img.is_primary)?.url || product.images?.[0]?.url || ""

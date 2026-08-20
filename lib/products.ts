@@ -286,11 +286,13 @@ export function formatNaira(value: number) {
  * `regular_price`/`sales_price` are admin/seller-only today; on the public
  * catalog they're absent, so `onSale` is false and callers render `price` alone.
  */
+export type SaleInfo = { onSale: boolean; effective: number; original: number | null; percentOff: number }
+
 export function saleInfo(p: {
   price: number | string | null | undefined
   regular_price?: number | string | null
   sales_price?: number | string | null
-}): { onSale: boolean; effective: number; original: number | null; percentOff: number } {
+}): SaleInfo {
   const effective = Number(p.price) || 0
   const regular = p.regular_price != null && p.regular_price !== "" ? Number(p.regular_price) : null
   const sales = p.sales_price != null && p.sales_price !== "" ? Number(p.sales_price) : null
@@ -298,6 +300,28 @@ export function saleInfo(p: {
   const original = onSale ? regular : null
   const percentOff = onSale && original ? Math.round(((original - effective) / original) * 100) : 0
   return { onSale, effective, original, percentOff }
+}
+
+/**
+ * Sale info for a catalog product, resilient to WHERE the backend exposes the
+ * sale fields: prefer the product root, but fall back to the default/first
+ * variant (admin carries regular_price/sales_price on both). Uses the product's
+ * effective `price` as the sale price so a simple root+variant stays consistent.
+ */
+export function productSaleInfo(p: {
+  price: number | string | null | undefined
+  regular_price?: number | string | null
+  sales_price?: number | string | null
+  variants?: { price?: number | string | null; regular_price?: number | string | null; sales_price?: number | string | null; is_default?: boolean }[] | null
+}): SaleInfo {
+  const rootHasSaleFields =
+    (p.regular_price != null && p.regular_price !== "") || (p.sales_price != null && p.sales_price !== "")
+  if (rootHasSaleFields) return saleInfo(p)
+  const v = p.variants?.find((x) => x.is_default) ?? p.variants?.[0]
+  if (v && ((v.regular_price != null && v.regular_price !== "") || (v.sales_price != null && v.sales_price !== ""))) {
+    return saleInfo({ price: p.price, regular_price: v.regular_price, sales_price: v.sales_price })
+  }
+  return saleInfo(p)
 }
 
 export function getProductBySlug(slug: string) {

@@ -1,7 +1,7 @@
 import Link from "next/link"
 import { MapPin, Star } from "lucide-react"
 import { GenericProduct } from "@/lib/generic-api"
-import { saleInfo } from "@/lib/products"
+import { productSaleInfo } from "@/lib/products"
 import { WishlistButton } from "./WishlistButton"
 import Image from "next/image"
 
@@ -11,7 +11,7 @@ function formatNaira(amount: number) {
 
 export function ApiProductCard({ product }: { product: GenericProduct }) {
   const primaryImage = product.images?.find((i) => i.is_primary) ?? product.images?.[0]
-  const sale = saleInfo(product)
+  const sale = productSaleInfo(product)
 
   return (
     <Link

@@ -2,7 +2,7 @@ import Link from "next/link"
 import { notFound } from "next/navigation"
 import { Star, Truck, ShieldCheck, BadgeCheck, ChevronLeft } from "lucide-react"
 import { fetchGenericProduct } from "@/lib/generic-api"
-import { saleInfo } from "@/lib/products"
+import { productSaleInfo } from "@/lib/products"
 import { ProductImageGallery } from "./components/ProductImageGallery"
 import { ProductActionButtons } from "./components/ProductActionButtons"
 import { ProductContactButtons } from "./components/ProductContactButtons"
@@ -64,7 +64,7 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
   const lowest = product.price
   // Strike through the regular price when an active sale is present (the catalog
   // must expose regular_price/sales_price for this to render).
-  const sale = saleInfo(product)
+  const sale = productSaleInfo(product)
 
   const formatNaira = (amount: number) => {
     return new Intl.NumberFormat("en-NG", {
