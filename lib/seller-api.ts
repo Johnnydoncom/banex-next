@@ -224,9 +224,22 @@ export async function sellerUpdateProfile(formData: FormData, token: string) {
 
 // ─── Seller Products ──────────────────────────────────────────────────────────
 
-export async function sellerFetchProducts(token: string) {
-  const res = await proxyFetch<{ products: SellerProduct[] }>("/seller/products", token)
-  return res.data?.products ?? []
+export type SellerProductsPage = {
+  products: SellerProduct[]
+  pagination?: { current_page: number; per_page: number; total: number; last_page: number }
+}
+
+export async function sellerFetchProducts(
+  token: string,
+  params?: { page?: number; per_page?: number; q?: string },
+) {
+  const sp = new URLSearchParams()
+  if (params?.page) sp.set("page", String(params.page))
+  if (params?.per_page) sp.set("per_page", String(params.per_page))
+  if (params?.q) sp.set("filter[name]", params.q)
+  const qs = sp.toString() ? `?${sp.toString()}` : ""
+  const res = await proxyFetch<SellerProductsPage>(`/seller/products${qs}`, token)
+  return { products: res.data?.products ?? [], pagination: res.data?.pagination }
 }
 
 export async function sellerFetchProduct(id: string, token: string) {

@@ -32,7 +32,7 @@ export default function VendorOverview() {
   const token = (session as any)?.accessToken as string | undefined
 
   const { profile } = useSellerApplication(token)
-  const { orders, loading } = useSellerOrders(token)
+  const { orders } = useSellerOrders(token)
   const { wallet } = useWallet(token)
 
   const walletBalance = wallet?.balance ?? null
@@ -41,16 +41,6 @@ export default function VendorOverview() {
   const totalRevenue = orders.reduce((sum, o) => sum + (o.lines_summary?.subtotal ?? 0), 0)
   const pendingCount = orders.filter(o => o.items?.some(i => i.status === "paid")).length
   const recentOrders = orders.slice(0, 5)
-
-  if (loading) {
-    return (
-      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-        {[...Array(4)].map((_, i) => (
-          <div key={i} className="h-28 animate-pulse rounded-2xl border border-border bg-card" />
-        ))}
-      </div>
-    )
-  }
 
   return (
     <div className="space-y-6">
@@ -79,15 +69,15 @@ export default function VendorOverview() {
         </div>
         <div className="flex gap-2">
           <Link
-            href="/vendor-dashboard/products"
-            className="inline-flex items-center gap-2 rounded-full border border-emerald-500/30 bg-emerald-500/10 px-4 py-2 text-xs font-semibold text-emerald-700"
+            href="/vendor-dashboard/products?add=1"
+            className="inline-flex items-center gap-2 rounded-full bg-emerald-600 px-4 py-2 text-xs font-semibold text-white hover:bg-emerald-700"
           >
             <Plus className="h-3.5 w-3.5" /> Add product
           </Link>
           {profile?.slug && (
             <Link
-              href={`/store/${profile.slug}`}
-              className="inline-flex items-center gap-2 rounded-full bg-emerald-600 px-4 py-2 text-xs font-semibold text-white"
+              href={`/vendor/${profile.slug}`}
+              className="inline-flex items-center gap-2 rounded-full border border-emerald-500/30 bg-emerald-500/10 px-4 py-2 text-xs font-semibold text-emerald-700"
             >
               <Store className="h-3.5 w-3.5" /> View store
             </Link>
@@ -199,7 +189,7 @@ export default function VendorOverview() {
             <p className="mb-3 text-xs font-semibold uppercase tracking-widest text-muted-foreground">Quick links</p>
             <div className="space-y-1">
               {[
-                { label: "Add a new product", href: "/vendor-dashboard/products" },
+                { label: "Add a new product", href: "/vendor-dashboard/products?add=1" },
                 { label: "Edit store profile", href: "/vendor-dashboard/store" },
                 { label: "Withdraw earnings", href: "/vendor-dashboard/finances" },
               ].map((l) => (

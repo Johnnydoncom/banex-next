@@ -1,7 +1,8 @@
 "use client"
 
 import { useState, useRef, useEffect } from "react"
-import { Search, Plus, PackageOpen, Edit2, Trash2, X, ImageOff, Package2, AlertCircle, ChevronUp, ChevronDown, BarChart2 } from "lucide-react"
+import { useSearchParams } from "next/navigation"
+import { Search, Plus, PackageOpen, Edit2, Trash2, X, ImageOff, Package2, AlertCircle, ChevronLeft, ChevronRight, BarChart2 } from "lucide-react"
 import { useAuth } from "@/hooks/use-auth"
 import { toast } from "sonner"
 import {
@@ -66,8 +67,12 @@ type PreviewImg = { url: string; file?: File; id?: string }
 export default function VendorProductsPage() {
   const { user, session } = useAuth()
   const token = (session as any)?.accessToken as string | undefined
+  const searchParams = useSearchParams()
 
-  const { products: fetchedProducts, loading: productsLoading, mutate: mutateProducts } = useSellerProducts(token)
+  const PER_PAGE = 12
+  const [page, setPage] = useState(1)
+  const [debouncedQ, setDebouncedQ] = useState("")
+  const { products: fetchedProducts, pagination, loading: productsLoading, mutate: mutateProducts } = useSellerProducts(token, page, PER_PAGE, debouncedQ)
   const { categories } = useCategories()
   const { profile } = useSellerApplication(token)
 
@@ -80,11 +85,9 @@ export default function VendorProductsPage() {
   const [products, setProducts] = useState<SellerProduct[] | null>(null)
   const loading = productsLoading && products === null
 
-  // Sync SWR data into local state so we can do optimistic updates
+  // Sync SWR data (current page) into local state so we can do optimistic updates
   useEffect(() => {
-    if (fetchedProducts && products === null) {
-      setProducts(fetchedProducts)
-    }
+    if (fetchedProducts) setProducts(fetchedProducts)
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [fetchedProducts])
 
@@ -141,6 +144,18 @@ export default function VendorProductsPage() {
     }, 800)
     return () => { if (previewTimerRef.current) clearTimeout(previewTimerRef.current) }
   }, [form.price, token, showModal])
+
+  // Debounce the search box into a server-side query (and reset to the first page).
+  useEffect(() => {
+    const t = setTimeout(() => { setDebouncedQ(q.trim()); setPage(1) }, 400)
+    return () => clearTimeout(t)
+  }, [q])
+
+  // Open the add-product form immediately when linked with ?add=1 (from the overview CTA).
+  useEffect(() => {
+    if (searchParams.get("add") === "1") openAdd()
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams])
 
   function openAdd() {
     setEditProduct(null)
@@ -315,10 +330,10 @@ export default function VendorProductsPage() {
     }
   }
 
-  const filtered = (products ?? []).filter((p) => {
-    if (!q) return true
-    return p.name.toLowerCase().includes(q.toLowerCase())
-  })
+  // Search + pagination are handled server-side, so render the current page as-is.
+  const filtered = products ?? []
+  const totalCount = pagination?.total ?? filtered.length
+  const totalPages = pagination?.last_page ?? 1
 
   return (
     <div className="space-y-5">
@@ -326,7 +341,7 @@ export default function VendorProductsPage() {
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
           <h1 className="font-display text-2xl font-bold">Products</h1>
-          <p className="text-sm text-muted-foreground">{(products ?? []).length} listing{(products ?? []).length !== 1 ? "s" : ""} in your store</p>
+          <p className="text-sm text-muted-foreground">{totalCount} listing{totalCount !== 1 ? "s" : ""} in your store</p>
         </div>
         <div className="flex gap-2">
           <label className="relative hidden sm:block">
@@ -354,11 +369,20 @@ export default function VendorProductsPage() {
       ) : filtered.length === 0 ? (
         <div className="rounded-2xl border border-dashed border-border bg-card p-12 text-center">
           <PackageOpen className="mx-auto h-10 w-10 text-muted-foreground/40" />
-          <p className="mt-3 font-display font-semibold">No products yet</p>
-          <p className="mt-1 text-xs text-muted-foreground">Add your first product listing to start selling.</p>
-          <Button variant="ghost" type="button" onClick={openAdd} className="mt-4 inline-flex items-center gap-2 rounded-full bg-emerald-600 px-4 py-2 text-xs font-semibold text-white">
-            <Plus className="h-3.5 w-3.5" /> Add first product
-          </Button>
+          {debouncedQ ? (
+            <>
+              <p className="mt-3 font-display font-semibold">No products match “{debouncedQ}”</p>
+              <p className="mt-1 text-xs text-muted-foreground">Try a different search term.</p>
+            </>
+          ) : (
+            <>
+              <p className="mt-3 font-display font-semibold">No products yet</p>
+              <p className="mt-1 text-xs text-muted-foreground">Add your first product listing to start selling.</p>
+              <Button variant="ghost" type="button" onClick={openAdd} className="mt-4 inline-flex items-center gap-2 rounded-full bg-emerald-600 px-4 py-2 text-xs font-semibold text-white">
+                <Plus className="h-3.5 w-3.5" /> Add first product
+              </Button>
+            </>
+          )}
         </div>
       ) : (
         <div className="rounded-2xl border border-border bg-card overflow-hidden">
@@ -456,6 +480,31 @@ export default function VendorProductsPage() {
                 })}
               </tbody>
             </table>
+          </div>
+        </div>
+      )}
+
+      {/* Pagination */}
+      {!loading && totalPages > 1 && (
+        <div className="flex items-center justify-between gap-2 text-xs text-muted-foreground">
+          <span>
+            Page {pagination?.current_page ?? page} of {totalPages} · {totalCount} products
+          </span>
+          <div className="flex gap-2">
+            <Button variant="ghost" type="button"
+              onClick={() => setPage((p) => Math.max(1, p - 1))}
+              disabled={page <= 1}
+              className="inline-flex items-center gap-1 rounded-full border border-border bg-card px-3 py-1.5 font-semibold disabled:opacity-40 hover:border-emerald-500"
+            >
+              <ChevronLeft className="h-3.5 w-3.5" /> Prev
+            </Button>
+            <Button variant="ghost" type="button"
+              onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+              disabled={page >= totalPages}
+              className="inline-flex items-center gap-1 rounded-full border border-border bg-card px-3 py-1.5 font-semibold disabled:opacity-40 hover:border-emerald-500"
+            >
+              Next <ChevronRight className="h-3.5 w-3.5" />
+            </Button>
           </div>
         </div>
       )}

@@ -166,14 +166,15 @@ export function useSellerApplication(token: string | undefined) {
   }
 }
 
-export function useSellerProducts(token: string | undefined) {
+export function useSellerProducts(token: string | undefined, page = 1, perPage = 12, q = "") {
   const { data, error, isLoading, mutate } = useSWR(
-    token ? SWR_KEYS.sellerProducts(token) : null,
-    ([, t]) => sellerFetchProducts(t),
-    { revalidateOnFocus: false }
+    token ? [...SWR_KEYS.sellerProducts(token), page, perPage, q] : null,
+    ([, t]) => sellerFetchProducts(t, { page, per_page: perPage, q: q || undefined }),
+    { revalidateOnFocus: false, keepPreviousData: true }
   )
   return {
-    products: data as SellerProduct[] | undefined,
+    products: data?.products as SellerProduct[] | undefined,
+    pagination: data?.pagination ?? null,
     loading: isLoading,
     error,
     mutate,
