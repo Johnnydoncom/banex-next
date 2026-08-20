@@ -164,7 +164,7 @@ export function DataTable<T>({
                         // Primary/identity column → full-width card header on mobile
                         <td
                           key={col.key}
-                          className={`block border-b border-border/50 bg-surface/40 px-4 py-3 text-sm last:border-b-0 md:table-cell md:border-0 md:bg-transparent md:py-3.5 md:align-middle ${col.className ?? ""}`}
+                          className={`block border-b border-border/50 bg-surface/40 px-4 py-3 text-sm last:border-b-0 max-w-sm md:table-cell md:border-0 md:bg-transparent md:py-3.5 md:align-middle ${col.className ?? ""}`}
                         >
                           {col.render(row)}
                         </td>
