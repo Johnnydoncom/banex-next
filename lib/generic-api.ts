@@ -32,6 +32,10 @@ export type ProductVariant = {
   sku: string | null
   attributes: Record<string, string> | string[] | null
   price: number
+  // Sale pricing (admin/seller context only; the public catalog exposes just the
+  // effective `price`). `price` already reflects the sale when one is active.
+  regular_price?: number | null
+  sales_price?: number | null
   stock_quantity: number
   in_stock: boolean
   is_default: boolean
@@ -52,6 +56,10 @@ export type GenericProduct = {
   slug: string
   brand: string | null
   price: number
+  // Sale pricing — only present if the catalog API is extended to expose them
+  // (currently admin/seller-only). `price` is always the effective price.
+  regular_price?: number | null
+  sales_price?: number | null
   currency: string
   location: string | null
   in_stock: boolean

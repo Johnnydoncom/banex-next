@@ -2,6 +2,7 @@ import Link from "next/link"
 import { notFound } from "next/navigation"
 import { Star, Truck, ShieldCheck, BadgeCheck, ChevronLeft } from "lucide-react"
 import { fetchGenericProduct } from "@/lib/generic-api"
+import { saleInfo } from "@/lib/products"
 import { ProductImageGallery } from "./components/ProductImageGallery"
 import { ProductActionButtons } from "./components/ProductActionButtons"
 import { ProductContactButtons } from "./components/ProductContactButtons"
@@ -61,6 +62,9 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
   const { product } = data
   // Banex Mall is the single seller — the product's own price is the price.
   const lowest = product.price
+  // Strike through the regular price when an active sale is present (the catalog
+  // must expose regular_price/sales_price for this to render).
+  const sale = saleInfo(product)
 
   const formatNaira = (amount: number) => {
     return new Intl.NumberFormat("en-NG", {
@@ -126,7 +130,15 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
           <div className="mt-6 flex items-end gap-3">
             <div>
               <p className="text-[10px] uppercase tracking-widest text-muted-foreground">Price</p>
-              <p className="font-display text-3xl font-bold text-foreground md:text-4xl">{formatNaira(lowest)}</p>
+              <div className="flex flex-wrap items-baseline gap-2">
+                <p className="font-display text-3xl font-bold text-foreground md:text-4xl">{formatNaira(lowest)}</p>
+                {sale.onSale && (
+                  <>
+                    <span className="text-lg font-medium text-muted-foreground line-through md:text-xl">{formatNaira(sale.original!)}</span>
+                    <span className="rounded-full bg-rose-600 px-2 py-0.5 text-xs font-bold text-white">−{sale.percentOff}%</span>
+                  </>
+                )}
+              </div>
             </div>
             {product.in_stock ? (
               <span className="rounded-full border border-emerald-500/40 bg-emerald-500/10 px-3 py-1 text-xs font-medium text-emerald-700 dark:text-emerald-400">

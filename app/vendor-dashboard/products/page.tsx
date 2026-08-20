@@ -12,7 +12,7 @@ import {
 } from "@/lib/seller-api"
 import { useSellerProducts, useCategories, useSellerApplication } from "@/hooks/use-swr-data"
 import { subcategoriesOf, findCategory } from "@/lib/categories"
-import { formatNaira } from "@/lib/products"
+import { formatNaira, saleInfo } from "@/lib/products"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { Button } from "@/components/ui/button"
@@ -24,7 +24,8 @@ type ProductForm = {
   brand: string
   category_id: string
   description: string
-  price: string
+  regular_price: string
+  sales_price: string
   stock_quantity: string
   weight_kg: string
   location: string
@@ -41,7 +42,8 @@ const defaultForm = (): ProductForm => ({
   brand: "",
   category_id: "",
   description: "",
-  price: "",
+  regular_price: "",
+  sales_price: "",
   stock_quantity: "",
   weight_kg: "",
   location: "",
@@ -125,16 +127,19 @@ export default function VendorProductsPage() {
   // Use effect only for the debounced pricing preview (not data loading)
   useEffect(() => {
     if (!token || !showModal) return
-    const price = parseFloat(form.price)
-    if (!form.price || isNaN(price) || price <= 0) {
+    const regular = parseFloat(form.regular_price)
+    const sales = parseFloat(form.sales_price)
+    if (!form.regular_price || isNaN(regular) || regular <= 0) {
       setPricingPreview(null)
       return
     }
+    // Forward the sale price only when valid (>0 and below the regular price).
+    const validSale = !isNaN(sales) && sales > 0 && sales < regular ? sales : undefined
     if (previewTimerRef.current) clearTimeout(previewTimerRef.current)
     previewTimerRef.current = setTimeout(async () => {
       setLoadingPreview(true)
       try {
-        const summary = await sellerPricingPreview(price, token)
+        const summary = await sellerPricingPreview(regular, validSale, token)
         setPricingPreview(summary)
       } catch {
         setPricingPreview(null)
@@ -143,7 +148,7 @@ export default function VendorProductsPage() {
       }
     }, 800)
     return () => { if (previewTimerRef.current) clearTimeout(previewTimerRef.current) }
-  }, [form.price, token, showModal])
+  }, [form.regular_price, form.sales_price, token, showModal])
 
   // Debounce the search box into a server-side query (and reset to the first page).
   useEffect(() => {
@@ -176,7 +181,8 @@ export default function VendorProductsPage() {
       brand: p.brand ?? "",
       category_id: p.category_id ?? "",
       description: p.description ?? "",
-      price: String(p.price),
+      regular_price: String(p.regular_price ?? p.price),
+      sales_price: p.sales_price != null && Number(p.sales_price) > 0 ? String(p.sales_price) : "",
       stock_quantity: String(p.stock_quantity ?? ""),
       weight_kg: String(p.weight_kg ?? ""),
       location: p.location ?? "",
@@ -251,13 +257,16 @@ export default function VendorProductsPage() {
 
   async function handleSave() {
     if (!token) return
-    if (!form.name || !form.category_id || (!hasVariants && !form.price)) {
-      toast.error("Name, price, and category are required")
+    if (!form.name || !form.category_id || (!hasVariants && !form.regular_price)) {
+      toast.error("Name, regular price, and category are required")
       return
     }
     if (hasVariants) {
       const err = validateVariants(variantRows, variantAttrs)
       if (err) { toast.error(err); return }
+    } else if (form.sales_price.trim() !== "" && Number(form.sales_price) > 0 && Number(form.sales_price) >= Number(form.regular_price)) {
+      toast.error("Sale price must be less than the regular price")
+      return
     }
     setSaving(true)
     try {
@@ -270,7 +279,13 @@ export default function VendorProductsPage() {
       if (hasVariants) {
         appendVariants(fd, variantRows, variantAttrs)
       } else {
-        fd.append("price", form.price)
+        fd.append("regular_price", form.regular_price)
+        if (editProduct) {
+          // On edit, always send sales_price so blank/0 clears an existing sale.
+          fd.append("sales_price", form.sales_price.trim() !== "" && Number(form.sales_price) > 0 ? form.sales_price : "0")
+        } else if (form.sales_price.trim() !== "" && Number(form.sales_price) > 0) {
+          fd.append("sales_price", form.sales_price)
+        }
         fd.append("stock_quantity", form.stock_quantity)
       }
       fd.append("weight_kg", form.weight_kg)
@@ -417,7 +432,19 @@ export default function VendorProductsPage() {
                           </div>
                         </div>
                       </td>
-                      <td className="px-5 py-3 font-semibold">{formatNaira(p.price)}</td>
+                      <td className="px-5 py-3 font-semibold">
+                        {(() => {
+                          const s = saleInfo(p)
+                          return s.onSale ? (
+                            <span className="flex items-center gap-1.5">
+                              <span className="text-emerald-700">{formatNaira(s.effective)}</span>
+                              <span className="text-[11px] font-normal text-muted-foreground line-through">{formatNaira(s.original!)}</span>
+                            </span>
+                          ) : (
+                            formatNaira(p.price)
+                          )
+                        })()}
+                      </td>
                       <td className="px-5 py-3">
                         {stockEditId === p.id ? (
                           <div className="flex items-center gap-1">
@@ -585,11 +612,14 @@ export default function VendorProductsPage() {
                   )}
                 </F>
               </div>
-              <div className={`grid gap-4 ${hasVariants ? "grid-cols-1" : "grid-cols-3"}`}>
+              <div className={`grid gap-4 ${hasVariants ? "grid-cols-1" : "grid-cols-2 sm:grid-cols-4"}`}>
                 {!hasVariants && (
                   <>
-                    <F label="Price (₦) *">
-                      <Input type="number" value={form.price} onChange={(e) => setForm((f) => ({ ...f, price: e.target.value }))} placeholder="0" />
+                    <F label="Regular Price (₦) *">
+                      <Input type="number" value={form.regular_price} onChange={(e) => setForm((f) => ({ ...f, regular_price: e.target.value }))} placeholder="0" />
+                    </F>
+                    <F label="Sale Price (₦)">
+                      <Input type="number" value={form.sales_price} onChange={(e) => setForm((f) => ({ ...f, sales_price: e.target.value }))} placeholder="Optional" />
                     </F>
                     <F label="Stock Qty">
                       <Input type="number" value={form.stock_quantity} onChange={(e) => setForm((f) => ({ ...f, stock_quantity: e.target.value }))} placeholder="0" />
@@ -600,6 +630,9 @@ export default function VendorProductsPage() {
                   <Input type="number" step="0.1" value={form.weight_kg} onChange={(e) => setForm((f) => ({ ...f, weight_kg: e.target.value }))} placeholder="0.5" />
                 </F>
               </div>
+              {!hasVariants && form.sales_price.trim() !== "" && Number(form.sales_price) > 0 && Number(form.sales_price) >= Number(form.regular_price) && (
+                <p className="-mt-3 text-[11px] text-rose-600">Sale price must be less than the regular price.</p>
+              )}
 
               <VariantsEditor enabled={hasVariants} onToggle={setHasVariants} rows={variantRows} onChange={setVariantRows} attrs={variantAttrs} onAttrsChange={setVariantAttrs} />
 

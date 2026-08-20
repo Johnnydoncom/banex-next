@@ -4,12 +4,14 @@ import Link from "next/link"
 import { Star, MapPin, Heart } from "lucide-react"
 import { motion } from "framer-motion"
 import { GenericProduct } from "@/lib/generic-api"
+import { saleInfo } from "@/lib/products"
 import { useWishlist } from "@/components/WishlistContext"
 import { Button } from "@/components/ui/button"
 
 export function ProductCard({ product, index = 0 }: { product: GenericProduct; index?: number }) {
   const { isInWishlist, toggle } = useWishlist()
-  
+
+  const sale = saleInfo(product)
   const lowest = product.price
   const categoryName = product.category?.name || "Uncategorized"
   const primaryImg = product.images?.find((img) => img.is_primary)?.url || product.images?.[0]?.url || ""
@@ -49,6 +51,11 @@ export function ProductCard({ product, index = 0 }: { product: GenericProduct; i
           <span className="absolute left-3 top-3 rounded-full bg-card/90 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wider text-brand-deep backdrop-blur">
             {categoryName}
           </span>
+          {sale.onSale && (
+            <span className="absolute left-3 top-10 rounded-full bg-rose-600 px-2 py-0.5 text-[10px] font-bold text-white shadow-sm">
+              −{sale.percentOff}%
+            </span>
+          )}
           <Button variant="ghost" type="button"
             aria-label="Save"
             onClick={(e) => {
@@ -74,6 +81,9 @@ export function ProductCard({ product, index = 0 }: { product: GenericProduct; i
             <div>
               <p className="text-[10px] uppercase tracking-wider text-muted-foreground">Price</p>
               <p className="font-display text-xl font-bold text-foreground">{formatNaira(lowest)}</p>
+              {sale.onSale && (
+                <p className="text-xs font-medium text-muted-foreground line-through">{formatNaira(sale.original!)}</p>
+              )}
             </div>
             {product.location && (
               <div className="flex items-center gap-1 text-[11px] text-muted-foreground">

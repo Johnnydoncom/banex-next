@@ -276,6 +276,30 @@ export function formatNaira(value: number) {
   return "₦" + value.toLocaleString("en-NG")
 }
 
+/**
+ * Derive sale-display info from a product/variant's price fields.
+ *
+ * The effective `price` already accounts for any sale (backend returns the
+ * sales_price when active, else the regular_price) — so we never compute a
+ * price here. We only decide whether to STRIKE THROUGH a higher original price.
+ *
+ * `regular_price`/`sales_price` are admin/seller-only today; on the public
+ * catalog they're absent, so `onSale` is false and callers render `price` alone.
+ */
+export function saleInfo(p: {
+  price: number | string | null | undefined
+  regular_price?: number | string | null
+  sales_price?: number | string | null
+}): { onSale: boolean; effective: number; original: number | null; percentOff: number } {
+  const effective = Number(p.price) || 0
+  const regular = p.regular_price != null && p.regular_price !== "" ? Number(p.regular_price) : null
+  const sales = p.sales_price != null && p.sales_price !== "" ? Number(p.sales_price) : null
+  const onSale = sales != null && sales > 0 && regular != null && regular > sales
+  const original = onSale ? regular : null
+  const percentOff = onSale && original ? Math.round(((original - effective) / original) * 100) : 0
+  return { onSale, effective, original, percentOff }
+}
+
 export function getProductBySlug(slug: string) {
   return products.find((p) => p.slug === slug)
 }

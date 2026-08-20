@@ -17,13 +17,16 @@ export const ALL_ATTRS: { key: AttrKey; label: string; placeholder: string }[] =
 export type VariantRow = {
   color: string
   size: string
-  price: string
+  /** Regular (list) price — required. */
+  regular_price: string
+  /** Optional sale price; must be strictly less than regular_price. Empty/0 = no sale. */
+  sales_price: string
   stock: string
   is_default: boolean
 }
 
 export function emptyVariantRow(is_default = false): VariantRow {
-  return { color: "", size: "", price: "", stock: "", is_default }
+  return { color: "", size: "", regular_price: "", sales_price: "", stock: "", is_default }
 }
 
 /** Which attributes are actually in use across a product's existing variants. */
@@ -43,10 +46,14 @@ export function variantsFromProduct(variants: ProductVariant[] | undefined | nul
   if (!variants || variants.length === 0) return [emptyVariantRow(true)]
   return variants.map((v) => {
     const a = variantAttributes(v.attributes)
+    // `regular_price` is the list price; fall back to `price` for older payloads
+    // that predate the sale-pricing fields. `sales_price` populates only when set.
+    const regular = v.regular_price != null ? v.regular_price : v.price
     return {
       color: a.color ?? "",
       size: a.size ?? "",
-      price: v.price != null ? String(v.price) : "",
+      regular_price: regular != null ? String(regular) : "",
+      sales_price: v.sales_price != null && Number(v.sales_price) > 0 ? String(v.sales_price) : "",
       stock: v.stock_quantity != null ? String(v.stock_quantity) : "",
       is_default: !!v.is_default,
     }
@@ -61,7 +68,10 @@ export function validateVariants(rows: VariantRow[], attrs: AttrKey[]): string |
     for (const key of attrs) {
       if (!r[key].trim()) return `Variant ${i + 1}: enter a ${key === "color" ? "colour" : "size"}.`
     }
-    if (!r.price || Number(r.price) <= 0) return `Variant ${i + 1}: enter a valid price.`
+    if (!r.regular_price || Number(r.regular_price) <= 0) return `Variant ${i + 1}: enter a valid regular price.`
+    if (r.sales_price.trim() !== "" && Number(r.sales_price) > 0 && Number(r.sales_price) >= Number(r.regular_price)) {
+      return `Variant ${i + 1}: sale price must be less than the regular price.`
+    }
     if (r.stock === "" || Number(r.stock) < 0) return `Variant ${i + 1}: enter a valid stock quantity.`
   }
   // Detect duplicate combinations of the active attributes only.
@@ -81,7 +91,11 @@ export function appendVariants(fd: FormData, rows: VariantRow[], attrs: AttrKey[
     for (const key of attrs) {
       if (r[key].trim()) fd.append(`variants[${i}][attributes][${key}]`, r[key].trim())
     }
-    fd.append(`variants[${i}][price]`, r.price)
+    fd.append(`variants[${i}][regular_price]`, r.regular_price)
+    // Only send a sale price when one is actually set (0/blank clears it).
+    if (r.sales_price.trim() !== "" && Number(r.sales_price) > 0) {
+      fd.append(`variants[${i}][sales_price]`, r.sales_price)
+    }
     fd.append(`variants[${i}][stock_quantity]`, r.stock)
     fd.append(`variants[${i}][is_default]`, r.is_default ? "1" : "0")
   })
@@ -126,11 +140,12 @@ export function VariantsEditor({
   }
 
   const activeCols = ALL_ATTRS.filter((a) => attrs.includes(a.key))
+  // Columns: [attr…] + Regular + Sale + Stock + Default(auto) + Remove(auto).
   // Only two possible layouts (1 or 2 attribute columns) → static Tailwind classes.
   const gridCols =
     activeCols.length === 2
-      ? "sm:grid-cols-[1fr_1fr_1fr_1fr_auto_auto]"
-      : "sm:grid-cols-[1fr_1fr_1fr_auto_auto]"
+      ? "sm:grid-cols-[1fr_1fr_1fr_1fr_1fr_auto_auto]"
+      : "sm:grid-cols-[1fr_1fr_1fr_1fr_auto_auto]"
 
   return (
     <section className="rounded-2xl border border-border bg-card p-6 shadow-sm">
@@ -185,7 +200,8 @@ export function VariantsEditor({
             {activeCols.map((a) => (
               <span key={a.key}>{a.label}</span>
             ))}
-            <span>Price (₦)</span>
+            <span>Regular (₦)</span>
+            <span>Sale (₦)</span>
             <span>Stock</span>
             <span>Default</span>
             <span></span>
@@ -208,8 +224,12 @@ export function VariantsEditor({
                 </div>
               ))}
               <div className="sm:contents">
-                <Label className="mb-1 block text-[10px] text-muted-foreground sm:hidden">Price</Label>
-                <Input type="number" min="0" value={r.price} onChange={(e) => setRow(i, { price: e.target.value })} placeholder="10000" className="rounded-lg px-3 py-2 text-sm" />
+                <Label className="mb-1 block text-[10px] text-muted-foreground sm:hidden">Regular price</Label>
+                <Input type="number" min="0" value={r.regular_price} onChange={(e) => setRow(i, { regular_price: e.target.value })} placeholder="10000" className="rounded-lg px-3 py-2 text-sm" />
+              </div>
+              <div className="sm:contents">
+                <Label className="mb-1 block text-[10px] text-muted-foreground sm:hidden">Sale price (optional)</Label>
+                <Input type="number" min="0" value={r.sales_price} onChange={(e) => setRow(i, { sales_price: e.target.value })} placeholder="—" className="rounded-lg px-3 py-2 text-sm" />
               </div>
               <div className="sm:contents">
                 <Label className="mb-1 block text-[10px] text-muted-foreground sm:hidden">Stock</Label>

@@ -26,6 +26,7 @@ import {
   type AdminSeller,
 } from "@/lib/admin-api"
 import { useAdminProducts } from "@/hooks/use-swr-data"
+import { saleInfo } from "@/lib/products"
 import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
 import { Input } from "@/components/ui/input"
@@ -436,12 +437,18 @@ export default function AdminProductsPage() {
       key: "price",
       label: "Price",
       sortable: true,
-      render: (p) => (
-        <span className="text-sm font-semibold">
-          {p.currency === "NGN" ? "₦" : p.currency}
-          {p.price.toLocaleString()}
-        </span>
-      ),
+      render: (p) => {
+        const cur = p.currency === "NGN" ? "₦" : p.currency
+        const s = saleInfo(p)
+        return s.onSale ? (
+          <span className="flex flex-col text-sm font-semibold leading-tight">
+            <span className="text-emerald-700">{cur}{s.effective.toLocaleString()}</span>
+            <span className="text-[11px] font-normal text-muted-foreground line-through">{cur}{s.original!.toLocaleString()}</span>
+          </span>
+        ) : (
+          <span className="text-sm font-semibold">{cur}{p.price.toLocaleString()}</span>
+        )
+      },
     },
     {
       key: "stock",

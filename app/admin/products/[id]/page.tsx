@@ -422,6 +422,12 @@ export default function AdminProductDetailPage({
                 <p className="mt-1 font-display text-xl font-bold">
                   {product.currency === "NGN" ? "₦" : product.currency}
                   {product.price.toLocaleString()}
+                  {product.sales_price != null && Number(product.sales_price) > 0 && product.regular_price != null && Number(product.regular_price) > Number(product.price) && (
+                    <span className="ml-2 text-sm font-medium text-muted-foreground line-through">
+                      {product.currency === "NGN" ? "₦" : product.currency}
+                      {Number(product.regular_price).toLocaleString()}
+                    </span>
+                  )}
                 </p>
               </div>
               <div className="rounded-xl bg-surface/60 p-3">

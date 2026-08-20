@@ -118,6 +118,10 @@ export type SellerProduct = {
   description: string | null
   specifications: string[] | null
   price: number
+  // Sale pricing. `price` is the effective price; regular_price/sales_price are
+  // returned by the seller API for the merchant's own products.
+  regular_price?: number | null
+  sales_price?: number | null
   currency: string
   location: string | null
   delivery_estimate: string | null
@@ -274,6 +278,10 @@ export async function sellerDeleteProduct(id: string, token: string) {
 
 export type PricingSummary = {
   listing_price: number
+  regular_price?: number
+  sales_price?: number | null
+  discount_amount?: number
+  is_on_sale?: boolean
   commission_percent: number
   commission_percent_label: string
   commission_amount: number
@@ -281,9 +289,16 @@ export type PricingSummary = {
   currency: string
 }
 
-export async function sellerPricingPreview(price: number, token: string): Promise<PricingSummary | null> {
+// Preview the commission split. Send the regular price (required) and, when the
+// seller sets a sale, the sale price too (0/undefined = no sale).
+export async function sellerPricingPreview(
+  regularPrice: number,
+  salesPrice: number | null | undefined,
+  token: string,
+): Promise<PricingSummary | null> {
   const fd = new FormData()
-  fd.append("price", String(price))
+  fd.append("regular_price", String(regularPrice))
+  if (salesPrice != null && salesPrice > 0) fd.append("sales_price", String(salesPrice))
   const res = await proxyFetchFormData<{ pricing_summary: PricingSummary }>(
     "/seller/products/pricing-preview",
     token,

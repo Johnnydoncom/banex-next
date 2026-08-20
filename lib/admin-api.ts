@@ -220,6 +220,10 @@ export type AdminProduct = {
   brand: string | null
   description: string | null
   price: number
+  // Sale pricing. `price` is the effective price (sales_price when on sale, else
+  // regular_price). regular_price/sales_price are exposed on admin endpoints only.
+  regular_price?: number | null
+  sales_price?: number | null
   currency: string
   location: string | null
   status: "draft" | "pending" | "active" | "inactive" | "rejected"
@@ -246,8 +250,13 @@ export type AdminProduct = {
 }
 
 // Commission breakdown: what Banex Mall keeps vs what the seller/owner receives.
+// When a sale price is supplied, the summary also carries the regular/sale split.
 export type PricingSummary = {
   listing_price: number
+  regular_price?: number
+  sales_price?: number | null
+  discount_amount?: number
+  is_on_sale?: boolean
   commission_percent: number
   commission_percent_label: string
   commission_amount: number
@@ -256,11 +265,14 @@ export type PricingSummary = {
 }
 
 // Preview the commission split for a price before saving. POST /admin/products/pricing-preview
+// Send the regular price (required) and, if applicable, the sale price.
 export async function pricingPreviewAdminProduct(
-  data: { seller_id: string; price: number },
+  data: { seller_id: string; regular_price: number; sales_price?: number | null },
   token: string,
 ) {
-  return proxyFetch<{ pricing_summary: PricingSummary }>("/admin/products/pricing-preview", token, "POST", data)
+  const body: Record<string, unknown> = { seller_id: data.seller_id, regular_price: data.regular_price }
+  if (data.sales_price != null && data.sales_price > 0) body.sales_price = data.sales_price
+  return proxyFetch<{ pricing_summary: PricingSummary }>("/admin/products/pricing-preview", token, "POST", body)
 }
 
 

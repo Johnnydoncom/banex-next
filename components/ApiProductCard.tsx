@@ -1,6 +1,7 @@
 import Link from "next/link"
 import { MapPin, Star } from "lucide-react"
 import { GenericProduct } from "@/lib/generic-api"
+import { saleInfo } from "@/lib/products"
 import { WishlistButton } from "./WishlistButton"
 import Image from "next/image"
 
@@ -10,6 +11,7 @@ function formatNaira(amount: number) {
 
 export function ApiProductCard({ product }: { product: GenericProduct }) {
   const primaryImage = product.images?.find((i) => i.is_primary) ?? product.images?.[0]
+  const sale = saleInfo(product)
 
   return (
     <Link
@@ -37,6 +39,11 @@ export function ApiProductCard({ product }: { product: GenericProduct }) {
         {product.is_authentic_only && (
           <span className="absolute left-3 top-9 rounded-full bg-emerald-500/90 px-1 md:px-2 py-0.5 text-[10px] font-semibold text-white backdrop-blur">
             Authentic
+          </span>
+        )}
+        {sale.onSale && (
+          <span className="absolute right-3 bottom-3 rounded-full bg-rose-600 px-2 py-0.5 text-[10px] font-bold text-white shadow-sm">
+            −{sale.percentOff}%
           </span>
         )}
         <WishlistButton product={product} />
@@ -67,6 +74,9 @@ export function ApiProductCard({ product }: { product: GenericProduct }) {
           <div className="min-w-0">
             <p className="hidden md:block text-[10px] uppercase tracking-wider text-muted-foreground">Price</p>
             <p className="font-display text-lg font-bold text-foreground md:text-xl">{formatNaira(product.price)}</p>
+            {sale.onSale && (
+              <p className="text-[11px] font-medium text-muted-foreground line-through">{formatNaira(sale.original!)}</p>
+            )}
           </div>
           {product.location && (
             <div className="flex min-w-0 items-center gap-1 text-[11px] text-muted-foreground">

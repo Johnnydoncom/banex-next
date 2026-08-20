@@ -40,7 +40,8 @@ export default function AdminNewProductPage() {
     name: "",
     brand: "",
     description: "",
-    price: "",
+    regular_price: "",
+    sales_price: "",
     category_id: "",
     stock_quantity: "",
     seller_id: "",
@@ -71,23 +72,29 @@ export default function AdminNewProductPage() {
 
   const update = (key: string, value: any) => setForm((f) => ({ ...f, [key]: value }))
 
-  // Live commission preview for a simple product once a seller + price are set.
+  // Live commission preview for a simple product once a seller + regular price are set.
   useEffect(() => {
-    const price = Number(form.price)
-    if (hasVariants || !form.seller_id || !price || price <= 0 || !session?.accessToken) {
+    const regular = Number(form.regular_price)
+    const sales = Number(form.sales_price)
+    if (hasVariants || !form.seller_id || !regular || regular <= 0 || !session?.accessToken) {
       setPricingPreview(null)
       return
     }
+    // Only forward the sale price when it's valid (>0 and below the regular price).
+    const validSale = sales > 0 && sales < regular ? sales : undefined
     const t = setTimeout(async () => {
       try {
-        const res = await pricingPreviewAdminProduct({ seller_id: form.seller_id, price }, session.accessToken as string)
+        const res = await pricingPreviewAdminProduct(
+          { seller_id: form.seller_id, regular_price: regular, sales_price: validSale },
+          session.accessToken as string,
+        )
         setPricingPreview(res.data?.pricing_summary ?? null)
       } catch {
         setPricingPreview(null)
       }
     }, 400)
     return () => clearTimeout(t)
-  }, [form.price, form.seller_id, hasVariants, session?.accessToken])
+  }, [form.regular_price, form.sales_price, form.seller_id, hasVariants, session?.accessToken])
 
   // Only the Banex Mall house account may sell across ALL categories; every other
   // seller is limited to the subcategories of their own (root) department.
@@ -171,6 +178,13 @@ export default function AdminNewProductPage() {
     if (hasVariants) {
       const err = validateVariants(variantRows, variantAttrs)
       if (err) return toast.error(err)
+    } else {
+      const regular = Number(form.regular_price)
+      const sales = Number(form.sales_price)
+      if (!regular || regular <= 0) return toast.error("Enter a valid regular price.")
+      if (form.sales_price.trim() !== "" && sales > 0 && sales >= regular) {
+        return toast.error("Sale price must be less than the regular price.")
+      }
     }
     setSubmitting(true)
 
@@ -184,7 +198,11 @@ export default function AdminNewProductPage() {
       if (hasVariants) {
         appendVariants(formData, variantRows, variantAttrs)
       } else {
-        formData.append("price", form.price)
+        formData.append("regular_price", form.regular_price)
+        // Only send a sale price when set (0/blank leaves the product at full price).
+        if (form.sales_price.trim() !== "" && Number(form.sales_price) > 0) {
+          formData.append("sales_price", form.sales_price)
+        }
         formData.append("stock_quantity", form.stock_quantity)
       }
       formData.append("seller_id", form.seller_id)
@@ -365,8 +383,15 @@ export default function AdminNewProductPage() {
             {!hasVariants && (
               <>
                 <div>
-                  <Label htmlFor="product-price" className="mb-1.5 block text-xs text-muted-foreground">Price (₦)</Label>
-                  <Input id="product-price" type="number" value={form.price} onChange={(e) => update("price", e.target.value)} className="rounded-xl px-4 py-2.5 focus-visible:border-brand focus-visible:ring-brand" placeholder="350000" />
+                  <Label htmlFor="product-price" className="mb-1.5 block text-xs text-muted-foreground">Regular Price (₦)</Label>
+                  <Input id="product-price" type="number" value={form.regular_price} onChange={(e) => update("regular_price", e.target.value)} className="rounded-xl px-4 py-2.5 focus-visible:border-brand focus-visible:ring-brand" placeholder="350000" />
+                </div>
+                <div>
+                  <Label htmlFor="product-sale-price" className="mb-1.5 block text-xs text-muted-foreground">Sale Price (₦) <span className="text-muted-foreground/70">— optional</span></Label>
+                  <Input id="product-sale-price" type="number" value={form.sales_price} onChange={(e) => update("sales_price", e.target.value)} className="rounded-xl px-4 py-2.5 focus-visible:border-brand focus-visible:ring-brand" placeholder="Leave blank for none" />
+                  {form.sales_price.trim() !== "" && Number(form.sales_price) > 0 && Number(form.sales_price) >= Number(form.regular_price) && (
+                    <p className="mt-1 text-[11px] text-rose-600">Sale price must be less than the regular price.</p>
+                  )}
                 </div>
                 <div>
                   <Label htmlFor="product-stock" className="mb-1.5 block text-xs text-muted-foreground">Stock Quantity</Label>
@@ -379,7 +404,15 @@ export default function AdminNewProductPage() {
                     <div className="mt-2 grid grid-cols-3 gap-3 text-sm">
                       <div>
                         <p className="text-[10px] uppercase text-muted-foreground">Listing price</p>
-                        <p className="font-display font-bold">{fmtNaira(pricingPreview.listing_price)}</p>
+                        <p className="font-display font-bold">
+                          {fmtNaira(pricingPreview.listing_price)}
+                          {pricingPreview.is_on_sale && pricingPreview.regular_price != null && (
+                            <span className="ml-1.5 text-xs font-medium text-muted-foreground line-through">{fmtNaira(pricingPreview.regular_price)}</span>
+                          )}
+                        </p>
+                        {pricingPreview.is_on_sale && !!pricingPreview.discount_amount && (
+                          <p className="text-[10px] font-semibold text-emerald-600">On sale · save {fmtNaira(pricingPreview.discount_amount)}</p>
+                        )}
                       </div>
                       <div>
                         <p className="text-[10px] uppercase text-muted-foreground">Commission ({pricingPreview.commission_percent_label})</p>
@@ -451,7 +484,17 @@ export default function AdminNewProductPage() {
               <div><span className="text-muted-foreground">Brand:</span> <strong>{form.brand || "—"}</strong></div>
               <div><span className="text-muted-foreground">Category:</span> <strong>{categories.find(c => c.id === form.category_id)?.name || "—"}</strong></div>
               <div><span className="text-muted-foreground">Seller:</span> <strong>{sellers.find(s => s.id === form.seller_id)?.shop_name || "—"}</strong></div>
-              <div><span className="text-muted-foreground">Price:</span> <strong>₦{Number(form.price || 0).toLocaleString()}</strong></div>
+              <div>
+                <span className="text-muted-foreground">Price:</span>{" "}
+                {form.sales_price.trim() !== "" && Number(form.sales_price) > 0 && Number(form.sales_price) < Number(form.regular_price) ? (
+                  <strong>
+                    ₦{Number(form.sales_price).toLocaleString()}{" "}
+                    <span className="font-normal text-muted-foreground line-through">₦{Number(form.regular_price || 0).toLocaleString()}</span>
+                  </strong>
+                ) : (
+                  <strong>₦{Number(form.regular_price || 0).toLocaleString()}</strong>
+                )}
+              </div>
               <div><span className="text-muted-foreground">Stock:</span> <strong>{form.stock_quantity || "—"}</strong></div>
               <div><span className="text-muted-foreground">Weight:</span> <strong>{form.weight_kg ? `${form.weight_kg} kg` : "—"}</strong></div>
               <div><span className="text-muted-foreground">Images:</span> <strong>{images.length}</strong></div>

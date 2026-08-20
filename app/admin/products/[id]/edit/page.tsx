@@ -136,7 +136,8 @@ export default function AdminEditProductPage({
     name: "",
     brand: "",
     description: "",
-    price: "",
+    regular_price: "",
+    sales_price: "",
     stock_quantity: "",
     category_id: "",
     seller_id: "",
@@ -241,7 +242,10 @@ export default function AdminEditProductPage({
           name: p.name ?? "",
           brand: p.brand ?? "",
           description: p.description ?? "",
-          price: p.price?.toString() ?? "",
+          // regular_price is the list price (fall back to price for older payloads);
+          // sales_price only prefills when an active sale exists.
+          regular_price: (p.regular_price ?? p.price)?.toString() ?? "",
+          sales_price: p.sales_price != null && Number(p.sales_price) > 0 ? String(p.sales_price) : "",
           stock_quantity: p.stock_quantity?.toString() ?? "",
           category_id: p.category_id ?? "",
           seller_id: p.seller_id ?? "",
@@ -330,7 +334,12 @@ export default function AdminEditProductPage({
   const handleSubmit = async () => {
     if (!session?.accessToken) return
     if (!form.name.trim()) { toast.error("Product name is required."); return }
-    if (!hasVariants && (!form.price || Number(form.price) <= 0)) { toast.error("Enter a valid price."); return }
+    if (!hasVariants) {
+      if (!form.regular_price || Number(form.regular_price) <= 0) { toast.error("Enter a valid regular price."); return }
+      if (form.sales_price.trim() !== "" && Number(form.sales_price) > 0 && Number(form.sales_price) >= Number(form.regular_price)) {
+        toast.error("Sale price must be less than the regular price."); return
+      }
+    }
     if (!form.category_id) { toast.error("Please select a category."); return }
     if (hasVariants) {
       const err = validateVariants(variantRows, variantAttrs)
@@ -347,7 +356,9 @@ export default function AdminEditProductPage({
       if (hasVariants) {
         appendVariants(fd, variantRows, variantAttrs)
       } else {
-        fd.append("price", form.price)
+        fd.append("regular_price", form.regular_price)
+        // Always send sales_price on edit so clearing it (blank/0) removes an existing sale.
+        fd.append("sales_price", form.sales_price.trim() !== "" && Number(form.sales_price) > 0 ? form.sales_price : "0")
         if (form.stock_quantity !== "") fd.append("stock_quantity", form.stock_quantity)
       }
       fd.append("category_id", form.category_id)
@@ -852,7 +863,15 @@ export default function AdminEditProductPage({
               <div className="mb-4 flex flex-wrap items-center gap-x-6 gap-y-2 rounded-xl border border-brand/30 bg-brand-soft/10 p-4 text-sm">
                 <div>
                   <p className="text-[10px] uppercase text-muted-foreground">Listing price</p>
-                  <p className="font-display font-bold">₦{product.pricing_summary.listing_price.toLocaleString()}</p>
+                  <p className="font-display font-bold">
+                    ₦{product.pricing_summary.listing_price.toLocaleString()}
+                    {product.pricing_summary.is_on_sale && product.pricing_summary.regular_price != null && (
+                      <span className="ml-1.5 text-xs font-medium text-muted-foreground line-through">₦{product.pricing_summary.regular_price.toLocaleString()}</span>
+                    )}
+                  </p>
+                  {product.pricing_summary.is_on_sale && !!product.pricing_summary.discount_amount && (
+                    <p className="text-[10px] font-semibold text-emerald-600">On sale · save ₦{product.pricing_summary.discount_amount.toLocaleString()}</p>
+                  )}
                 </div>
                 <div>
                   <p className="text-[10px] uppercase text-muted-foreground">Commission ({product.pricing_summary.commission_percent_label})</p>
@@ -869,16 +888,34 @@ export default function AdminEditProductPage({
                 <>
                   <div>
                     <Label className="mb-1.5 block text-xs text-muted-foreground">
-                      Price (₦) <span className="text-rose-500">*</span>
+                      Regular Price (₦) <span className="text-rose-500">*</span>
                     </Label>
                     <Input
                       type="number"
-                      value={form.price}
-                      onChange={(e) => update("price", e.target.value)}
+                      value={form.regular_price}
+                      onChange={(e) => update("regular_price", e.target.value)}
                       placeholder="350000"
                       min="0"
                       className="rounded-xl px-4 py-2.5 focus-visible:border-brand focus-visible:ring-brand"
                     />
+                  </div>
+                  <div>
+                    <Label className="mb-1.5 block text-xs text-muted-foreground">
+                      Sale Price (₦) <span className="text-muted-foreground/70">— optional</span>
+                    </Label>
+                    <Input
+                      type="number"
+                      value={form.sales_price}
+                      onChange={(e) => update("sales_price", e.target.value)}
+                      placeholder="Leave blank for none"
+                      min="0"
+                      className="rounded-xl px-4 py-2.5 focus-visible:border-brand focus-visible:ring-brand"
+                    />
+                    {form.sales_price.trim() !== "" && Number(form.sales_price) > 0 && Number(form.sales_price) >= Number(form.regular_price) ? (
+                      <p className="mt-1 text-[11px] text-rose-600">Must be less than the regular price.</p>
+                    ) : (
+                      <p className="mt-1 text-[11px] text-muted-foreground">Clear to remove an active sale.</p>
+                    )}
                   </div>
                   <div>
                     <Label className="mb-1.5 block text-xs text-muted-foreground">
