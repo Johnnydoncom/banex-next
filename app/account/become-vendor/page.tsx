@@ -1,7 +1,8 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { Store, Upload, CheckCircle2, X, Loader2, ImageIcon, Clock, Truck, MapPin, Phone, Mail, Tag, Info } from "lucide-react"
+import { useRouter } from "next/navigation"
+import { Store, Upload, CheckCircle2, X, Loader2, ImageIcon, Clock, Truck, MapPin, Phone, Mail, Tag, Info, ArrowRight } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -13,7 +14,9 @@ import { fetchGenericCategories, GenericCategory } from "@/lib/generic-api"
 
 
 export default function BecomeVendorPage() {
-  const { data: session, status } = useSession()
+  const { data: session, status, update: updateSession } = useSession()
+  const router = useRouter()
+  const [goingToDashboard, setGoingToDashboard] = useState(false)
   const [submitted, setSubmitted] = useState(false)
   const [submitting, setSubmitting] = useState(false)
   const [categories, setCategories] = useState<GenericCategory[]>([])
@@ -78,6 +81,21 @@ export default function BecomeVendorPage() {
     }
     checkApp()
   }, [session, status])
+
+  // Refresh the session so the JWT reflects the approved store, then open the dashboard.
+  const goToDashboard = async () => {
+    setGoingToDashboard(true)
+    try { await updateSession() } catch { /* keep going even if refresh fails */ }
+    router.push("/vendor-dashboard")
+  }
+
+  // Approved sellers shouldn't sit on the application page — send them straight through.
+  useEffect(() => {
+    if (existingApp?.status === "approved") {
+      goToDashboard()
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [existingApp])
 
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
@@ -146,6 +164,32 @@ export default function BecomeVendorPage() {
       <div className="flex min-h-[400px] flex-col items-center justify-center py-20 text-center">
         <Loader2 className="h-10 w-10 animate-spin text-brand" />
         <p className="mt-4 text-sm text-muted-foreground">Checking application status...</p>
+      </div>
+    )
+  }
+
+  // ─── Approved → straight to the vendor dashboard (no dead-end page) ───────────
+  if (existingApp?.status === "approved") {
+    return (
+      <div className="mx-auto max-w-2xl pb-12">
+        <div className="rounded-2xl border border-border bg-card p-8 text-center space-y-6">
+          <div className="mx-auto flex h-24 w-24 items-center justify-center rounded-full bg-emerald-500/15">
+            <CheckCircle2 className="h-12 w-12 text-emerald-500" />
+          </div>
+          <div>
+            <h2 className="font-display text-2xl font-bold">You're an approved vendor 🎉</h2>
+            <p className="mt-2 text-sm text-muted-foreground">Taking you to your vendor dashboard…</p>
+          </div>
+          <Button
+            type="button"
+            onClick={goToDashboard}
+            disabled={goingToDashboard}
+            className="mx-auto inline-flex h-auto items-center gap-2 rounded-full bg-emerald-600 px-6 py-3 text-sm font-bold text-white hover:bg-emerald-700 disabled:opacity-70"
+          >
+            {goingToDashboard ? <Loader2 className="h-4 w-4 animate-spin" /> : <Store className="h-4 w-4" />}
+            Go to Vendor Dashboard <ArrowRight className="h-4 w-4" />
+          </Button>
+        </div>
       </div>
     )
   }

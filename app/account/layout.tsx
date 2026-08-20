@@ -1,13 +1,30 @@
 "use client"
 
+import { useEffect, useRef } from "react"
 import { LayoutDashboard, Package, Truck, Heart, MapPin, UserCircle, Settings, Store } from "lucide-react"
+import { useSession } from "next-auth/react"
 import { DashboardLayout } from "@/components/DashboardLayout"
 import { useAuth } from "@/hooks/use-auth"
 import { useRoles } from "@/hooks/use-roles"
+import { useSellerApplication } from "@/hooks/use-swr-data"
 
 export default function AccountLayout({ children }: { children: React.ReactNode }) {
-  const { user } = useAuth()
+  const { user, session } = useAuth()
   const { isAdmin, isVendor, loading } = useRoles()
+  const { update } = useSession()
+
+  // If the seller was approved after login, the JWT is stale (isVendor=false).
+  // Detect the live approved status and refresh the session ONCE so the vendor
+  // shortcut appears and the /vendor-dashboard proxy grants access.
+  const token = (session as any)?.accessToken as string | undefined
+  const { profile } = useSellerApplication(!isAdmin && !isVendor ? token : undefined)
+  const refreshedRef = useRef(false)
+  useEffect(() => {
+    if (!isAdmin && !isVendor && profile?.status === "approved" && !refreshedRef.current) {
+      refreshedRef.current = true
+      update()
+    }
+  }, [isAdmin, isVendor, profile, update])
 
   const name =
     ((user as any)?.name as string | undefined) ||

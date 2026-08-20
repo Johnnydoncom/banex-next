@@ -121,7 +121,7 @@ export const authOptions: NextAuthOptions = {
       return true;
     },
 
-    async jwt({ token, user, account }) {
+    async jwt({ token, user, account, trigger }) {
       if (account?.provider === "google") {
         // This runs only on initial sign in for OAuth
         if ((account as any).backendToken) {
@@ -138,6 +138,26 @@ export const authOptions: NextAuthOptions = {
         token.hasStore = (user as any).hasStore
         token.storeStatus = (user as any).storeStatus
       }
+
+      // On an explicit `useSession().update()`, re-read the vendor/store status from
+      // the backend so a newly-approved seller's session reflects it (grants vendor
+      // dashboard access) without needing to log out and back in.
+      if (trigger === "update" && token.accessToken) {
+        try {
+          const res = await fetch(`${API_URL}/seller/application`, {
+            headers: { Authorization: `Bearer ${token.accessToken}`, Accept: "application/json" },
+          })
+          const data = await res.json().catch(() => null)
+          const seller = data?.data?.seller
+          if (seller) {
+            token.hasStore = true
+            token.storeStatus = seller.status ?? null
+          }
+        } catch {
+          // Ignore — keep the existing token values.
+        }
+      }
+
       return token
     },
     async session({ session, token }) {
