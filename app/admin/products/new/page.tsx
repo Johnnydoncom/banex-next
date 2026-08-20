@@ -18,7 +18,7 @@ import {
 import { RichTextEditor } from "@/components/RichTextEditor"
 import { LocationSelect } from "@/components/LocationSelect"
 import { VariantsEditor, emptyVariantRow, appendVariants, validateVariants, type VariantRow, type AttrKey } from "@/components/VariantsEditor"
-import { flattenCategories } from "@/lib/categories"
+import { flattenCategories, subcategoriesOf, findCategory } from "@/lib/categories"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -27,6 +27,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 
 const fmtNaira = (n: number) =>
   new Intl.NumberFormat("en-NG", { style: "currency", currency: "NGN", maximumFractionDigits: 0 }).format(n || 0)
+
+// The Banex Mall house account can list under any category; other sellers are
+// restricted to their own department's subcategories.
+const BANEX_MALL_SELLER_ID = "019e8813-b50f-7270-98a9-bf5889e4161c"
 
 export default function AdminNewProductPage() {
   const router = useRouter()
@@ -85,9 +89,19 @@ export default function AdminNewProductPage() {
     return () => clearTimeout(t)
   }, [form.price, form.seller_id, hasVariants, session?.accessToken])
 
-  // Admin can categorise a product under ANY category (roots + subcategories),
-  // not just the seller's department — the whole tree is offered, flattened.
-  const categoryOptions = flattenCategories(categories)
+  // Only the Banex Mall house account may sell across ALL categories; every other
+  // seller is limited to the subcategories of their own (root) department.
+  const selectedSeller = sellers.find((s) => s.id === form.seller_id)
+  const isBanexMall = form.seller_id === BANEX_MALL_SELLER_ID
+  const sellerRoot = findCategory(categories, selectedSeller?.category_id)
+  const sellerSubcats = subcategoriesOf(categories, selectedSeller?.category_id)
+  const categoryOptions = isBanexMall
+    ? flattenCategories(categories)
+    : (sellerSubcats.length ? sellerSubcats : sellerRoot ? [sellerRoot] : []).map((node) => ({ node, depth: 0 }))
+
+  // Changing the seller changes the allowed categories → reset the picked category.
+  const onSellerChange = (sellerId: string) =>
+    setForm((f) => ({ ...f, seller_id: sellerId, category_id: "" }))
 
   const addSpecification = () => setSpecifications(prev => [...prev, { key: "", value: "" }])
   const removeSpecification = (index: number) => setSpecifications(prev => prev.filter((_, i) => i !== index))
@@ -274,7 +288,7 @@ export default function AdminNewProductPage() {
             <div className="grid gap-4 sm:grid-cols-2">
               <div>
                 <Label htmlFor="product-seller" className="mb-1.5 block text-xs text-muted-foreground">Seller</Label>
-                <Select value={form.seller_id} onValueChange={(v) => update("seller_id", v)}>
+                <Select value={form.seller_id} onValueChange={onSellerChange}>
                   <SelectTrigger id="product-seller" className="h-auto rounded-xl px-4 py-2.5"><SelectValue placeholder="Assign to seller" /></SelectTrigger>
                   <SelectContent>
                     {sellers.map((s) => (
@@ -284,10 +298,12 @@ export default function AdminNewProductPage() {
                 </Select>
               </div>
               <div>
-                <Label htmlFor="product-category" className="mb-1.5 block text-xs text-muted-foreground">Category</Label>
-                <Select value={form.category_id} onValueChange={(v) => update("category_id", v)}>
+                <Label htmlFor="product-category" className="mb-1.5 block text-xs text-muted-foreground">
+                  Category{!isBanexMall && sellerRoot ? ` (under ${sellerRoot.name})` : ""}
+                </Label>
+                <Select value={form.category_id} onValueChange={(v) => update("category_id", v)} disabled={!form.seller_id}>
                   <SelectTrigger id="product-category" className="h-auto rounded-xl px-4 py-2.5">
-                    <SelectValue placeholder="Select category" />
+                    <SelectValue placeholder={form.seller_id ? "Select category" : "Select a seller first"} />
                   </SelectTrigger>
                   <SelectContent>
                     {categoryOptions.map(({ node, depth }) => (

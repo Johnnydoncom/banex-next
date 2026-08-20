@@ -25,7 +25,10 @@ import {
 } from "@/lib/admin-api"
 import { RichTextEditor } from "@/components/RichTextEditor"
 import { VariantsEditor, variantsFromProduct, inferAttrs, appendVariants, validateVariants, type VariantRow, type AttrKey } from "@/components/VariantsEditor"
-import { flattenCategories } from "@/lib/categories"
+import { flattenCategories, subcategoriesOf, findCategory } from "@/lib/categories"
+
+// Banex Mall house account → all categories; other sellers → own department only.
+const BANEX_MALL_SELLER_ID = "019e8813-b50f-7270-98a9-bf5889e4161c"
 import { LocationSelect } from "@/components/LocationSelect"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -177,8 +180,23 @@ export default function AdminEditProductPage({
   const update = (key: string, value: any) =>
     setForm((f) => ({ ...f, [key]: value }))
 
-  // Admin may assign any category (whole tree, flattened) — not seller-scoped.
-  const categoryOptions = flattenCategories(categories)
+  // Only the Banex Mall house account sells across ALL categories; other sellers
+  // are limited to the subcategories of their own (root) department.
+  const selectedSeller = sellers.find((s) => s.id === form.seller_id)
+  const isBanexMall = form.seller_id === BANEX_MALL_SELLER_ID
+  const sellerRoot = findCategory(categories, selectedSeller?.category_id)
+  const sellerSubcats = subcategoriesOf(categories, selectedSeller?.category_id)
+  const baseOptions = isBanexMall
+    ? flattenCategories(categories)
+    : (sellerSubcats.length ? sellerSubcats : sellerRoot ? [sellerRoot] : []).map((node) => ({ node, depth: 0 }))
+  // Keep the product's current category selectable even if it's outside the allowed set.
+  const currentCat = findCategory(categories, form.category_id)
+  const categoryOptions =
+    currentCat && !baseOptions.some((o) => o.node.id === currentCat.id)
+      ? [{ node: currentCat, depth: 0 }, ...baseOptions]
+      : baseOptions
+  const onSellerChange = (sellerId: string) =>
+    setForm((f) => ({ ...f, seller_id: sellerId, category_id: "" }))
 
   // ── Spec helpers ───────────────────────────────────────────────────────────
   const addSpec = () =>
@@ -797,7 +815,7 @@ export default function AdminEditProductPage({
                   <Label className="mb-1.5 block text-xs text-muted-foreground">
                     Seller
                   </Label>
-                  <Select value={form.seller_id} onValueChange={(v) => update("seller_id", v)}>
+                  <Select value={form.seller_id} onValueChange={onSellerChange}>
                     <SelectTrigger className="h-auto rounded-xl px-4 py-2.5"><SelectValue placeholder="Assign to seller" /></SelectTrigger>
                     <SelectContent>
                       {sellers.map((s) => (
@@ -808,9 +826,9 @@ export default function AdminEditProductPage({
                 </div>
                 <div>
                   <Label className="mb-1.5 block text-xs text-muted-foreground">
-                    Category <span className="text-rose-500">*</span>
+                    Category{!isBanexMall && sellerRoot ? ` (under ${sellerRoot.name})` : ""} <span className="text-rose-500">*</span>
                   </Label>
-                  <Select value={form.category_id} onValueChange={(v) => update("category_id", v)}>
+                  <Select value={form.category_id} onValueChange={(v) => update("category_id", v)} disabled={!form.seller_id}>
                     <SelectTrigger className="h-auto rounded-xl px-4 py-2.5"><SelectValue placeholder="Select category" /></SelectTrigger>
                     <SelectContent>
                       {categoryOptions.map(({ node, depth }) => (
