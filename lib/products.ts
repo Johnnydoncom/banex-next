@@ -272,8 +272,11 @@ export const products: Product[] = [
   },
 ]
 
-export function formatNaira(value: number) {
-  return "₦" + value.toLocaleString("en-NG")
+export function formatNaira(value: number | string | null | undefined) {
+  // The API serialises prices as strings (e.g. "155500.00"); String.toLocaleString
+  // does NOT group digits, so coerce to a number first to get thousand separators.
+  const n = Number(value) || 0
+  return "₦" + n.toLocaleString("en-NG", { maximumFractionDigits: 2 })
 }
 
 /**
