@@ -296,7 +296,7 @@ export default async function Home() {
               See all →
             </Link>
           </div>
-          <div className="mt-8 grid grid-cols-2 gap-5 md:grid-cols-3 lg:grid-cols-4">
+          <div className="mt-8 grid grid-cols-2 gap-3 md:gap-5 md:grid-cols-3 lg:grid-cols-4">
             {featuredListings.slice(0, 8).map((p) => (
               <ApiProductCard key={p.id} product={p} />
             ))}
@@ -316,7 +316,7 @@ export default async function Home() {
               Browse all →
             </Link>
           </div>
-          <div className="mt-8 grid grid-cols-2 gap-5 md:grid-cols-3 lg:grid-cols-4">
+          <div className="mt-8 grid grid-cols-2 gap-3 md:gap-5 md:grid-cols-3 lg:grid-cols-4">
             {popularListings.slice(0, 8).map((p) => (
               <ApiProductCard key={p.id} product={p} />
             ))}
