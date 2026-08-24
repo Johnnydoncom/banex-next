@@ -7,10 +7,10 @@ import { useCart } from "@/components/CartContext"
 import { useWishlist } from "@/components/WishlistContext"
 import { toast } from "sonner"
 import { type GenericProduct, type ProductVariant, variantAttributes } from "@/lib/generic-api"
-import { formatNaira } from "@/lib/products"
+import { formatNaira, saleInfo, productSaleInfo } from "@/lib/products"
 import { Button } from "@/components/ui/button"
 
-interface ProductActionButtonsProps {
+interface ProductPurchasePanelProps {
   product: GenericProduct
 }
 
@@ -26,7 +26,11 @@ function optionsFor(variants: ProductVariant[], key: string): string[] {
   return seen
 }
 
-export function ProductActionButtons({ product }: ProductActionButtonsProps) {
+/**
+ * Owns the variant selection so the MAIN price display updates when a variant is
+ * picked (price, sale strikethrough, and stock badge all reflect the selection).
+ */
+export function ProductPurchasePanel({ product }: ProductPurchasePanelProps) {
   const router = useRouter()
   const { add, open } = useCart()
   const { isInWishlist, toggle } = useWishlist()
@@ -56,7 +60,7 @@ export function ProductActionButtons({ product }: ProductActionButtonsProps) {
     })
   }, [hasVariants, attrKeys, selection, variants, defaultVariant])
 
-  // A value is selectable if some in-stock variant has it (given the other picks).
+  // A value is selectable if some variant has it (given the other picks).
   const isAvailable = (key: string, value: string) =>
     variants.some((v) => {
       const a = variantAttributes(v.attributes)
@@ -70,9 +74,18 @@ export function ProductActionButtons({ product }: ProductActionButtonsProps) {
 
   const priceToShow = selectedVariant?.price ?? product.price
   const outOfStock = selectedVariant ? !selectedVariant.in_stock : !product.in_stock
+  // Sale display: prefer the selected variant's own sale fields; otherwise fall
+  // back to product-level detection (root or default variant). Only renders a
+  // strikethrough when the backend exposes regular_price/sales_price.
+  const variantSale = selectedVariant ? saleInfo(selectedVariant) : null
+  const sale = variantSale?.onSale ? variantSale : productSaleInfo(product)
+  // When a specific variant is picked, its own price wins as the shown number.
+  const showStrike = sale.onSale && sale.original != null && sale.original > priceToShow
+
+  const awaitingSelection = hasVariants && !selectedVariant
 
   const buildLine = () => {
-    if (hasVariants && !selectedVariant) {
+    if (awaitingSelection) {
       toast.error(`Please select ${attrKeys.join(" and ")}`)
       return null
     }
@@ -109,10 +122,39 @@ export function ProductActionButtons({ product }: ProductActionButtonsProps) {
   }
 
   return (
-    <div className="mt-6">
+    <div>
+      {/* Main price display — reflects the selected variant */}
+      <div className="mt-6 flex items-end gap-3">
+        <div>
+          <p className="text-[10px] uppercase tracking-widest text-muted-foreground">Price</p>
+          <div className="flex flex-wrap items-baseline gap-2">
+            <p className="font-display text-3xl font-bold text-foreground md:text-4xl">{formatNaira(priceToShow)}</p>
+            {showStrike && (
+              <>
+                <span className="text-lg font-medium text-muted-foreground line-through md:text-xl">{formatNaira(sale.original!)}</span>
+                <span className="rounded-full bg-rose-600 px-2 py-0.5 text-xs font-bold text-white">−{sale.percentOff}%</span>
+              </>
+            )}
+          </div>
+        </div>
+        {awaitingSelection ? (
+          <span className="rounded-full border border-border bg-surface px-3 py-1 text-xs font-medium text-muted-foreground">
+            Select {attrKeys.join(" & ")}
+          </span>
+        ) : outOfStock ? (
+          <span className="rounded-full border border-red-300 bg-red-100 px-3 py-1 text-xs font-medium text-red-600">
+            Out of stock
+          </span>
+        ) : (
+          <span className="rounded-full border border-emerald-500/40 bg-emerald-500/10 px-3 py-1 text-xs font-medium text-emerald-700 dark:text-emerald-400">
+            In stock
+          </span>
+        )}
+      </div>
+
       {/* Variant selectors */}
       {hasVariants && (
-        <div className="mb-5 space-y-4">
+        <div className="mt-5 space-y-4">
           {attrKeys.map((key) => {
             const opts = optionsFor(variants, key)
             return (
@@ -148,38 +190,21 @@ export function ProductActionButtons({ product }: ProductActionButtonsProps) {
               </div>
             )
           })}
-
-          {/* Selected variant price / stock */}
-          <div className="flex items-center gap-3 text-sm">
-            <span className="font-display text-2xl font-bold text-foreground">{formatNaira(priceToShow)}</span>
-            {selectedVariant ? (
-              selectedVariant.in_stock ? (
-                <span className="rounded-full bg-emerald-500/10 px-2.5 py-0.5 text-xs font-semibold text-emerald-600">
-                  In stock
-                </span>
-              ) : (
-                <span className="rounded-full bg-red-100 px-2.5 py-0.5 text-xs font-semibold text-red-600">
-                  Out of stock
-                </span>
-              )
-            ) : (
-              <span className="text-xs text-muted-foreground">Select {attrKeys.join(" & ")} to see price</span>
-            )}
-          </div>
         </div>
       )}
 
-      <div className="flex flex-wrap gap-2">
+      {/* Actions */}
+      <div className="mt-6 flex flex-wrap gap-2">
         <Button variant="ghost" type="button"
           onClick={buyNow}
-          disabled={outOfStock || (hasVariants && !selectedVariant)}
+          disabled={outOfStock || awaitingSelection}
           className="inline-flex items-center gap-2 rounded-full bg-gradient-brand px-5 py-3 text-sm font-semibold text-primary-foreground disabled:opacity-50"
         >
           <Lock className="h-4 w-4" /> Buy with escrow
         </Button>
         <Button variant="ghost" type="button"
           onClick={addToCart}
-          disabled={outOfStock || (hasVariants && !selectedVariant)}
+          disabled={outOfStock || awaitingSelection}
           className="inline-flex items-center gap-2 rounded-full border border-border bg-card px-5 py-3 text-sm font-semibold hover:border-brand hover:text-brand disabled:opacity-50"
         >
           <ShoppingBag className="h-4 w-4" /> Add to cart

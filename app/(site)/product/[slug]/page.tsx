@@ -2,9 +2,9 @@ import Link from "next/link"
 import { notFound } from "next/navigation"
 import { Star, Truck, ShieldCheck, BadgeCheck, ChevronLeft } from "lucide-react"
 import { fetchGenericProduct } from "@/lib/generic-api"
-import { productSaleInfo } from "@/lib/products"
 import { ProductImageGallery } from "./components/ProductImageGallery"
-import { ProductActionButtons } from "./components/ProductActionButtons"
+import { ProductPurchasePanel } from "./components/ProductPurchasePanel"
+import { ProductSellerCard } from "./components/ProductSellerCard"
 import { ProductContactButtons } from "./components/ProductContactButtons"
 import { ProductDescription } from "./components/ProductDescription"
 import type { Metadata } from "next"
@@ -60,19 +60,13 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
   }
 
   const { product } = data
-  // Banex Mall is the single seller — the product's own price is the price.
-  const lowest = product.price
-  // Strike through the regular price when an active sale is present (the catalog
-  // must expose regular_price/sales_price for this to render).
-  const sale = productSaleInfo(product)
-
-  const formatNaira = (amount: number) => {
-    return new Intl.NumberFormat("en-NG", {
-      style: "currency",
-      currency: "NGN",
-      maximumFractionDigits: 0,
-    }).format(amount)
-  }
+  // Other sellers offering the same product (empty in the single-seller model).
+  const comparableProducts = data.comparable_products ?? []
+  // Compare-sellers list = the main product + comparables, sorted by lowest price.
+  const allSellers = [product, ...comparableProducts].filter((p) => p.seller)
+  const sortedSellers = [...allSellers].sort((a, b) => a.price - b.price)
+  // Banex Mall is the single seller — the product's own (effective) price is the price.
+  const lowest = allSellers.length ? Math.min(...allSellers.map((p) => p.price)) : product.price
 
   // ── Structured data (Product + AggregateOffer + Breadcrumb) ──
   const productImages = (product.images || [])
@@ -120,39 +114,15 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
           <p className="text-xs uppercase tracking-widest text-brand-deep">
             {product.brand} · {product.category?.name || "Uncategorized"}
           </p>
-          <h1 className="mt-3 font-display text-3xl font-bold md:text-5xl break-all">{product.name}</h1>
+          <h1 className="mt-3 font-display text-xl font-bold leading-snug break-words sm:text-2xl md:text-4xl">{product.name}</h1>
           <div className="mt-3 flex items-center gap-2 text-sm text-muted-foreground">
             <Star className="h-4 w-4 fill-brand text-brand" />
             <span className="text-foreground">{product.rating_average || "0.0"}</span>
             <span>· {(product.reviews_count || 0).toLocaleString()} reviews</span>
           </div>
 
-          <div className="mt-6 flex items-end gap-3">
-            <div>
-              <p className="text-[10px] uppercase tracking-widest text-muted-foreground">Price</p>
-              <div className="flex flex-wrap items-baseline gap-2">
-                <p className="font-display text-3xl font-bold text-foreground md:text-4xl">{formatNaira(lowest)}</p>
-                {sale.onSale && (
-                  <>
-                    <span className="text-lg font-medium text-muted-foreground line-through md:text-xl">{formatNaira(sale.original!)}</span>
-                    <span className="rounded-full bg-rose-600 px-2 py-0.5 text-xs font-bold text-white">−{sale.percentOff}%</span>
-                  </>
-                )}
-              </div>
-            </div>
-            {product.in_stock ? (
-              <span className="rounded-full border border-emerald-500/40 bg-emerald-500/10 px-3 py-1 text-xs font-medium text-emerald-700 dark:text-emerald-400">
-                In stock
-              </span>
-            ) : (
-              <span className="rounded-full border border-red-300 bg-red-100 px-3 py-1 text-xs font-medium text-red-600">
-                Out of stock
-              </span>
-            )}
-          </div>
-
-          {/* Action buttons (client interactivity extracted) */}
-          <ProductActionButtons product={product} />
+          {/* Price + variant selection + actions (client — price reflects the selected variant) */}
+          <ProductPurchasePanel product={product} />
 
           {/* Contact Banex Mall about this listing */}
           <ProductContactButtons product={product} />
@@ -176,6 +146,35 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
         <h2 className="mb-6 font-display text-xl font-bold md:text-2xl">Product Overview</h2>
         <ProductDescription html={product.description || null} />
       </section>
+
+      {/* Compare sellers — same product from other sellers. Renders only when there
+          is more than one seller (hidden in the current single-seller model; appears
+          automatically once the API returns comparable_products). */}
+      {sortedSellers.length > 1 && (
+        <section className="mx-auto max-w-7xl px-4 pb-20 md:px-8">
+          <div className="flex items-end justify-between">
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-widest text-brand-deep">Compare sellers</p>
+              <h2 className="mt-2 font-display text-2xl font-bold md:text-3xl">
+                {sortedSellers.length} sellers · contact or buy
+              </h2>
+            </div>
+            <p className="hidden text-xs text-muted-foreground md:block">Sorted by lowest price</p>
+          </div>
+
+          <div className="mt-6 space-y-3">
+            {sortedSellers.map((sellerProduct, i) => (
+              <ProductSellerCard
+                key={sellerProduct.seller?.id || i}
+                product={product}
+                sellerProduct={sellerProduct}
+                isBestPrice={sellerProduct.price === lowest}
+                index={i}
+              />
+            ))}
+          </div>
+        </section>
+      )}
 
       {/* Specifications */}
       {product.specifications && product.specifications.length > 0 && (
