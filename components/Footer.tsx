@@ -7,8 +7,8 @@ export function Footer({ settings }: { settings?: ResolvedSiteSettings }) {
   return (
     <footer className="mt-24 border-t border-border bg-surface/60">
       <div className="mx-auto container py-16">
-        <div className="grid gap-12 md:grid-cols-4">
-          <div className="md:col-span-1">
+        <div className="grid gap-12 grid-cols-2 md:grid-cols-4">
+          <div className="col-span-2 md:col-span-1">
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src={logoSrc} alt={siteName} className="h-14 w-auto" width={220} height={110} />
             <p className="mt-4 max-w-md text-sm leading-relaxed text-muted-foreground">
