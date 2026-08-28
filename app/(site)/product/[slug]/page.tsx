@@ -141,6 +141,24 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
         </div>
       </section>
 
+      {/* Specifications */}
+      {product.specifications && product.specifications.length > 0 && (
+        <section className="mx-auto max-w-7xl px-4 pb-20 md:px-8">
+          <h2 className="mb-6 font-display text-xl font-bold md:text-2xl">Specifications</h2>
+          <dl className="grid grid-cols-1 overflow-hidden rounded-2xl border border-border bg-card sm:grid-cols-2 lg:grid-cols-3">
+            {product.specifications.map((spec, i) => {
+              const [k, v] = spec.split("=>").map((s) => s.trim())
+              return (
+                <div key={i} className="border-b border-border p-4 last:border-b-0 sm:[&:nth-last-child(-n+1)]:border-b-0 md:even:border-l">
+                  <dt className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">{k || "Detail"}</dt>
+                  <dd className="mt-1 text-sm font-medium text-foreground">{v || spec}</dd>
+                </div>
+              )
+            })}
+          </dl>
+        </section>
+      )}
+
       {/* Product Description */}
       <section className="mx-auto max-w-7xl px-4 pb-12 md:px-8">
         <h2 className="mb-6 font-display text-xl font-bold md:text-2xl">Product Overview</h2>
@@ -176,23 +194,6 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
         </section>
       )}
 
-      {/* Specifications */}
-      {product.specifications && product.specifications.length > 0 && (
-        <section className="mx-auto max-w-7xl px-4 pb-20 md:px-8">
-          <h2 className="mb-6 font-display text-xl font-bold md:text-2xl">Specifications</h2>
-          <dl className="grid grid-cols-1 overflow-hidden rounded-2xl border border-border bg-card sm:grid-cols-2 lg:grid-cols-3">
-            {product.specifications.map((spec, i) => {
-              const [k, v] = spec.split("=>").map((s) => s.trim())
-              return (
-                <div key={i} className="border-b border-border p-4 last:border-b-0 sm:[&:nth-last-child(-n+1)]:border-b-0 md:even:border-l">
-                  <dt className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">{k || "Detail"}</dt>
-                  <dd className="mt-1 text-sm font-medium text-foreground">{v || spec}</dd>
-                </div>
-              )
-            })}
-          </dl>
-        </section>
-      )}
     </div>
   )
 }
