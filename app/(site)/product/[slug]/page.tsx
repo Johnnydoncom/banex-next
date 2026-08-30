@@ -107,7 +107,7 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
         </Link>
       </div>
 
-      <section className="mx-auto grid grid-cols-1 max-w-7xl gap-10 px-4 py-4 md:grid-cols-2 md:px-8 md:py-12">
+      <section className="mx-auto grid grid-cols-1 max-w-7xl gap-10 px-4 py-4 md:grid-cols-2 md:px-8 md:pb-12">
         <ProductImageGallery images={product.images || []} name={product.name} />
 
         <div>

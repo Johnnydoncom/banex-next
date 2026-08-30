@@ -1,59 +1,17 @@
 "use client"
 
-import { useState, useRef, useEffect } from "react"
+import { useState, useEffect } from "react"
 import { useSearchParams } from "next/navigation"
-import { Search, Plus, PackageOpen, Edit2, Trash2, X, ImageOff, Package2, AlertCircle, ChevronLeft, ChevronRight, BarChart2 } from "lucide-react"
+import { Search, Plus, PackageOpen, Edit2, Trash2, ImageOff, Package2, AlertCircle, ChevronLeft, ChevronRight } from "lucide-react"
 import { useAuth } from "@/hooks/use-auth"
 import { toast } from "sonner"
-import {
-  sellerCreateProduct, sellerUpdateProduct,
-  sellerUpdateStock, sellerDeleteProduct, sellerPricingPreview,
-  type SellerProduct, type PricingSummary
-} from "@/lib/seller-api"
+import { sellerUpdateStock, sellerDeleteProduct, type SellerProduct } from "@/lib/seller-api"
 import { useSellerProducts, useCategories, useSellerApplication } from "@/hooks/use-swr-data"
 import { subcategoriesOf, findCategory } from "@/lib/categories"
 import { formatNaira, saleInfo } from "@/lib/products"
 import { Input } from "@/components/ui/input"
-import { Textarea } from "@/components/ui/textarea"
 import { Button } from "@/components/ui/button"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Switch } from "@/components/ui/switch"
-import { VariantsEditor, variantsFromProduct, inferAttrs, appendVariants, validateVariants, type VariantRow, type AttrKey } from "@/components/VariantsEditor"
-type ProductForm = {
-  name: string
-  brand: string
-  category_id: string
-  description: string
-  regular_price: string
-  sales_price: string
-  stock_quantity: string
-  weight_kg: string
-  location: string
-  delivery_estimate: string
-  is_nationwide_delivery: boolean
-  is_authentic_only: boolean
-  specifications: string[]
-  images: File[]
-  primary_image_index: number
-}
-
-const defaultForm = (): ProductForm => ({
-  name: "",
-  brand: "",
-  category_id: "",
-  description: "",
-  regular_price: "",
-  sales_price: "",
-  stock_quantity: "",
-  weight_kg: "",
-  location: "",
-  delivery_estimate: "",
-  is_nationwide_delivery: false,
-  is_authentic_only: true,
-  specifications: [""],
-  images: [],
-  primary_image_index: 0,
-})
+import { ProductWizardModal } from "./ProductWizardModal"
 
 function statusBadge(status: string) {
   switch (status) {
@@ -64,10 +22,8 @@ function statusBadge(status: string) {
   }
 }
 
-type PreviewImg = { url: string; file?: File; id?: string }
-
 export default function VendorProductsPage() {
-  const { user, session } = useAuth()
+  const { session } = useAuth()
   const token = (session as any)?.accessToken as string | undefined
   const searchParams = useSearchParams()
 
@@ -78,8 +34,7 @@ export default function VendorProductsPage() {
   const { categories } = useCategories()
   const { profile } = useSellerApplication(token)
 
-  // Sellers are limited to the subcategories of their assigned (root) category, so a
-  // product can only be listed under the vendor's own department.
+  // Sellers are limited to the subcategories of their assigned (root) category.
   const rootCategory = findCategory(categories, profile?.category_id)
   const subCats = subcategoriesOf(categories, profile?.category_id)
   const allowedCategories = subCats.length ? subCats : rootCategory ? [rootCategory] : categories
@@ -87,7 +42,6 @@ export default function VendorProductsPage() {
   const [products, setProducts] = useState<SellerProduct[] | null>(null)
   const loading = productsLoading && products === null
 
-  // Sync SWR data (current page) into local state so we can do optimistic updates
   useEffect(() => {
     if (fetchedProducts) setProducts(fetchedProducts)
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -96,59 +50,15 @@ export default function VendorProductsPage() {
   // Modal state
   const [showModal, setShowModal] = useState(false)
   const [editProduct, setEditProduct] = useState<SellerProduct | null>(null)
-  const [form, setForm] = useState<ProductForm>(defaultForm())
-  const [saving, setSaving] = useState(false)
-  const [previewImages, setPreviewImages] = useState<PreviewImg[]>([])
-  const [deletedImageIds, setDeletedImageIds] = useState<string[]>([])
-  const [hasVariants, setHasVariants] = useState(false)
-  const [variantRows, setVariantRows] = useState<VariantRow[]>([])
-  const [variantAttrs, setVariantAttrs] = useState<AttrKey[]>(["color"])
 
   // Stock update modal
   const [stockModalProduct, setStockModalProduct] = useState<SellerProduct | null>(null)
   const [stockVal, setStockVal] = useState("")
   const [savingStock, setSavingStock] = useState(false)
-
-  // Inline stock edit (table row)
   const [stockEditId, setStockEditId] = useState<string | null>(null)
 
-  // Pricing preview
-  const [pricingPreview, setPricingPreview] = useState<PricingSummary | null>(null)
-  const [loadingPreview, setLoadingPreview] = useState(false)
-  const previewTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
-
   const [q, setQ] = useState("")
-
-  // Delete confirm
   const [deleteId, setDeleteId] = useState<string | null>(null)
-
-  const fileInputRef = useRef<HTMLInputElement>(null)
-
-  // Use effect only for the debounced pricing preview (not data loading)
-  useEffect(() => {
-    if (!token || !showModal) return
-    const regular = parseFloat(form.regular_price)
-    const sales = parseFloat(form.sales_price)
-    if (!form.regular_price || isNaN(regular) || regular <= 0) {
-      setPricingPreview(null)
-      return
-    }
-    // Forward the sale price only when valid (>0 and below the regular price).
-    const validSale = !isNaN(sales) && sales > 0 && sales < regular ? sales : undefined
-    if (previewTimerRef.current) clearTimeout(previewTimerRef.current)
-    previewTimerRef.current = setTimeout(async () => {
-      setLoadingPreview(true)
-      try {
-        const summary = await sellerPricingPreview(regular, validSale, token)
-        setPricingPreview(summary)
-      } catch {
-        setPricingPreview(null)
-      } finally {
-        setLoadingPreview(false)
-      }
-    }, 800)
-    return () => { if (previewTimerRef.current) clearTimeout(previewTimerRef.current) }
-  }, [form.regular_price, form.sales_price, token, showModal])
 
   // Debounce the search box into a server-side query (and reset to the first page).
   useEffect(() => {
@@ -156,52 +66,14 @@ export default function VendorProductsPage() {
     return () => clearTimeout(t)
   }, [q])
 
-  // Open the add-product form immediately when linked with ?add=1 (from the overview CTA).
+  // Open the add-product wizard immediately when linked with ?add=1.
   useEffect(() => {
     if (searchParams.get("add") === "1") openAdd()
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchParams])
 
-  function openAdd() {
-    setEditProduct(null)
-    setForm(defaultForm())
-    setPreviewImages([])
-    setDeletedImageIds([])
-    setHasVariants(false)
-    setVariantRows([])
-    setVariantAttrs(["color"])
-    setPricingPreview(null)
-    setShowModal(true)
-  }
-
-  function openEdit(p: SellerProduct) {
-    setEditProduct(p)
-    setForm({
-      name: p.name,
-      brand: p.brand ?? "",
-      category_id: p.category_id ?? "",
-      description: p.description ?? "",
-      regular_price: String(p.regular_price ?? p.price),
-      sales_price: p.sales_price != null && Number(p.sales_price) > 0 ? String(p.sales_price) : "",
-      stock_quantity: String(p.stock_quantity ?? ""),
-      weight_kg: String(p.weight_kg ?? ""),
-      location: p.location ?? "",
-      delivery_estimate: p.delivery_estimate ?? "",
-      is_nationwide_delivery: p.is_nationwide_delivery,
-      is_authentic_only: p.is_authentic_only,
-      specifications: p.specifications?.length ? p.specifications : [""],
-      images: [],
-      primary_image_index: 0,
-    })
-    setPreviewImages(p.images?.map((i) => ({ url: i.url, id: i.id })) ?? [])
-    setDeletedImageIds([])
-    const variable = !!p.has_variants && (p.variants?.length ?? 0) > 0
-    setHasVariants(variable)
-    setVariantRows(variable ? variantsFromProduct(p.variants) : [])
-    setVariantAttrs(variable ? inferAttrs(p.variants) : ["color"])
-    setPricingPreview(null)
-    setShowModal(true)
-  }
+  function openAdd() { setEditProduct(null); setShowModal(true) }
+  function openEdit(p: SellerProduct) { setEditProduct(p); setShowModal(true) }
 
   function openStockModal(p: SellerProduct) {
     setStockModalProduct(p)
@@ -214,120 +86,14 @@ export default function VendorProductsPage() {
     if (isNaN(qty) || qty < 0) { toast.error("Invalid quantity"); return }
     setSavingStock(true)
     try {
-      const updated = await sellerUpdateStock(stockModalProduct.id, qty, token)
-      if (updated) {
-        setProducts((prev) => prev ? prev.map((p) => p.id === stockModalProduct.id ? { ...p, stock_quantity: qty } : p) : prev)
-      } else {
-        // API returned no body — update locally
-        setProducts((prev) => prev ? prev.map((p) => p.id === stockModalProduct.id ? { ...p, stock_quantity: qty } : p) : prev)
-      }
+      await sellerUpdateStock(stockModalProduct.id, qty, token)
+      setProducts((prev) => prev ? prev.map((p) => p.id === stockModalProduct.id ? { ...p, stock_quantity: qty } : p) : prev)
       setStockModalProduct(null)
       toast.success("Stock updated")
     } catch (e: any) {
       toast.error(e.message || "Failed to update stock")
     } finally {
       setSavingStock(false)
-    }
-  }
-
-  function handleImageChange(e: React.ChangeEvent<HTMLInputElement>) {
-    const files = Array.from(e.target.files ?? [])
-    const newPreviews = files.map(file => ({ url: URL.createObjectURL(file), file }))
-    setPreviewImages((prev) => [...prev, ...newPreviews])
-  }
-
-  function removeImage(index: number, e: React.MouseEvent) {
-    e.stopPropagation()
-    const img = previewImages[index]
-    if (img.id) {
-      setDeletedImageIds((prev) => [...prev, img.id!])
-    }
-    setPreviewImages((prev) => prev.filter((_, i) => i !== index))
-    
-    setForm(f => {
-      let newPrimary = f.primary_image_index
-      if (newPrimary === index) {
-        newPrimary = 0
-      } else if (newPrimary > index) {
-        newPrimary = newPrimary - 1
-      }
-      return { ...f, primary_image_index: newPrimary }
-    })
-  }
-
-  async function handleSave() {
-    if (!token) return
-    if (!form.name || !form.category_id || (!hasVariants && !form.regular_price)) {
-      toast.error("Name, regular price, and category are required")
-      return
-    }
-    if (hasVariants) {
-      const err = validateVariants(variantRows, variantAttrs)
-      if (err) { toast.error(err); return }
-    } else if (form.sales_price.trim() !== "" && Number(form.sales_price) > 0 && Number(form.sales_price) >= Number(form.regular_price)) {
-      toast.error("Sale price must be less than the regular price")
-      return
-    }
-    setSaving(true)
-    try {
-      const fd = new FormData()
-      fd.append("name", form.name)
-      fd.append("brand", form.brand)
-      fd.append("category_id", form.category_id)
-      fd.append("description", form.description)
-      // Variable products carry per-variant price/stock; simple products send them flat.
-      if (hasVariants) {
-        appendVariants(fd, variantRows, variantAttrs)
-      } else {
-        fd.append("regular_price", form.regular_price)
-        if (editProduct) {
-          // On edit, always send sales_price so blank/0 clears an existing sale.
-          fd.append("sales_price", form.sales_price.trim() !== "" && Number(form.sales_price) > 0 ? form.sales_price : "0")
-        } else if (form.sales_price.trim() !== "" && Number(form.sales_price) > 0) {
-          fd.append("sales_price", form.sales_price)
-        }
-        fd.append("stock_quantity", form.stock_quantity)
-      }
-      fd.append("weight_kg", form.weight_kg)
-      fd.append("location", form.location)
-      fd.append("delivery_estimate", form.delivery_estimate)
-      fd.append("is_nationwide_delivery", form.is_nationwide_delivery ? "1" : "0")
-      fd.append("is_authentic_only", form.is_authentic_only ? "1" : "0")
-      fd.append("primary_image_index", String(form.primary_image_index))
-
-      form.specifications.filter(Boolean).forEach((s, i) => fd.append(`specifications[${i}]`, s))
-      previewImages.filter(img => img.file).forEach(img => fd.append("images[]", img.file!))
-      
-      if (editProduct && deletedImageIds.length > 0) {
-        deletedImageIds.forEach(id => fd.append("delete_image_ids[]", id))
-      }
-
-      if (editProduct) {
-        fd.append("_method", "PUT")
-        await sellerUpdateProduct(editProduct.id, fd, token)
-        toast.success("Product updated")
-      } else {
-        await sellerCreateProduct(fd, token)
-        toast.success("Product created")
-      }
-      mutateProducts()
-      setShowModal(false)
-    } catch (e: any) {
-      toast.error(e.message || "Failed to save product")
-    } finally {
-      setSaving(false)
-    }
-  }
-
-  async function handleDelete(id: string) {
-    if (!token) return
-    try {
-      await sellerDeleteProduct(id, token)
-      mutateProducts()
-      setDeleteId(null)
-      toast.success("Product deleted")
-    } catch (e: any) {
-      toast.error(e.message || "Failed to delete")
     }
   }
 
@@ -345,7 +111,18 @@ export default function VendorProductsPage() {
     }
   }
 
-  // Search + pagination are handled server-side, so render the current page as-is.
+  async function handleDelete(id: string) {
+    if (!token) return
+    try {
+      await sellerDeleteProduct(id, token)
+      mutateProducts()
+      setDeleteId(null)
+      toast.success("Product deleted")
+    } catch (e: any) {
+      toast.error(e.message || "Failed to delete")
+    }
+  }
+
   const filtered = products ?? []
   const totalCount = pagination?.total ?? filtered.length
   const totalPages = pagination?.last_page ?? 1
@@ -361,17 +138,9 @@ export default function VendorProductsPage() {
         <div className="flex gap-2">
           <label className="relative hidden sm:block">
             <Search className="pointer-events-none absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
-            <Input
-              value={q}
-              onChange={(e) => setQ(e.target.value)}
-              placeholder="Search products"
-              className="h-9 w-52 rounded-full bg-card pl-9 pr-3 text-xs"
-            />
+            <Input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search products" className="h-9 w-52 rounded-full bg-card pl-9 pr-3 text-xs" />
           </label>
-          <Button variant="ghost" type="button"
-            onClick={openAdd}
-            className="inline-flex items-center gap-2 rounded-full bg-emerald-600 px-4 py-2 text-xs font-semibold text-white hover:bg-emerald-700 transition-colors"
-          >
+          <Button variant="ghost" type="button" onClick={openAdd} className="inline-flex items-center gap-2 rounded-full bg-emerald-600 px-4 py-2 text-xs font-semibold text-white hover:bg-emerald-700 transition-colors">
             <Plus className="h-3.5 w-3.5" /> Add product
           </Button>
         </div>
@@ -448,31 +217,19 @@ export default function VendorProductsPage() {
                       <td className="px-5 py-3">
                         {stockEditId === p.id ? (
                           <div className="flex items-center gap-1">
-                            <Input
-                              type="number"
-                              value={stockVal}
-                              onChange={(e) => setStockVal(e.target.value)}
-                              className="h-7 w-16 px-2 text-xs"
-                              autoFocus
-                              onKeyDown={(e) => { if (e.key === "Enter") handleStockSave(p.id); if (e.key === "Escape") setStockEditId(null) }}
-                            />
+                            <Input type="number" value={stockVal} onChange={(e) => setStockVal(e.target.value)} className="h-7 w-16 px-2 text-xs" autoFocus onKeyDown={(e) => { if (e.key === "Enter") handleStockSave(p.id); if (e.key === "Escape") setStockEditId(null) }} />
                             <Button variant="ghost" type="button" onClick={() => handleStockSave(p.id)} className="text-emerald-600 hover:underline text-xs font-medium">Save</Button>
                             <Button variant="ghost" type="button" onClick={() => setStockEditId(null)} className="text-muted-foreground hover:text-foreground text-xs">Cancel</Button>
                           </div>
                         ) : (
-                          <Button variant="ghost" type="button"
-                            onClick={() => { setStockEditId(p.id); setStockVal(String(p.stock_quantity ?? 0)) }}
-                            className="flex items-center gap-1 group text-sm hover:text-emerald-600"
-                          >
+                          <Button variant="ghost" type="button" onClick={() => { setStockEditId(p.id); setStockVal(String(p.stock_quantity ?? 0)) }} className="flex items-center gap-1 group text-sm hover:text-emerald-600">
                             {p.stock_quantity ?? 0}
                             <Edit2 className="h-3 w-3 opacity-0 group-hover:opacity-100 transition-opacity" />
                           </Button>
                         )}
                       </td>
                       <td className="px-5 py-3">
-                        <span className={`rounded-full px-2.5 py-1 text-[10px] font-bold uppercase ${statusBadge(p.status)}`}>
-                          {p.status}
-                        </span>
+                        <span className={`rounded-full px-2.5 py-1 text-[10px] font-bold uppercase ${statusBadge(p.status)}`}>{p.status}</span>
                         {p.rejection_reason && (
                           <p className="mt-1 text-[10px] text-rose-600 flex items-center gap-1">
                             <AlertCircle className="h-3 w-3" /> {p.rejection_reason}
@@ -481,23 +238,13 @@ export default function VendorProductsPage() {
                       </td>
                       <td className="px-5 py-3 text-right">
                         <div className="flex items-center justify-end gap-1">
-                          <Button variant="ghost" type="button"
-                            onClick={() => openStockModal(p)}
-                            title="Manage stock"
-                            className="rounded-lg p-1.5 text-muted-foreground hover:bg-blue-500/10 hover:text-blue-600 transition-colors"
-                          >
+                          <Button variant="ghost" type="button" onClick={() => openStockModal(p)} title="Manage stock" className="rounded-lg p-1.5 text-muted-foreground hover:bg-blue-500/10 hover:text-blue-600 transition-colors">
                             <Package2 className="h-4 w-4" />
                           </Button>
-                          <Button variant="ghost" type="button"
-                            onClick={() => openEdit(p)}
-                            className="rounded-lg p-1.5 text-muted-foreground hover:bg-emerald-500/10 hover:text-emerald-600 transition-colors"
-                          >
+                          <Button variant="ghost" type="button" onClick={() => openEdit(p)} className="rounded-lg p-1.5 text-muted-foreground hover:bg-emerald-500/10 hover:text-emerald-600 transition-colors">
                             <Edit2 className="h-4 w-4" />
                           </Button>
-                          <Button variant="ghost" type="button"
-                            onClick={() => setDeleteId(p.id)}
-                            className="rounded-lg p-1.5 text-muted-foreground hover:bg-rose-500/10 hover:text-rose-600 transition-colors"
-                          >
+                          <Button variant="ghost" type="button" onClick={() => setDeleteId(p.id)} className="rounded-lg p-1.5 text-muted-foreground hover:bg-rose-500/10 hover:text-rose-600 transition-colors">
                             <Trash2 className="h-4 w-4" />
                           </Button>
                         </div>
@@ -514,243 +261,32 @@ export default function VendorProductsPage() {
       {/* Pagination */}
       {!loading && totalPages > 1 && (
         <div className="flex items-center justify-between gap-2 text-xs text-muted-foreground">
-          <span>
-            Page {pagination?.current_page ?? page} of {totalPages} · {totalCount} products
-          </span>
+          <span>Page {pagination?.current_page ?? page} of {totalPages} · {totalCount} products</span>
           <div className="flex gap-2">
-            <Button variant="ghost" type="button"
-              onClick={() => setPage((p) => Math.max(1, p - 1))}
-              disabled={page <= 1}
-              className="inline-flex items-center gap-1 rounded-full border border-border bg-card px-3 py-1.5 font-semibold disabled:opacity-40 hover:border-emerald-500"
-            >
+            <Button variant="ghost" type="button" onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={page <= 1} className="inline-flex items-center gap-1 rounded-full border border-border bg-card px-3 py-1.5 font-semibold disabled:opacity-40 hover:border-emerald-500">
               <ChevronLeft className="h-3.5 w-3.5" /> Prev
             </Button>
-            <Button variant="ghost" type="button"
-              onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-              disabled={page >= totalPages}
-              className="inline-flex items-center gap-1 rounded-full border border-border bg-card px-3 py-1.5 font-semibold disabled:opacity-40 hover:border-emerald-500"
-            >
+            <Button variant="ghost" type="button" onClick={() => setPage((p) => Math.min(totalPages, p + 1))} disabled={page >= totalPages} className="inline-flex items-center gap-1 rounded-full border border-border bg-card px-3 py-1.5 font-semibold disabled:opacity-40 hover:border-emerald-500">
               Next <ChevronRight className="h-3.5 w-3.5" />
             </Button>
           </div>
         </div>
       )}
 
-      {/* Add/Edit Product Modal */}
-      {showModal && (
-        <div className="fixed inset-0 z-50 flex items-start justify-end bg-black/40 backdrop-blur-sm" onClick={() => setShowModal(false)}>
-          <div
-            className="relative flex h-screen w-full max-w-xl flex-col overflow-y-auto border-l border-border bg-card shadow-2xl"
-            onClick={(e) => e.stopPropagation()}
-          >
-            {/* Modal header */}
-            <div className="flex items-center justify-between border-b border-border px-6 py-4">
-              <div>
-                <h2 className="font-display text-lg font-bold">{editProduct ? "Edit Product" : "Add Product"}</h2>
-                <p className="text-xs text-muted-foreground">Fill in the details below</p>
-              </div>
-              <Button variant="ghost" type="button" onClick={() => setShowModal(false)} className="rounded-lg p-1.5 text-muted-foreground hover:bg-surface hover:text-foreground">
-                <X className="h-5 w-5" />
-              </Button>
-            </div>
-
-            {/* Form body */}
-            <div className="flex-1 space-y-5 p-6">
-              {/* Images */}
-              <div>
-                <label className="mb-2 block text-[11px] font-semibold uppercase tracking-widest text-muted-foreground">Images</label>
-                <div className="flex flex-wrap gap-2">
-                  {previewImages.map((img, i) => (
-                    <div
-                      key={i}
-                      onClick={() => setForm((f) => ({ ...f, primary_image_index: i }))}
-                      className={`relative group h-20 w-20 cursor-pointer overflow-hidden rounded-lg border-2 transition-all ${form.primary_image_index === i ? "border-emerald-500 shadow-emerald-500/30 shadow-md" : "border-border"}`}
-                    >
-                      <img src={img.url} alt="" className="h-full w-full object-cover" />
-                      {form.primary_image_index === i && (
-                        <span className="absolute bottom-0 left-0 right-0 bg-emerald-600 text-center text-[9px] font-bold text-white py-0.5">PRIMARY</span>
-                      )}
-                      <Button variant="ghost" type="button"
-                        onClick={(e) => removeImage(i, e)}
-                        className="absolute right-1 top-1 rounded-full bg-black/60 p-1 text-white opacity-0 transition-opacity hover:bg-rose-500 group-hover:opacity-100"
-                      >
-                        <X className="h-3 w-3" />
-                      </Button>
-                    </div>
-                  ))}
-                  <Button variant="ghost" type="button"
-                    onClick={() => fileInputRef.current?.click()}
-                    className="flex h-20 w-20 flex-col items-center justify-center gap-1 rounded-lg border border-dashed border-border text-muted-foreground hover:border-emerald-500 hover:text-emerald-600 transition-colors"
-                  >
-                    <Plus className="h-5 w-5" />
-                    <span className="text-[9px] font-semibold">Add photo</span>
-                  </Button>
-                  <Input ref={fileInputRef} type="file" accept="image/*" multiple className="hidden" onChange={handleImageChange} />
-                </div>
-                <p className="mt-1 text-[10px] text-muted-foreground">Click an image to set it as primary.</p>
-              </div>
-
-              {/* Basic info */}
-              <F label="Product Name *">
-                <Input value={form.name} onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))} placeholder="e.g. Samsung Galaxy S24" />
-              </F>
-              <div className="grid grid-cols-2 gap-4">
-                <F label="Brand">
-                  <Input value={form.brand} onChange={(e) => setForm((f) => ({ ...f, brand: e.target.value }))} placeholder="e.g. Samsung" />
-                </F>
-                <F label={rootCategory ? `Category * (under ${rootCategory.name})` : "Category *"}>
-                  <Select value={form.category_id} onValueChange={(val) => setForm((f) => ({ ...f, category_id: val }))}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select..." />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {allowedCategories.map((c) => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
-                    </SelectContent>
-                  </Select>
-                  {rootCategory && subCats.length === 0 && (
-                    <p className="mt-1 text-[11px] text-muted-foreground">No subcategories yet — using {rootCategory.name}.</p>
-                  )}
-                </F>
-              </div>
-              <div className={`grid gap-4 ${hasVariants ? "grid-cols-1" : "grid-cols-2 sm:grid-cols-4"}`}>
-                {!hasVariants && (
-                  <>
-                    <F label="Regular Price (₦) *">
-                      <Input type="number" value={form.regular_price} onChange={(e) => setForm((f) => ({ ...f, regular_price: e.target.value }))} placeholder="0" />
-                    </F>
-                    <F label="Sale Price (₦)">
-                      <Input type="number" value={form.sales_price} onChange={(e) => setForm((f) => ({ ...f, sales_price: e.target.value }))} placeholder="Optional" />
-                    </F>
-                    <F label="Stock Qty">
-                      <Input type="number" value={form.stock_quantity} onChange={(e) => setForm((f) => ({ ...f, stock_quantity: e.target.value }))} placeholder="0" />
-                    </F>
-                  </>
-                )}
-                <F label="Weight (kg)">
-                  <Input type="number" step="0.1" value={form.weight_kg} onChange={(e) => setForm((f) => ({ ...f, weight_kg: e.target.value }))} placeholder="0.5" />
-                </F>
-              </div>
-              {!hasVariants && form.sales_price.trim() !== "" && Number(form.sales_price) > 0 && Number(form.sales_price) >= Number(form.regular_price) && (
-                <p className="-mt-3 text-[11px] text-rose-600">Sale price must be less than the regular price.</p>
-              )}
-
-              <VariantsEditor enabled={hasVariants} onToggle={setHasVariants} rows={variantRows} onChange={setVariantRows} attrs={variantAttrs} onAttrsChange={setVariantAttrs} />
-
-
-              {/* Pricing preview panel */}
-              {(pricingPreview || loadingPreview) && (
-                <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/5 p-4">
-                  <div className="flex items-center gap-2 mb-3">
-                    <BarChart2 className="h-4 w-4 text-emerald-600" />
-                    <p className="text-xs font-semibold text-emerald-700">Pricing Breakdown</p>
-                    {loadingPreview && <span className="ml-auto text-[10px] text-muted-foreground animate-pulse">Calculating…</span>}
-                  </div>
-                  {pricingPreview && !loadingPreview && (
-                    <div className="space-y-2 text-xs">
-                      <div className="flex justify-between">
-                        <span className="text-muted-foreground">Listing Price</span>
-                        <span className="font-semibold">{formatNaira(pricingPreview.listing_price)}</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-muted-foreground">Platform Commission ({pricingPreview.commission_percent_label})</span>
-                        <span className="font-semibold text-rose-600">− {formatNaira(pricingPreview.commission_amount)}</span>
-                      </div>
-                      <div className="my-1 border-t border-emerald-500/20" />
-                      <div className="flex justify-between">
-                        <span className="font-semibold text-emerald-700">You Receive</span>
-                        <span className="font-bold text-emerald-700 text-sm">{formatNaira(pricingPreview.seller_receives)}</span>
-                      </div>
-                    </div>
-                  )}
-                </div>
-              )}
-              <div className="grid grid-cols-2 gap-4">
-                <F label="Location">
-                  <Input value={form.location} onChange={(e) => setForm((f) => ({ ...f, location: e.target.value }))} placeholder="e.g. Banex Mall" />
-                </F>
-                <F label="Delivery Estimate">
-                  <Input value={form.delivery_estimate} onChange={(e) => setForm((f) => ({ ...f, delivery_estimate: e.target.value }))} placeholder="e.g. 1-2 days" />
-                </F>
-              </div>
-              <F label="Description *">
-                <Textarea
-                  value={form.description}
-                  onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))}
-                  rows={3}
-                  placeholder="Describe your product..."
-                />
-              </F>
-
-              {/* Specifications */}
-              <div>
-                <label className="mb-2 block text-[11px] font-semibold uppercase tracking-widest text-muted-foreground">Specifications</label>
-                <div className="space-y-2">
-                  {form.specifications.map((s, i) => (
-                    <div key={i} className="flex gap-2">
-                      <Input
-                        value={s}
-                        onChange={(e) => {
-                          const specs = [...form.specifications]
-                          specs[i] = e.target.value
-                          setForm((f) => ({ ...f, specifications: specs }))
-                        }}
-                        placeholder={`Spec ${i + 1} (e.g. RAM: 8GB)`}
-                      />
-                      {form.specifications.length > 1 && (
-                        <Button variant="ghost" type="button"
-                          onClick={() => setForm((f) => ({ ...f, specifications: f.specifications.filter((_, j) => j !== i) }))}
-                          className="rounded-lg border border-border p-1.5 text-muted-foreground hover:border-rose-500 hover:text-rose-600"
-                        >
-                          <X className="h-4 w-4" />
-                        </Button>
-                      )}
-                    </div>
-                  ))}
-                  <Button variant="ghost" type="button"
-                    onClick={() => setForm((f) => ({ ...f, specifications: [...f.specifications, ""] }))}
-                    className="flex items-center gap-1.5 text-xs font-medium text-emerald-600 hover:underline"
-                  >
-                    <Plus className="h-3.5 w-3.5" /> Add specification
-                  </Button>
-                </div>
-              </div>
-
-              {/* Toggles */}
-              <div className="flex flex-col gap-3">
-                <Toggle
-                  checked={form.is_nationwide_delivery}
-                  onChange={(v) => setForm((f) => ({ ...f, is_nationwide_delivery: v }))}
-                  label="Nationwide delivery available"
-                />
-                <Toggle
-                  checked={form.is_authentic_only}
-                  onChange={(v) => setForm((f) => ({ ...f, is_authentic_only: v }))}
-                  label="Authentic products only"
-                />
-              </div>
-            </div>
-
-            {/* Footer */}
-            <div className="flex items-center gap-3 border-t border-border px-6 py-4">
-              <Button variant="ghost" type="button"
-                onClick={handleSave}
-                disabled={saving}
-                className="flex-1 rounded-full bg-emerald-600 py-2.5 text-sm font-semibold text-white disabled:opacity-60 hover:bg-emerald-700 transition-colors"
-              >
-                {saving ? "Saving…" : editProduct ? "Update Product" : "Create Product"}
-              </Button>
-              <Button variant="ghost" type="button"
-                onClick={() => setShowModal(false)}
-                className="rounded-full border border-border bg-card px-5 py-2.5 text-sm font-semibold hover:border-foreground/30 transition-colors"
-              >
-                Cancel
-              </Button>
-            </div>
-          </div>
-        </div>
+      {/* Add/Edit product wizard (mounts fresh each open so drafts restore correctly) */}
+      {showModal && token && (
+        <ProductWizardModal
+          editProduct={editProduct}
+          token={token}
+          allowedCategories={allowedCategories.map((c) => ({ id: c.id, name: c.name }))}
+          rootCategory={rootCategory ? { name: rootCategory.name } : null}
+          subCount={subCats.length}
+          onClose={() => setShowModal(false)}
+          onSaved={() => { mutateProducts(); setShowModal(false) }}
+        />
       )}
 
-      {/* Dedicated Manage Stock Modal */}
+      {/* Manage Stock Modal */}
       {stockModalProduct && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
           <div className="w-full max-w-sm rounded-2xl border border-border bg-card p-6 shadow-2xl">
@@ -763,35 +299,18 @@ export default function VendorProductsPage() {
                 <p className="text-xs text-muted-foreground line-clamp-1">{stockModalProduct.name}</p>
               </div>
             </div>
-
             <div className="rounded-xl border border-border bg-surface/40 p-3 mb-4 text-xs text-muted-foreground">
               Current stock: <strong className="text-foreground">{stockModalProduct.stock_quantity ?? 0} units</strong>
             </div>
-
-            <F label="New Stock Quantity">
-              <Input
-                type="number"
-                min="0"
-                value={stockVal}
-                onChange={(e) => setStockVal(e.target.value)}
-                placeholder="Enter new quantity"
-                autoFocus
-                onKeyDown={(e) => { if (e.key === "Enter") handleStockModalSave() }}
-              />
-            </F>
-
+            <label className="block">
+              <span className="mb-1.5 block text-[11px] font-semibold uppercase tracking-widest text-muted-foreground">New Stock Quantity</span>
+              <Input type="number" min="0" value={stockVal} onChange={(e) => setStockVal(e.target.value)} placeholder="Enter new quantity" autoFocus onKeyDown={(e) => { if (e.key === "Enter") handleStockModalSave() }} />
+            </label>
             <div className="mt-5 flex gap-3">
-              <Button variant="ghost" type="button"
-                onClick={handleStockModalSave}
-                disabled={savingStock}
-                className="flex-1 rounded-full bg-blue-600 py-2.5 text-sm font-semibold text-white disabled:opacity-60 hover:bg-blue-700 transition-colors"
-              >
+              <Button variant="ghost" type="button" onClick={handleStockModalSave} disabled={savingStock} className="flex-1 rounded-full bg-blue-600 py-2.5 text-sm font-semibold text-white disabled:opacity-60 hover:bg-blue-700 transition-colors">
                 {savingStock ? "Updating…" : "Update Stock"}
               </Button>
-              <Button variant="ghost" type="button"
-                onClick={() => setStockModalProduct(null)}
-                className="flex-1 rounded-full border border-border bg-card py-2.5 text-sm font-semibold hover:border-foreground/30 transition-colors"
-              >
+              <Button variant="ghost" type="button" onClick={() => setStockModalProduct(null)} className="flex-1 rounded-full border border-border bg-card py-2.5 text-sm font-semibold hover:border-foreground/30 transition-colors">
                 Cancel
               </Button>
             </div>
@@ -809,16 +328,10 @@ export default function VendorProductsPage() {
             <h3 className="mt-4 font-display text-lg font-bold">Delete Product?</h3>
             <p className="mt-1 text-sm text-muted-foreground">This action cannot be undone. The listing will be permanently removed.</p>
             <div className="mt-5 flex gap-3">
-              <Button variant="ghost" type="button"
-                onClick={() => handleDelete(deleteId)}
-                className="flex-1 rounded-full bg-rose-600 py-2.5 text-sm font-semibold text-white hover:bg-rose-700 transition-colors"
-              >
+              <Button variant="ghost" type="button" onClick={() => handleDelete(deleteId)} className="flex-1 rounded-full bg-rose-600 py-2.5 text-sm font-semibold text-white hover:bg-rose-700 transition-colors">
                 Delete
               </Button>
-              <Button variant="ghost" type="button"
-                onClick={() => setDeleteId(null)}
-                className="flex-1 rounded-full border border-border bg-card py-2.5 text-sm font-semibold hover:border-foreground/30 transition-colors"
-              >
+              <Button variant="ghost" type="button" onClick={() => setDeleteId(null)} className="flex-1 rounded-full border border-border bg-card py-2.5 text-sm font-semibold hover:border-foreground/30 transition-colors">
                 Cancel
               </Button>
             </div>
@@ -826,30 +339,5 @@ export default function VendorProductsPage() {
         </div>
       )}
     </div>
-  )
-}
-
-// ─── Sub-components ────────────────────────────────────────────────────────────
-
-function F({ label, children }: { label: string; children: React.ReactNode }) {
-  return (
-    <label className="block">
-      <span className="mb-1.5 block text-[11px] font-semibold uppercase tracking-widest text-muted-foreground">{label}</span>
-      {children}
-    </label>
-  )
-}
-
-// Wrap inputs automatically with standard classes via cloneElement not available — use a wrapper approach
-// The input inside F must have the right classes. Convenience: just apply them inline in each callsite above.
-// Override select styling:
-// Removed generic styles since we now use shadcn UI components natively.
-
-function Toggle({ checked, onChange, label }: { checked: boolean; onChange: (v: boolean) => void; label: string }) {
-  return (
-    <label className="flex cursor-pointer items-center justify-between rounded-xl border border-border bg-background px-4 py-3">
-      <span className="text-sm font-medium">{label}</span>
-      <Switch checked={checked} onCheckedChange={onChange} />
-    </label>
   )
 }
