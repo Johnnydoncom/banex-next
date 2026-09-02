@@ -20,7 +20,7 @@ export async function GET(
 
   if (slug && slug !== "all") {
     try {
-      const category = await fetchGenericCategory(slug)
+      const { category } = await fetchGenericCategory(slug)
       if (category) {
         return brandOgImage({
           eyebrow: "Shop category",

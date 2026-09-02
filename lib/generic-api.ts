@@ -1,4 +1,7 @@
 import { apiGet, ApiError } from "@/lib/api-client"
+import type { ApiSeo } from "@/lib/seo/metadata"
+
+export type { ApiSeo }
 
 // ─── Shared Envelope ──────────────────────────────────────────────────────────
 type ApiEnvelope<T> = {
@@ -140,8 +143,9 @@ export async function fetchGenericCategories() {
 }
 
 export async function fetchGenericCategory(slug: string) {
-  const res = await apiGet<ApiEnvelope<{ category: GenericCategory }>>(`/generic/categories/${slug}`)
-  return res.data.category
+  // The by-slug endpoint returns a ready-to-render `seo` object alongside the category.
+  const res = await apiGet<ApiEnvelope<{ category: GenericCategory; seo?: ApiSeo }>>(`/generic/categories/${slug}`)
+  return { category: res.data.category, seo: res.data.seo ?? null }
 }
 
 export async function fetchGenericProducts(params?: {
@@ -188,7 +192,8 @@ export const PRODUCT_SORT_MAP: Record<string, string> = {
 }
 
 export async function fetchGenericProduct(slug: string) {
-  const res = await apiGet<ApiEnvelope<{ product: GenericProduct; comparable_products: GenericProduct[] }>>(`/generic/products/slug/${slug}`)
+  // The by-slug endpoint also returns a ready-to-render `seo` object.
+  const res = await apiGet<ApiEnvelope<{ product: GenericProduct; comparable_products: GenericProduct[]; seo?: ApiSeo }>>(`/generic/products/slug/${slug}`)
   return res.data
 }
 

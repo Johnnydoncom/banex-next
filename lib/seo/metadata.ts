@@ -128,4 +128,73 @@ export function buildMetadata(input: BuildMetadataInput = {}): Metadata {
   }
 }
 
+// ─── API-driven SEO ───────────────────────────────────────────────────────────
+// The backend now returns a ready-to-render `seo` object on product/category
+// by-slug endpoints. Render it verbatim — do NOT rebuild titles/canonicals here.
+
+export type ApiSeo = {
+  title?: string | null
+  description?: string | null
+  /** Single comma-separated string, not an array. */
+  keywords?: string | null
+  canonical_url?: string | null
+  /** Absolute URL or null. */
+  image?: string | null
+  /** Raw robots directive string, e.g. "max-snippet:-1,max-image-preview:large". */
+  robots?: string | null
+  open_graph?: {
+    title?: string | null
+    description?: string | null
+    image?: string | null
+    url?: string | null
+    type?: string | null
+    site_name?: string | null
+  } | null
+}
+
+/**
+ * Convert the API's `seo` object into a Next `Metadata`. Titles already include
+ * the site-name suffix (rendered absolute — never re-append). Falls back to
+ * `buildMetadata(fallback)` when the API sends no usable seo. A `fallback.images`
+ * entry (e.g. a generated OG route) is used only when the API supplies no image.
+ */
+export function metadataFromApiSeo(seo: ApiSeo | null | undefined, fallback: BuildMetadataInput = {}): Metadata {
+  if (!seo || (!seo.title && !seo.description)) return buildMetadata(fallback)
+
+  const og = seo.open_graph ?? {}
+  const fallbackImage = (fallback.images ?? []).find((u): u is string => !!u)
+  const ogImage = og.image ?? seo.image ?? fallbackImage ?? undefined
+  // Next's OpenGraph type union has no "product"; map it (and anything unknown) to website.
+  const ogType: OgType = og.type === "article" || og.type === "profile" ? og.type : "website"
+  const ogTitle = og.title ?? seo.title ?? undefined
+  const ogDescription = og.description ?? seo.description ?? undefined
+  const ogUrl = og.url ?? seo.canonical_url ?? undefined
+
+  return {
+    ...(seo.title ? { title: { absolute: seo.title } } : {}),
+    ...(seo.description ? { description: seo.description } : {}),
+    ...(seo.keywords ? { keywords: seo.keywords } : {}),
+    ...(seo.canonical_url ? { alternates: { canonical: seo.canonical_url } } : {}),
+    // Next renders a raw string straight into <meta name="robots">.
+    ...(seo.robots ? { robots: seo.robots } : {}),
+    openGraph: {
+      type: ogType,
+      siteName: og.site_name ?? SITE_NAME,
+      locale: SITE_LOCALE,
+      ...(ogTitle ? { title: ogTitle } : {}),
+      ...(ogDescription ? { description: ogDescription } : {}),
+      ...(ogUrl ? { url: ogUrl } : {}),
+      ...(ogImage ? { images: [{ url: ogImage, width: 1200, height: 630 }] } : {}),
+    },
+    twitter: {
+      card: "summary_large_image",
+      site: TWITTER_HANDLE,
+      creator: TWITTER_HANDLE,
+      ...(seo.title ? { title: seo.title } : {}),
+      ...(ogDescription ? { description: ogDescription } : {}),
+      ...(ogImage ? { images: [ogImage] } : {}),
+    },
+  }
+}
+
 export { SITE_URL, SITE_NAME }

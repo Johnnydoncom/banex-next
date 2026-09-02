@@ -100,6 +100,38 @@ export type AdminCategory = {
   image_url: string | null
   parent?: { id: string; name: string; slug: string } | null
   children?: AdminCategory[]
+  seo?: AdminSeo | null
+}
+
+// Editable SEO overrides (null when not overridden). `resolved` is the read-only
+// effective SEO the FE would render. Sent back as multipart `seo[<field>]`.
+export type AdminSeo = {
+  title: string | null
+  description: string | null
+  keywords: string | null
+  robots: string | null
+  canonical_url: string | null
+  resolved?: {
+    title?: string | null
+    description?: string | null
+    keywords?: string | null
+    canonical_url?: string | null
+    image?: string | null
+    robots?: string | null
+  } | null
+}
+
+/** Append admin SEO override fields to a product/category FormData as seo[<key>].
+ *  Always appends (empty string clears an existing override → null). */
+export function appendSeoFields(
+  fd: FormData,
+  seo: { title?: string; description?: string; keywords?: string; robots?: string; canonical_url?: string },
+) {
+  fd.append("seo[title]", seo.title ?? "")
+  fd.append("seo[description]", seo.description ?? "")
+  fd.append("seo[keywords]", seo.keywords ?? "")
+  fd.append("seo[robots]", seo.robots ?? "")
+  fd.append("seo[canonical_url]", seo.canonical_url ?? "")
 }
 
 type AdminCategoriesData = {
@@ -247,6 +279,7 @@ export type AdminProduct = {
   seller: { id: string; shop_name: string; slug: string }
   category: { id: string; name: string; slug: string; image_url: string | null } | null
   pricing_summary?: PricingSummary | null
+  seo?: AdminSeo | null
 }
 
 // Commission breakdown: what Banex Mall keeps vs what the seller/owner receives.

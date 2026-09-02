@@ -5,7 +5,7 @@ import Link from "next/link"
 import { useRouter } from "next/navigation"
 import {
   ArrowLeft, Upload, X, Loader2, Star,
-  FileText, ImageIcon, Tag, ListChecks, CheckCircle2,
+  FileText, ImageIcon, Tag, ListChecks, CheckCircle2, Search,
 } from "lucide-react"
 import { toast } from "sonner"
 import { useSession } from "next-auth/react"
@@ -14,10 +14,12 @@ import {
   fetchAdminSellers,
   createAdminProduct,
   pricingPreviewAdminProduct,
+  appendSeoFields,
   AdminCategory,
   AdminSeller,
   type PricingSummary,
 } from "@/lib/admin-api"
+import { SeoFieldsEditor, emptySeo, type SeoFields } from "@/components/SeoFieldsEditor"
 import { RichTextEditor } from "@/components/RichTextEditor"
 import { LocationSelect } from "@/components/LocationSelect"
 import { VariantsEditor, emptyVariantRow, appendVariants, validateVariants, type VariantRow, type AttrKey } from "@/components/VariantsEditor"
@@ -44,6 +46,7 @@ const STEPS: WizardStep[] = [
   { key: "media", label: "Media", icon: ImageIcon },
   { key: "pricing", label: "Pricing", icon: Tag },
   { key: "options", label: "Options", icon: ListChecks },
+  { key: "seo", label: "SEO", icon: Search },
   { key: "review", label: "Review", icon: CheckCircle2 },
 ]
 
@@ -92,6 +95,7 @@ export default function AdminNewProductPage() {
   const [form, setForm] = useState<FormState>(defaultForm())
 
   const [specifications, setSpecifications] = useState([{ key: "", value: "" }])
+  const [seo, setSeo] = useState<SeoFields>(emptySeo())
   const [hasVariants, setHasVariants] = useState(false)
   const [variantRows, setVariantRows] = useState<VariantRow[]>([emptyVariantRow(true)])
   const [variantAttrs, setVariantAttrs] = useState<AttrKey[]>(["color"])
@@ -111,10 +115,11 @@ export default function AdminNewProductPage() {
   const { hasDraft, savedAt, clear: clearDraft } = useDraftPersistence(
     DRAFT_KEY,
     true,
-    { form, specifications, hasVariants, variantRows, variantAttrs },
+    { form, specifications, seo, hasVariants, variantRows, variantAttrs },
     (d) => {
       if (d.form) setForm((f) => ({ ...f, ...d.form }))
       if (Array.isArray(d.specifications) && d.specifications.length) setSpecifications(d.specifications)
+      if (d.seo) setSeo((s) => ({ ...s, ...d.seo }))
       if (typeof d.hasVariants === "boolean") setHasVariants(d.hasVariants)
       if (Array.isArray(d.variantRows) && d.variantRows.length) setVariantRows(d.variantRows)
       if (Array.isArray(d.variantAttrs) && d.variantAttrs.length) setVariantAttrs(d.variantAttrs)
@@ -291,6 +296,7 @@ export default function AdminNewProductPage() {
       })
       formData.append("primary_image_index", String(primaryImageIndex))
       images.forEach((img) => formData.append("images[]", img.file))
+      appendSeoFields(formData, seo)
 
       await createAdminProduct(formData, session.accessToken)
       clearDraft()
@@ -306,6 +312,7 @@ export default function AdminNewProductPage() {
     clearDraft()
     setForm(defaultForm())
     setSpecifications([{ key: "", value: "" }])
+    setSeo(emptySeo())
     setHasVariants(false)
     setVariantRows([emptyVariantRow(true)])
     setVariantAttrs(["color"])
@@ -533,8 +540,19 @@ export default function AdminNewProductPage() {
             </div>
           )}
 
-          {/* Step 4 — Review */}
+          {/* Step 4 — SEO */}
           {step === 4 && (
+            <div className="space-y-4">
+              <div>
+                <h3 className="font-display text-base font-semibold">Search engine optimization</h3>
+                <p className="text-xs text-muted-foreground">Control how this product appears on Google and social shares.</p>
+              </div>
+              <SeoFieldsEditor value={seo} onChange={(patch) => setSeo((s) => ({ ...s, ...patch }))} />
+            </div>
+          )}
+
+          {/* Step 5 — Review */}
+          {step === 5 && (
             <div className="space-y-4">
               <h3 className="font-display text-base font-semibold">Review Product</h3>
               <div className="grid gap-3 rounded-xl bg-surface/60 p-4 text-sm sm:grid-cols-2">
@@ -557,6 +575,7 @@ export default function AdminNewProductPage() {
                 {!hasVariants && <div><span className="text-muted-foreground">Stock:</span> <strong>{form.stock_quantity || "—"}</strong></div>}
                 <div><span className="text-muted-foreground">Weight:</span> <strong>{form.weight_kg ? `${form.weight_kg} kg` : "—"}</strong></div>
                 <div><span className="text-muted-foreground">Images:</span> <strong>{images.length}</strong></div>
+                <div><span className="text-muted-foreground">SEO:</span> <strong>{seo.title || seo.description || seo.keywords ? "Custom" : "Auto"}</strong></div>
               </div>
               <div className="text-xs text-muted-foreground prose prose-sm dark:prose-invert max-w-none line-clamp-3" dangerouslySetInnerHTML={{ __html: form.description || "No description" }} />
             </div>
