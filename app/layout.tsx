@@ -1,6 +1,7 @@
 import type { Metadata } from "next"
 import { Inter, Plus_Jakarta_Sans } from "next/font/google"
 import "./globals.css"
+import { GoogleAnalytics } from '@next/third-parties/google'
 import { Providers } from "@/components/providers"
 import { JsonLd } from "@/lib/seo/JsonLdComponent"
 import { organizationSchema, websiteSchema } from "@/lib/seo/jsonld"
@@ -81,11 +82,11 @@ export default function RootLayout({
       <head>
         <meta name="apple-mobile-web-app-title" content="Banex Marketplace" />
       </head>
-
       <body className="antialiased">
         <JsonLd schema={[organizationSchema(), websiteSchema()]} />
         <Providers>{children}</Providers>
       </body>
+      <GoogleAnalytics gaId="G-SXPRSN2QKL" />
     </html>
   )
 }
