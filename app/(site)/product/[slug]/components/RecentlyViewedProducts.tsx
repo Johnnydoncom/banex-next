@@ -4,6 +4,7 @@ import { useEffect, useState } from "react"
 import { useSession } from "next-auth/react"
 import type { GenericProduct } from "@/lib/generic-api"
 import { ApiProductCard } from "@/components/ApiProductCard"
+import { Carousel, CarouselContent, CarouselItem, CarouselPrevious, CarouselNext } from "@/components/ui/carousel"
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "https://api-marketplace.banexmall.com/api"
 
@@ -36,10 +37,10 @@ export function RecentlyViewedProducts({ slug, currentId }: { slug: string; curr
         if (!res.ok) return
         const json = await res.json().catch(() => null)
         const rv: GenericProduct[] = json?.data?.recently_viewed ?? []
-        // Defensive: drop the current product and de-duplicate by id.
+        // Defensive: drop the current product and de-duplicate by id. Show ALL items.
         const seen = new Set<string>([currentId])
         const cleaned = rv.filter((p) => p && !seen.has(p.id) && seen.add(p.id))
-        setItems(cleaned.slice(0, 6))
+        setItems(cleaned)
       } catch {
         // network/abort — leave the rail hidden
       }
@@ -52,12 +53,26 @@ export function RecentlyViewedProducts({ slug, currentId }: { slug: string; curr
 
   return (
     <section className="mx-auto max-w-7xl px-4 pb-16 md:px-8">
-      <h2 className="mb-6 font-display text-xl font-bold md:text-2xl">Recently viewed</h2>
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:gap-5 lg:grid-cols-4 xl:grid-cols-6">
-        {items.map((p) => (
-          <ApiProductCard key={p.id} product={p} />
-        ))}
-      </div>
+      <Carousel opts={{ align: "start", dragFree: true, containScroll: "trimSnaps" }} className="w-full">
+        <div className="mb-6 flex items-center justify-between gap-4">
+          <h2 className="font-display text-xl font-bold md:text-2xl">Recently viewed</h2>
+          {/* Arrows are inline (not absolute) so they never overlap the cards */}
+          <div className="hidden items-center gap-2 sm:flex">
+            <CarouselPrevious className="static translate-y-0" />
+            <CarouselNext className="static translate-y-0" />
+          </div>
+        </div>
+        <CarouselContent className="-ml-3 md:-ml-5">
+          {items.map((p) => (
+            <CarouselItem
+              key={p.id}
+              className="basis-1/2 pl-3 sm:basis-1/3 md:pl-5 lg:basis-1/4 xl:basis-1/5"
+            >
+              <ApiProductCard product={p} />
+            </CarouselItem>
+          ))}
+        </CarouselContent>
+      </Carousel>
     </section>
   )
 }
