@@ -3,6 +3,7 @@ import { notFound } from "next/navigation"
 import { Star, Truck, ShieldCheck, BadgeCheck, ChevronLeft } from "lucide-react"
 import { fetchGenericProduct } from "@/lib/generic-api"
 import { ProductImageGallery } from "./components/ProductImageGallery"
+import { RecentlyViewedProducts } from "./components/RecentlyViewedProducts"
 import { ProductPurchasePanel } from "./components/ProductPurchasePanel"
 import { ProductSellerCard } from "./components/ProductSellerCard"
 import { ProductContactButtons } from "./components/ProductContactButtons"
@@ -195,6 +196,9 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
           </div>
         </section>
       )}
+
+      {/* Recently viewed (viewer-scoped; fetched client-side) */}
+      <RecentlyViewedProducts slug={product.slug} currentId={product.id} />
 
     </div>
   )

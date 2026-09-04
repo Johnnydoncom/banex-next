@@ -54,6 +54,8 @@ import {
 } from "@/lib/user-api"
 import {
   fetchDashboardData,
+  fetchAdminAnalyticsViews,
+  type AdminAnalyticsViews,
   fetchAdminOrders,
   fetchAdminOrder,
   fetchAdminUsers,
@@ -358,6 +360,25 @@ export function useAdminDashboard(token: string | undefined) {
     error,
     mutate,
   }
+}
+
+export function useAdminAnalyticsViews(
+  token: string | undefined,
+  from?: string,
+  to?: string,
+) {
+  const { data, error, isLoading, mutate } = useSWR<AdminAnalyticsViews | null>(
+    token ? ["admin-analytics-views", token, from ?? "", to ?? ""] : null,
+    async ([, t, f, tt]) => {
+      const res = await fetchAdminAnalyticsViews(t as string, {
+        from: (f as string) || undefined,
+        to: (tt as string) || undefined,
+      })
+      return res.data ?? null
+    },
+    { revalidateOnFocus: false, keepPreviousData: true },
+  )
+  return { data: data ?? null, loading: isLoading, error, mutate }
 }
 
 export function useAdminOrders(token: string | undefined) {

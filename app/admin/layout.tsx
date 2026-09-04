@@ -16,6 +16,7 @@ import {
   Coins,
   Award,
   KeyRound,
+  BarChart3,
 } from "lucide-react"
 import { AdminShell } from "@/components/AdminShell"
 import { useAuth } from "@/hooks/use-auth"
@@ -42,7 +43,8 @@ export default function AdminDashboardLayout({ children }: { children: React.Rea
       }}
       nav={[
         { to: "/admin", label: "Overview", icon: LayoutDashboard, exact: true, group: "Main" },
-        
+        { to: "/admin/analytics", label: "Analytics", icon: BarChart3, group: "Main" },
+
         { to: "/admin/products", label: "Products", icon: Package, group: "Catalog" },
         { to: "/admin/categories", label: "Categories", icon: FolderTree, group: "Catalog" },
         

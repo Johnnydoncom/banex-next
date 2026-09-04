@@ -308,6 +308,28 @@ export async function pricingPreviewAdminProduct(
   return proxyFetch<{ pricing_summary: PricingSummary }>("/admin/products/pricing-preview", token, "POST", body)
 }
 
+// ─── Analytics: product/seller views ──────────────────────────────────────────
+// GET /admin/analytics/views — defaults to the last 30 days; accepts from/to
+// (YYYY-MM-DD). Verified live 2026-09-04.
+export type AdminAnalyticsViews = {
+  period: { from: string; to: string }
+  totals: { views: number; unique_visitors: number; unique_products: number; unique_sellers: number }
+  most_viewed_products: (import("./generic-api").GenericProduct & { views: number })[]
+  most_viewed_sellers: { id: string; shop_name: string; slug: string; views: number }[]
+  views_by_day: { date: string; views: number }[]
+}
+
+export async function fetchAdminAnalyticsViews(
+  token: string,
+  params?: { from?: string; to?: string },
+) {
+  const qs = new URLSearchParams()
+  if (params?.from) qs.set("from", params.from)
+  if (params?.to) qs.set("to", params.to)
+  const suffix = qs.toString() ? `?${qs.toString()}` : ""
+  return proxyFetch<AdminAnalyticsViews>(`/admin/analytics/views${suffix}`, token)
+}
+
 
 type AdminProductsData = {
   products: AdminProduct[]
