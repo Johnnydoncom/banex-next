@@ -8,7 +8,7 @@ import { toast } from "sonner"
 import { useSession } from "next-auth/react"
 import { fetchAdminCategory, createAdminCategory, updateAdminCategory, deleteAdminCategory, appendSeoFields, type AdminCategory } from "@/lib/admin-api"
 import { useAdminCategories } from "@/hooks/use-swr-data"
-import { rootCategories } from "@/lib/categories"
+import { flattenCategories, findCategory } from "@/lib/categories"
 import { SeoFieldsEditor, emptySeo, seoFromApi, type SeoFields } from "@/components/SeoFieldsEditor"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -31,9 +31,18 @@ export default function AdminCategoryEditPage({ params }: { params: Promise<{ id
     parent_id: "",
   })
 
-  // Root categories the new/edited category can be nested under.
+  // Any category can be a parent (multi-level tree) — EXCEPT this category and its
+  // own descendants (that would create a cycle). Flattened + indented by depth.
   const { categories: allCategories } = useAdminCategories(session?.accessToken as string | undefined)
-  const parentOptions = rootCategories(allCategories as AdminCategory[]).filter((c) => c.id !== id)
+  const excludedIds = (() => {
+    if (isNew) return new Set<string>()
+    const self = findCategory(allCategories as AdminCategory[], id)
+    const ids = new Set<string>()
+    const collect = (n: AdminCategory) => { ids.add(n.id); (n.children as AdminCategory[] | undefined)?.forEach(collect) }
+    if (self) collect(self)
+    return ids
+  })()
+  const parentOptions = flattenCategories(allCategories as AdminCategory[]).filter(({ node }) => !excludedIds.has(node.id))
   
   // Category image (multipart `image`) + SEO overrides.
   const [imageFile, setImageFile] = useState<File | null>(null)
@@ -106,9 +115,8 @@ export default function AdminCategoryEditPage({ params }: { params: Promise<{ id
       fd.append("icon", form.icon)
       fd.append("sort_order", String(parseInt(form.sort_order, 10) || 0))
       fd.append("is_active", form.is_active === "true" ? "1" : "0")
-      // Send parent_id only when nesting under a root — omitting it keeps/creates a
-      // top-level category. (The API rejects an empty parent_id and enforces a
-      // 2-level hierarchy: a category with subcategories can't itself be nested.)
+      // Send parent_id only when nesting — omitting it keeps/creates a top-level
+      // category. (The API rejects an empty parent_id.) Any depth is allowed now.
       if (form.parent_id) fd.append("parent_id", form.parent_id)
       if (imageFile) fd.append("image", imageFile)
       appendSeoFields(fd, seo)
@@ -175,12 +183,14 @@ export default function AdminCategoryEditPage({ params }: { params: Promise<{ id
               <SelectTrigger id="cat-parent" className="rounded-xl px-4 py-2.5 h-auto"><SelectValue /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="none">None (top-level category)</SelectItem>
-                {parentOptions.map((c) => (
-                  <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
+                {parentOptions.map(({ node, depth }) => (
+                  <SelectItem key={node.id} value={node.id}>
+                    {depth > 0 ? `${"— ".repeat(depth)}${node.name}` : node.name}
+                  </SelectItem>
                 ))}
               </SelectContent>
             </Select>
-            <p className="mt-1 text-[11px] text-muted-foreground">Choose a parent to make this a subcategory. Leave as top-level for a department.</p>
+            <p className="mt-1 text-[11px] text-muted-foreground">Choose any category as the parent to nest this one beneath it (sub-subcategories supported). Leave as top-level for a department.</p>
           </div>
           <div>
             <Label htmlFor="cat-icon" className="mb-1.5 block text-xs text-muted-foreground">Icon (lucide name)</Label>
