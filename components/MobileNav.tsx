@@ -1,8 +1,9 @@
 "use client"
 
+import { useState } from "react"
 import Link from "next/link"
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger, SheetClose } from "@/components/ui/sheet"
-import { Menu, ChevronRight, Store, Truck, HelpCircle, Smartphone, Laptop, Sofa, Shirt, Sparkles, Dumbbell, Baby, PawPrint, Apple, Briefcase, Car, Home } from "lucide-react"
+import { Menu, ChevronRight, ChevronDown, Store, Truck, HelpCircle, Smartphone, Laptop, Sofa, Shirt, Sparkles, Dumbbell, Baby, PawPrint, Apple, Briefcase, Car, Home } from "lucide-react"
 import { GenericCategory } from "@/lib/generic-api"
 
 // Helper to map backend icon string to a Lucide component
@@ -50,22 +51,9 @@ export function MobileNav({ categories }: { categories: GenericCategory[] }) {
                   <ChevronRight className="h-4 w-4 text-muted-foreground" />
                 </Link>
               </SheetClose>
-              {categories.map((c) => {
-                const Icon = getCategoryIcon(c.icon)
-                return (
-                  <SheetClose asChild key={c.slug}>
-                    <Link
-                      href={`/shop/${c.slug}`}
-                      className="flex items-center justify-between px-4 py-3 text-sm"
-                    >
-                      <span className="flex items-center gap-3">
-                        <Icon className="h-4 w-4 text-brand" /> {c.name}
-                      </span>
-                      <ChevronRight className="h-4 w-4 text-muted-foreground" />
-                    </Link>
-                  </SheetClose>
-                )
-              })}
+              {categories.map((c) => (
+                <MobileCategoryItem key={c.slug} category={c} />
+              ))}
             </ul>
           </div>
 
@@ -90,5 +78,73 @@ export function MobileNav({ categories }: { categories: GenericCategory[] }) {
         </div>
       </SheetContent>
     </Sheet>
+  )
+}
+
+/**
+ * One category row in the mobile menu. The label links to the department; when
+ * the category has children a chevron expands an indented list of subcategories
+ * (and grandchildren). Links keep the department + node slug so filtering matches
+ * the desktop mega-menu.
+ */
+function MobileCategoryItem({ category }: { category: GenericCategory }) {
+  const [open, setOpen] = useState(false)
+  const Icon = getCategoryIcon(category.icon)
+  const children = category.children ?? []
+  const hasChildren = children.length > 0
+  const rootSlug = category.slug
+  const hrefFor = (slug: string) => (slug === rootSlug ? `/shop/${rootSlug}` : `/shop/${rootSlug}/${slug}`)
+
+  return (
+    <div>
+      <div className="flex items-center justify-between">
+        <SheetClose asChild>
+          <Link href={`/shop/${rootSlug}`} className="flex flex-1 items-center gap-3 px-4 py-3 text-sm">
+            <Icon className="h-4 w-4 text-brand" /> {category.name}
+          </Link>
+        </SheetClose>
+        {hasChildren ? (
+          <button
+            type="button"
+            onClick={() => setOpen((v) => !v)}
+            aria-label={open ? `Collapse ${category.name}` : `Expand ${category.name}`}
+            aria-expanded={open}
+            className="flex h-full items-center px-4 py-3 text-muted-foreground"
+          >
+            <ChevronDown className={`h-4 w-4 transition-transform ${open ? "rotate-180" : ""}`} />
+          </button>
+        ) : (
+          <span className="px-4 py-3"><ChevronRight className="h-4 w-4 text-muted-foreground" /></span>
+        )}
+      </div>
+
+      {hasChildren && open && (
+        <div className="bg-surface/40 px-4 pb-3">
+          {children.map((child) => {
+            const grandkids = child.children ?? []
+            return (
+              <div key={child.id} className="pt-1">
+                <SheetClose asChild>
+                  <Link href={hrefFor(child.slug)} className="block py-1.5 pl-7 text-sm font-medium text-foreground">
+                    {child.name}
+                  </Link>
+                </SheetClose>
+                {grandkids.length > 0 && (
+                  <div>
+                    {grandkids.map((gc) => (
+                      <SheetClose asChild key={gc.id}>
+                        <Link href={hrefFor(gc.slug)} className="block py-1.5 pl-11 text-xs text-muted-foreground">
+                          {gc.name}
+                        </Link>
+                      </SheetClose>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )
+          })}
+        </div>
+      )}
+    </div>
   )
 }

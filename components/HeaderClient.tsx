@@ -21,6 +21,7 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { GenericCategory } from "@/lib/generic-api"
+import { CategoryMegaMenu } from "@/components/CategoryMegaMenu"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import type { ResolvedSiteSettings } from "@/lib/site-settings"
@@ -254,13 +255,7 @@ export function HeaderClient({ categories, settings }: { categories: GenericCate
             🛍 All listings
           </Link>
           {categories.slice(0, 7).map((c) => (
-            <Link
-              key={c.slug}
-              href={`/shop/${c.slug}`}
-              className="whitespace-nowrap rounded-full px-3.5 py-1.5 text-muted-foreground transition-colors hover:bg-surface hover:text-brand"
-            >
-              {c.name}
-            </Link>
+            <CategoryMegaMenu key={c.slug} category={c} />
           ))}
           <span className="ml-auto hidden whitespace-nowrap rounded-full bg-brand-soft/30 px-3 py-1 text-xs font-medium text-brand-deep md:inline-flex">
             🛵 Same-hour rider delivery
