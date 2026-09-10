@@ -1,9 +1,11 @@
 "use client"
 
+import { useEffect, useState } from "react"
 import { useRouter, useSearchParams, usePathname } from "next/navigation"
-import { Search, SlidersHorizontal, MapPin } from "lucide-react"
+import { Search, SlidersHorizontal, MapPin, ChevronRight } from "lucide-react"
 import { useDebouncedCallback } from "use-debounce"
 import { GenericCategory } from "@/lib/generic-api"
+import { shopHrefFor } from "@/lib/categories"
 
 export const SORTS = [
   { value: "featured", label: "Featured" },
@@ -80,19 +82,105 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 
 interface ShopSidebarFiltersProps {
   categories: GenericCategory[]
-  categorySlug: string
-  subcategorySlug: string
+  /** Slug of the category being viewed (deepest URL segment), if any. */
+  activeSlug?: string
+  /** Ancestor slugs root → viewed category; these branches render expanded. */
+  trailSlugs: string[]
   totalListingsCount: number
+}
+
+/**
+ * One node in the multi-level category filter. Branches on the active trail open
+ * automatically; any branch can also be toggled with its chevron. Links keep the
+ * department first and the node second, matching the header mega-menu.
+ */
+function CategoryFilterNode({
+  node,
+  rootSlug,
+  depth,
+  activeSlug,
+  trailSlugs,
+  onNavigate,
+}: {
+  node: GenericCategory
+  rootSlug: string
+  depth: number
+  activeSlug?: string
+  trailSlugs: string[]
+  onNavigate: (href: string) => void
+}) {
+  const children = node.children ?? []
+  const hasChildren = children.length > 0
+  const inTrail = trailSlugs.includes(node.slug)
+  const active = node.slug === activeSlug
+  const [open, setOpen] = useState(inTrail)
+
+  // Follow client-side navigation: open the branch once it joins the active trail.
+  useEffect(() => {
+    if (inTrail) setOpen(true)
+  }, [inTrail])
+
+  const isRoot = depth === 0
+  return (
+    <div>
+      <div
+        className={`flex items-center rounded-md transition-colors ${active
+          ? "bg-brand-soft/30 font-medium text-brand-deep"
+          : inTrail
+            ? "text-foreground hover:bg-surface"
+            : "text-muted-foreground hover:bg-surface hover:text-foreground"
+          }`}
+      >
+        <button
+          type="button"
+          onClick={() => onNavigate(shopHrefFor(rootSlug, node.slug))}
+          aria-current={active ? "page" : undefined}
+          className={`flex min-w-0 flex-1 items-center justify-between gap-2 text-left ${isRoot ? "px-3 py-2 text-sm" : "px-3 py-1.5 text-xs"}`}
+        >
+          <span className="flex min-w-0 items-center gap-2">
+            {isRoot && <span className="text-muted-foreground">•</span>}
+            <span className={`truncate ${inTrail && !active ? "font-medium" : ""}`}>{node.name}</span>
+          </span>
+          <span className="flex-none text-[10px] text-muted-foreground">{node.listings_count || 0}</span>
+        </button>
+        {hasChildren && (
+          <button
+            type="button"
+            onClick={() => setOpen((v) => !v)}
+            aria-label={open ? `Collapse ${node.name}` : `Expand ${node.name}`}
+            aria-expanded={open}
+            className="flex h-7 w-7 flex-none items-center justify-center rounded text-muted-foreground hover:text-foreground"
+          >
+            <ChevronRight className={`h-3.5 w-3.5 transition-transform ${open ? "rotate-90" : ""}`} />
+          </button>
+        )}
+      </div>
+
+      {hasChildren && open && (
+        <div className="ml-4 mt-0.5 flex flex-col gap-0.5 border-l border-border pl-2">
+          {children.map((child) => (
+            <CategoryFilterNode
+              key={child.slug}
+              node={child}
+              rootSlug={rootSlug}
+              depth={depth + 1}
+              activeSlug={activeSlug}
+              trailSlugs={trailSlugs}
+              onNavigate={onNavigate}
+            />
+          ))}
+        </div>
+      )}
+    </div>
+  )
 }
 
 function FilterContent({
   categories,
-  categorySlug,
-  subcategorySlug,
+  activeSlug,
+  trailSlugs,
   totalListingsCount,
-  searchParams,
   router,
-  pathname,
   maxPrice,
   handlePriceChange
 }: any) {
@@ -109,7 +197,7 @@ function FilterContent({
         <div className="mt-3 flex flex-col gap-1">
           <Button variant="ghost" type="button"
             onClick={() => router.push("/shop")}
-            className={`flex items-center justify-between rounded-md px-3 py-2 text-left text-sm transition-colors ${categorySlug === "all"
+            className={`flex items-center justify-between rounded-md px-3 py-2 text-left text-sm transition-colors ${!activeSlug
               ? "bg-brand-soft/30 font-medium text-brand-deep"
               : "text-muted-foreground hover:bg-surface hover:text-foreground"
               }`}
@@ -117,49 +205,17 @@ function FilterContent({
             <span>All categories</span>
             <span className="text-[10px] text-muted-foreground">{totalListingsCount}</span>
           </Button>
-          {categories.map((c: any) => {
-            const count = c.listings_count || 0
-            const active = categorySlug === c.slug
-            const children = (c.children || []) as any[]
-            return (
-              <div key={c.slug}>
-                <Button variant="ghost" type="button"
-                  onClick={() => router.push(`/shop/${c.slug}`)}
-                  className={`flex w-full items-center justify-between gap-2 rounded-md px-3 py-2 text-left text-sm transition-colors ${active
-                    ? "bg-brand-soft/30 font-medium text-brand-deep"
-                    : "text-muted-foreground hover:bg-surface hover:text-foreground"
-                    }`}
-                >
-                  <span className="flex items-center gap-2">
-                    <span className="text-muted-foreground">•</span>
-                    {c.name}
-                  </span>
-                  <span className="text-[10px] text-muted-foreground">{count}</span>
-                </Button>
-                {/* Subcategories, shown when the parent department is selected */}
-                {active && children.length > 0 && (
-                  <div className="ml-4 mt-1 flex flex-col gap-0.5 border-l border-border pl-2">
-                    {children.map((sub: any) => {
-                      const subActive = subcategorySlug === sub.slug
-                      return (
-                        <Button variant="ghost" type="button"
-                          key={sub.slug}
-                          onClick={() => router.push(`/shop/${c.slug}/${sub.slug}`)}
-                          className={`flex items-center justify-between gap-2 rounded-md px-3 py-1.5 text-left text-xs transition-colors ${subActive
-                            ? "bg-brand-soft/30 font-medium text-brand-deep"
-                            : "text-muted-foreground hover:bg-surface hover:text-foreground"
-                            }`}
-                        >
-                          <span>{sub.name}</span>
-                          <span className="text-[10px] text-muted-foreground">{sub.listings_count || 0}</span>
-                        </Button>
-                      )
-                    })}
-                  </div>
-                )}
-              </div>
-            )
-          })}
+          {(categories as GenericCategory[]).map((c) => (
+            <CategoryFilterNode
+              key={c.slug}
+              node={c}
+              rootSlug={c.slug}
+              depth={0}
+              activeSlug={activeSlug}
+              trailSlugs={trailSlugs ?? []}
+              onNavigate={(href) => router.push(href)}
+            />
+          ))}
         </div>
       </div>
 

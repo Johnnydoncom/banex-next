@@ -27,6 +27,22 @@ export function findCategory<T extends CategoryNode>(list: T[], id: string | nul
   return undefined
 }
 
+/** Ancestor chain (root → … → node) for the category with this slug, or [] if not found. */
+export function categoryPathBySlug<T extends CategoryNode>(list: T[], slug: string | null | undefined): T[] {
+  if (!slug) return []
+  for (const c of list) {
+    if (c.slug === slug) return [c]
+    const sub = categoryPathBySlug((c.children as T[] | undefined) ?? [], slug)
+    if (sub.length) return [c, ...sub]
+  }
+  return []
+}
+
+/** Shop URL for a category: the department stays the first segment, the node the second. */
+export function shopHrefFor(rootSlug: string, slug: string): string {
+  return slug === rootSlug ? `/shop/${rootSlug}` : `/shop/${rootSlug}/${slug}`
+}
+
 /** The direct subcategories (children) of the given root category id. */
 export function subcategoriesOf<T extends CategoryNode>(list: T[], rootId: string | null | undefined): T[] {
   const root = findCategory(list, rootId)

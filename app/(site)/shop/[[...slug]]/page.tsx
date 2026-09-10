@@ -4,6 +4,7 @@ import { ApiProductCard } from "@/components/ApiProductCard"
 import { Pagination, buildQuery } from "@/components/Pagination"
 import { ShopHeaderFilters, ShopSidebarFilters } from "./components/ShopFilters"
 import { fetchGenericCategories, fetchGenericCategory, fetchGenericProducts, GenericCategory, GenericProduct } from "@/lib/generic-api"
+import { categoryPathBySlug, shopHrefFor } from "@/lib/categories"
 import type { Metadata } from "next"
 import { buildMetadata, metadataFromApiSeo } from "@/lib/seo/metadata"
 import { JsonLd } from "@/lib/seo/JsonLdComponent"
@@ -11,10 +12,20 @@ import { itemListSchema, breadcrumbSchema } from "@/lib/seo/jsonld"
 
 export const dynamic = 'force-dynamic'
 
+/**
+ * The category actually being viewed is the DEEPEST slug in the URL.
+ * Links are `/shop/{department}/{node}` where `node` can sit at any depth
+ * (e.g. `/shop/fashion/pants-jeans` → Fashion › Men Fashion › Pants & Jeans).
+ */
+function viewedSlugFrom(slugArray: string[] | undefined): string | undefined {
+  const segs = (slugArray ?? []).filter((s) => s && s !== "all")
+  return segs[segs.length - 1]
+}
+
 export async function generateMetadata({ params }: { params: Promise<{ slug?: string[] }> }): Promise<Metadata> {
   const resolvedParams = await params
-  const categorySlug = resolvedParams.slug?.[0]
-  if (!categorySlug || categorySlug === "all") {
+  const viewedSlug = viewedSlugFrom(resolvedParams.slug)
+  if (!viewedSlug) {
     return buildMetadata({
       title: "Marketplace — Shop All Categories",
       description:
@@ -23,14 +34,13 @@ export async function generateMetadata({ params }: { params: Promise<{ slug?: st
     })
   }
   try {
-    const { category, seo } = await fetchGenericCategory(categorySlug)
+    // The by-slug endpoint resolves categories at ANY depth and returns their own seo.
+    const { category, seo } = await fetchGenericCategory(viewedSlug)
     if (category) {
-      // Render the API's seo verbatim; fall back to the generated OG card when the
-      // category has no image, and to computed copy when the API sends no seo.
       return metadataFromApiSeo(seo, {
         title: `${category.name} in Nigeria`,
         description: `Shop ${category.name} from verified vendors on Banex Mall — compare prices, escrow protected, same-hour rider delivery across Nigeria.`,
-        path: `/shop/${category.slug}`,
+        path: `/shop/${(resolvedParams.slug ?? []).join("/")}`,
         images: [`/og/category/${category.slug}`],
       })
     }
@@ -49,29 +59,23 @@ export default async function ShopPage({
   const resolvedSearchParams = await searchParams
 
   const slugArray = resolvedParams.slug
-  const categorySlug = slugArray?.[0] || "all"
-  const subcategorySlug = slugArray?.[1] || "all"
+  const viewedSlug = viewedSlugFrom(slugArray)
 
-  // Ensure these are strings
   const q = typeof resolvedSearchParams.q === "string" ? resolvedSearchParams.q : undefined
   const sort = typeof resolvedSearchParams.sort === "string" ? resolvedSearchParams.sort : undefined
   const maxPriceParam = typeof resolvedSearchParams.max_price === "string" ? Number(resolvedSearchParams.max_price) : undefined
   const pageParam = typeof resolvedSearchParams.page === "string" ? Math.max(1, parseInt(resolvedSearchParams.page, 10) || 1) : 1
   const PER_PAGE = 12
 
-  // Fetch API data
   let categoriesData: any = {}
   let productsData: any = {}
 
   try {
     categoriesData = (await fetchGenericCategories()) || {}
-
-    // Filter by the most specific selection: a subcategory when chosen, else the department.
-    const effectiveCategory =
-      subcategorySlug !== "all" ? subcategorySlug : categorySlug !== "all" ? categorySlug : undefined
+    // Filter by the viewed (most specific) category; the API includes its descendants.
     productsData = await fetchGenericProducts({
       q,
-      category: effectiveCategory,
+      category: viewedSlug,
       sort,
       max_price: maxPriceParam,
       page: pageParam,
@@ -84,18 +88,23 @@ export default async function ShopPage({
   const categories: GenericCategory[] = categoriesData.categories || []
   const totalListingsCount = categoriesData.total_listings_count || 0
 
-  const activeCategory = categorySlug !== "all" ? categories.find((c: GenericCategory) => c.slug === categorySlug) : undefined
+  // Full ancestor trail for the viewed category, e.g. [Fashion, Men Fashion, Pants & Jeans].
+  const trail = categoryPathBySlug(categories, viewedSlug)
+  const activeCategory = trail[trail.length - 1]
+  const rootSlug = trail[0]?.slug
+  const crumbs = trail.map((c) => ({ name: c.name, path: shopHrefFor(rootSlug!, c.slug) }))
+  // Hero art: the viewed category's image, else the nearest ancestor that has one.
+  const heroImage = [...trail].reverse().find((c) => c.image_url)?.image_url
 
-  // The API applies all filters (search/category/max_price/sort) AND paginates server-side,
-  // so we render the returned page as-is — no local re-filtering.
   const filteredProducts: GenericProduct[] = productsData.products || []
   const pagination = productsData.pagination as { current_page: number; last_page: number; total: number; per_page: number } | undefined
+  const basePath = slugArray?.length ? `/shop/${slugArray.join("/")}` : "/shop"
 
   const shopJsonLd = [
     breadcrumbSchema([
       { name: "Home", path: "/" },
       { name: "Marketplace", path: "/shop" },
-      ...(activeCategory ? [{ name: activeCategory.name, path: `/shop/${activeCategory.slug}` }] : []),
+      ...crumbs,
     ]),
     ...(filteredProducts.length
       ? [
@@ -115,28 +124,34 @@ export default async function ShopPage({
     <div>
       <JsonLd schema={shopJsonLd} />
       <section className="relative overflow-hidden bg-white pt-10 pb-16 md:pt-16 md:pb-24 border-b border-border">
-        {/* Very subtle, elegant background elements */}
         <div className="absolute inset-0 z-0 bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-brand-soft/20 via-transparent to-transparent"></div>
         <div className="absolute -top-[20%] -left-[10%] z-0 h-[500px] w-[500px] rounded-full bg-brand/5 blur-[100px] pointer-events-none"></div>
 
-        {activeCategory?.image_url && (
+        {heroImage && (
           <div className="absolute right-0 top-0 z-0 hidden h-full w-1/3 md:block">
             <div className="absolute inset-0 bg-gradient-to-r from-white via-white/80 to-transparent z-10"></div>
-            <img src={activeCategory.image_url} alt="" className="h-full w-full object-cover object-center opacity-40 mix-blend-multiply" />
+            <img src={heroImage} alt="" className="h-full w-full object-cover object-center opacity-40 mix-blend-multiply" />
           </div>
         )}
 
         <div className="relative z-10 mx-auto container">
-          <nav className="mb-6 flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+          <nav aria-label="Breadcrumb" className="mb-6 flex flex-wrap items-center gap-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
             <Link href="/" className="hover:text-brand transition-colors">Home</Link>
             <span className="text-border">•</span>
             <Link href="/shop" className="hover:text-brand transition-colors">Marketplace</Link>
-            {activeCategory && (
-              <>
-                <span className="text-border">•</span>
-                <span className="text-brand font-bold">{activeCategory.name}</span>
-              </>
-            )}
+            {crumbs.map((crumb, i) => {
+              const isLast = i === crumbs.length - 1
+              return (
+                <span key={crumb.path} className="flex items-center gap-2">
+                  <span className="text-border">•</span>
+                  {isLast ? (
+                    <span aria-current="page" className="text-brand font-bold">{crumb.name}</span>
+                  ) : (
+                    <Link href={crumb.path} className="hover:text-brand transition-colors">{crumb.name}</Link>
+                  )}
+                </span>
+              )
+            })}
           </nav>
 
           <div className="max-w-4xl">
@@ -144,7 +159,8 @@ export default async function ShopPage({
               {activeCategory ? activeCategory.name : "Marketplace"}
             </h1>
             <p className="mt-5 text-lg font-medium text-muted-foreground md:text-xl max-w-2xl">
-              Discover <span className="font-bold text-foreground">{productsData.pagination?.total || filteredProducts.length}</span> verified listings across Nigeria. The best deals, curated for you.
+              Discover <span className="font-bold text-foreground">{productsData.pagination?.total || filteredProducts.length}</span> verified listings
+              {trail.length > 1 ? <> in <span className="font-semibold text-foreground">{trail[trail.length - 2].name}</span></> : null} across Nigeria. The best deals, curated for you.
             </p>
 
             <div className="mt-10">
@@ -161,8 +177,8 @@ export default async function ShopPage({
           <Suspense fallback={<div className="h-96 animate-pulse rounded-xl bg-surface" />}>
             <ShopSidebarFilters
               categories={categories}
-              categorySlug={categorySlug}
-              subcategorySlug={subcategorySlug}
+              activeSlug={activeCategory?.slug}
+              trailSlugs={trail.map((c) => c.slug)}
               totalListingsCount={totalListingsCount}
             />
           </Suspense>
@@ -200,12 +216,7 @@ export default async function ShopPage({
                     lastPage={pagination.last_page}
                     total={pagination.total}
                     perPage={pagination.per_page}
-                    hrefForPage={(n) => {
-                      const path = categorySlug !== "all"
-                        ? `/shop/${categorySlug}${subcategorySlug !== "all" ? `/${subcategorySlug}` : ""}`
-                        : "/shop"
-                      return `${path}${buildQuery({ q, sort, max_price: maxPriceParam, page: n > 1 ? n : undefined })}`
-                    }}
+                    hrefForPage={(n) => `${basePath}${buildQuery({ q, sort, max_price: maxPriceParam, page: n > 1 ? n : undefined })}`}
                   />
                 )}
               </>

@@ -4,6 +4,7 @@ import {
   fetchGenericCategories,
   fetchGenericProducts,
 } from "@/lib/generic-api"
+import { flattenCategories, shopHrefFor } from "@/lib/categories"
 
 /**
  * Dynamic sitemap. Combines static marketplace pages with live categories,
@@ -56,13 +57,16 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     collectProducts(),
   ])
 
-  const categoryEntries: MetadataRoute.Sitemap =
-    categoriesRes?.categories?.map((c) => ({
-      url: absoluteUrl(`/shop/${c.slug}`),
+  // Every category at every depth, using the same URL scheme as the site menus:
+  // departments at /shop/{root}, descendants at /shop/{root}/{node}.
+  const categoryEntries: MetadataRoute.Sitemap = (categoriesRes?.categories ?? []).flatMap((root) =>
+    flattenCategories([root]).map(({ node, depth }) => ({
+      url: absoluteUrl(shopHrefFor(root.slug, node.slug)),
       lastModified: now,
-      changeFrequency: "daily",
-      priority: 0.8,
-    })) ?? []
+      changeFrequency: "daily" as const,
+      priority: depth === 0 ? 0.8 : depth === 1 ? 0.7 : 0.6,
+    })),
+  )
 
   const productEntries: MetadataRoute.Sitemap = products.map((p) => ({
     url: absoluteUrl(`/product/${p.slug}`),
