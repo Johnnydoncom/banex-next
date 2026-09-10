@@ -23,7 +23,8 @@ import { SeoFieldsEditor, emptySeo, type SeoFields } from "@/components/SeoField
 import { RichTextEditor } from "@/components/RichTextEditor"
 import { LocationSelect } from "@/components/LocationSelect"
 import { VariantsEditor, emptyVariantRow, appendVariants, validateVariants, type VariantRow, type AttrKey } from "@/components/VariantsEditor"
-import { flattenCategories, subcategoriesOf, findCategory } from "@/lib/categories"
+import { flattenCategories, findCategory } from "@/lib/categories"
+import { CategoryTreePicker } from "@/components/CategoryTreePicker"
 import { WizardStepper, WizardFooter, DraftRestoredBanner, FieldError, type WizardStep } from "@/components/Wizard"
 import { useDraftPersistence } from "@/hooks/use-draft-persistence"
 import { Button } from "@/components/ui/button"
@@ -154,10 +155,9 @@ export default function AdminNewProductPage() {
   const selectedSeller = sellers.find((s) => s.id === form.seller_id)
   const isBanexMall = form.seller_id === BANEX_MALL_SELLER_ID
   const sellerRoot = findCategory(categories, selectedSeller?.category_id)
-  const sellerSubcats = subcategoriesOf(categories, selectedSeller?.category_id)
-  const categoryOptions = isBanexMall
-    ? flattenCategories(categories)
-    : (sellerSubcats.length ? sellerSubcats : sellerRoot ? [sellerRoot] : []).map((node) => ({ node, depth: 0 }))
+  // Banex Mall picks from the FULL category tree; every other seller is scoped to
+  // their own department's subtree (all descendants, any depth).
+  const categoryTree = isBanexMall ? categories : (sellerRoot ? [sellerRoot] : [])
 
   // Changing the seller changes the allowed categories → reset the picked category.
   const onSellerChange = (sellerId: string) =>
@@ -374,24 +374,19 @@ export default function AdminNewProductPage() {
                   </Select>
                   <FieldError message={errors.seller_id} />
                 </div>
-                <div>
-                  <Label htmlFor="product-category" className="mb-1.5 block text-xs text-muted-foreground">
-                    Category{!isBanexMall && sellerRoot ? ` (under ${sellerRoot.name})` : ""} <span className="text-rose-500">*</span>
-                  </Label>
-                  <Select value={form.category_id} onValueChange={(v) => { update("category_id", v); setErrors((x) => ({ ...x, category_id: "" })) }} disabled={!form.seller_id}>
-                    <SelectTrigger id="product-category" className="h-auto rounded-xl px-4 py-2.5">
-                      <SelectValue placeholder={form.seller_id ? "Select category" : "Select a seller first"} />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {categoryOptions.map(({ node, depth }) => (
-                        <SelectItem key={node.id} value={node.id}>
-                          {depth > 0 ? `  ${"— ".repeat(depth)}${node.name}` : node.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <FieldError message={errors.category_id} />
-                </div>
+              </div>
+              <div>
+                <Label className="mb-1.5 block text-xs text-muted-foreground">
+                  Category{!isBanexMall && sellerRoot ? ` (under ${sellerRoot.name})` : ""} <span className="text-rose-500">*</span>
+                </Label>
+                <CategoryTreePicker
+                  nodes={categoryTree}
+                  value={form.category_id}
+                  onChange={(v) => { update("category_id", v); setErrors((x) => ({ ...x, category_id: "" })) }}
+                  disabled={!form.seller_id}
+                  placeholder={form.seller_id ? "Select a category" : "Choose a seller first"}
+                />
+                <FieldError message={errors.category_id} />
               </div>
               <div>
                 <Label className="mb-1.5 block text-xs text-muted-foreground">Description</Label>

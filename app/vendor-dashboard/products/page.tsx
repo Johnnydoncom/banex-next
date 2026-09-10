@@ -7,7 +7,7 @@ import { useAuth } from "@/hooks/use-auth"
 import { toast } from "sonner"
 import { sellerUpdateStock, sellerDeleteProduct, type SellerProduct } from "@/lib/seller-api"
 import { useSellerProducts, useCategories, useSellerApplication } from "@/hooks/use-swr-data"
-import { subcategoriesOf, findCategory } from "@/lib/categories"
+import { findCategory } from "@/lib/categories"
 import { formatNaira, saleInfo } from "@/lib/products"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
@@ -34,10 +34,11 @@ export default function VendorProductsPage() {
   const { categories } = useCategories()
   const { profile } = useSellerApplication(token)
 
-  // Sellers are limited to the subcategories of their assigned (root) category.
+  // Sellers are scoped to their own department: show that root's whole subtree
+  // (children + grandchildren) in the category tree. Fall back to the full tree
+  // if the seller has no assigned department yet.
   const rootCategory = findCategory(categories, profile?.category_id)
-  const subCats = subcategoriesOf(categories, profile?.category_id)
-  const allowedCategories = subCats.length ? subCats : rootCategory ? [rootCategory] : categories
+  const categoryTree = rootCategory ? [rootCategory] : categories
 
   const [products, setProducts] = useState<SellerProduct[] | null>(null)
   const loading = productsLoading && products === null
@@ -278,9 +279,8 @@ export default function VendorProductsPage() {
         <ProductWizardModal
           editProduct={editProduct}
           token={token}
-          allowedCategories={allowedCategories.map((c) => ({ id: c.id, name: c.name }))}
+          categoryTree={categoryTree}
           rootCategory={rootCategory ? { name: rootCategory.name } : null}
-          subCount={subCats.length}
           onClose={() => setShowModal(false)}
           onSaved={() => { mutateProducts(); setShowModal(false) }}
         />

@@ -11,10 +11,11 @@ import { formatNaira } from "@/lib/products"
 import { VariantsEditor, variantsFromProduct, inferAttrs, appendVariants, validateVariants, type VariantRow, type AttrKey } from "@/components/VariantsEditor"
 import { WizardStepper, WizardFooter, DraftRestoredBanner, FieldError, type WizardStep } from "@/components/Wizard"
 import { useDraftPersistence } from "@/hooks/use-draft-persistence"
+import { CategoryTreePicker } from "@/components/CategoryTreePicker"
+import { findCategory, type CategoryNode } from "@/lib/categories"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { Button } from "@/components/ui/button"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Switch } from "@/components/ui/switch"
 
 const DRAFT_KEY = "banex:draft:vendor-product-new"
@@ -76,17 +77,15 @@ type PreviewImg = { url: string; file?: File; id?: string }
 export function ProductWizardModal({
   editProduct,
   token,
-  allowedCategories,
+  categoryTree,
   rootCategory,
-  subCount,
   onClose,
   onSaved,
 }: {
   editProduct: SellerProduct | null
   token: string
-  allowedCategories: { id: string; name: string }[]
+  categoryTree: CategoryNode[]
   rootCategory: { name: string } | null
-  subCount: number
   onClose: () => void
   onSaved: () => void
 }) {
@@ -305,23 +304,18 @@ export function ProductWizardModal({
                 <Input value={form.name} onChange={(e) => { setForm((f) => ({ ...f, name: e.target.value })); setErrors((x) => ({ ...x, name: "" })) }} placeholder="e.g. Samsung Galaxy S24" />
                 <FieldError message={errors.name} />
               </F>
-              <div className="grid grid-cols-2 gap-4">
-                <F label="Brand">
-                  <Input value={form.brand} onChange={(e) => setForm((f) => ({ ...f, brand: e.target.value }))} placeholder="e.g. Samsung" />
-                </F>
-                <F label={rootCategory ? `Category * (under ${rootCategory.name})` : "Category *"}>
-                  <Select value={form.category_id} onValueChange={(val) => { setForm((f) => ({ ...f, category_id: val })); setErrors((x) => ({ ...x, category_id: "" })) }}>
-                    <SelectTrigger><SelectValue placeholder="Select..." /></SelectTrigger>
-                    <SelectContent>
-                      {allowedCategories.map((c) => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
-                    </SelectContent>
-                  </Select>
-                  {rootCategory && subCount === 0 && (
-                    <p className="mt-1 text-[11px] text-muted-foreground">No subcategories yet — using {rootCategory.name}.</p>
-                  )}
-                  <FieldError message={errors.category_id} />
-                </F>
-              </div>
+              <F label="Brand">
+                <Input value={form.brand} onChange={(e) => setForm((f) => ({ ...f, brand: e.target.value }))} placeholder="e.g. Samsung" />
+              </F>
+              <F label={rootCategory ? `Category * (under ${rootCategory.name})` : "Category *"}>
+                <CategoryTreePicker
+                  nodes={categoryTree}
+                  value={form.category_id}
+                  onChange={(val) => { setForm((f) => ({ ...f, category_id: val })); setErrors((x) => ({ ...x, category_id: "" })) }}
+                  placeholder="Select a category"
+                />
+                <FieldError message={errors.category_id} />
+              </F>
               <F label="Description *">
                 <Textarea value={form.description} onChange={(e) => { setForm((f) => ({ ...f, description: e.target.value })); setErrors((x) => ({ ...x, description: "" })) }} rows={4} placeholder="Describe your product..." />
                 <FieldError message={errors.description} />
@@ -477,7 +471,7 @@ export function ProductWizardModal({
               <div className="grid gap-3 rounded-xl bg-surface/60 p-4 text-sm sm:grid-cols-2">
                 <div><span className="text-muted-foreground">Name:</span> <strong>{form.name || "—"}</strong></div>
                 <div><span className="text-muted-foreground">Brand:</span> <strong>{form.brand || "—"}</strong></div>
-                <div><span className="text-muted-foreground">Category:</span> <strong>{allowedCategories.find((c) => c.id === form.category_id)?.name || "—"}</strong></div>
+                <div><span className="text-muted-foreground">Category:</span> <strong>{findCategory(categoryTree, form.category_id)?.name || "—"}</strong></div>
                 {hasVariants ? (
                   <div><span className="text-muted-foreground">Variants:</span> <strong>{variantRows.length} option{variantRows.length !== 1 ? "s" : ""}</strong></div>
                 ) : (

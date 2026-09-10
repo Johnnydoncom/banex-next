@@ -29,7 +29,8 @@ import { SeoFieldsEditor, emptySeo, seoFromApi, type SeoFields } from "@/compone
 import { RichTextEditor } from "@/components/RichTextEditor"
 import { VariantsEditor, variantsFromProduct, inferAttrs, appendVariants, validateVariants, type VariantRow, type AttrKey } from "@/components/VariantsEditor"
 import { WizardStepper, WizardFooter, FieldError, type WizardStep } from "@/components/Wizard"
-import { flattenCategories, subcategoriesOf, findCategory } from "@/lib/categories"
+import { findCategory } from "@/lib/categories"
+import { CategoryTreePicker } from "@/components/CategoryTreePicker"
 import { LocationSelect } from "@/components/LocationSelect"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -155,15 +156,13 @@ export default function AdminEditProductPage({ params }: { params: Promise<{ id:
   const selectedSeller = sellers.find((s) => s.id === form.seller_id)
   const isBanexMall = form.seller_id === BANEX_MALL_SELLER_ID
   const sellerRoot = findCategory(categories, selectedSeller?.category_id)
-  const sellerSubcats = subcategoriesOf(categories, selectedSeller?.category_id)
-  const baseOptions = isBanexMall
-    ? flattenCategories(categories)
-    : (sellerSubcats.length ? sellerSubcats : sellerRoot ? [sellerRoot] : []).map((node) => ({ node, depth: 0 }))
   const currentCat = findCategory(categories, form.category_id)
-  const categoryOptions =
-    currentCat && !baseOptions.some((o) => o.node.id === currentCat.id)
-      ? [{ node: currentCat, depth: 0 }, ...baseOptions]
-      : baseOptions
+  // Banex Mall picks from the FULL tree; others from their own department subtree.
+  // If the product's current category falls outside that scope (e.g. reassigned
+  // seller), fall back to the full tree so the existing choice stays visible.
+  const scopedTree = isBanexMall ? categories : (sellerRoot ? [sellerRoot] : [])
+  const categoryTree =
+    form.category_id && !findCategory(scopedTree, form.category_id) ? categories : scopedTree
   const onSellerChange = (sellerId: string) => {
     setForm((f) => ({ ...f, seller_id: sellerId, category_id: "" }))
     setErrors((x) => ({ ...x, seller_id: "", category_id: "" }))
@@ -498,20 +497,19 @@ export default function AdminEditProductPage({ params }: { params: Promise<{ id:
                   </Select>
                   <FieldError message={errors.seller_id} />
                 </div>
-                <div>
-                  <Label className="mb-1.5 block text-xs text-muted-foreground">
-                    Category{!isBanexMall && sellerRoot ? ` (under ${sellerRoot.name})` : ""} <span className="text-rose-500">*</span>
-                  </Label>
-                  <Select value={form.category_id} onValueChange={(v) => { update("category_id", v); setErrors((x) => ({ ...x, category_id: "" })) }} disabled={!form.seller_id}>
-                    <SelectTrigger className="h-auto rounded-xl px-4 py-2.5"><SelectValue placeholder="Select category" /></SelectTrigger>
-                    <SelectContent>
-                      {categoryOptions.map(({ node, depth }) => (
-                        <SelectItem key={node.id} value={node.id}>{depth > 0 ? `  ${"— ".repeat(depth)}${node.name}` : node.name}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <FieldError message={errors.category_id} />
-                </div>
+              </div>
+              <div>
+                <Label className="mb-1.5 block text-xs text-muted-foreground">
+                  Category{!isBanexMall && sellerRoot ? ` (under ${sellerRoot.name})` : ""} <span className="text-rose-500">*</span>
+                </Label>
+                <CategoryTreePicker
+                  nodes={categoryTree}
+                  value={form.category_id}
+                  onChange={(v) => { update("category_id", v); setErrors((x) => ({ ...x, category_id: "" })) }}
+                  disabled={!form.seller_id}
+                  placeholder={form.seller_id ? "Select a category" : "Choose a seller first"}
+                />
+                <FieldError message={errors.category_id} />
               </div>
               <div>
                 <Label className="mb-1.5 block text-xs text-muted-foreground">Description</Label>
