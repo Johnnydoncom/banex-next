@@ -74,6 +74,7 @@ import {
   type AdminUser,
   type AdminUsersData,
   type AdminSeller,
+  type AdminSellersData,
   type AdminProduct,
   type AdminCategory,
   type AdminWithdrawal,
@@ -417,14 +418,17 @@ export function useAdminUsers(token: string | undefined, opts?: { has_seller?: 0
   }
 }
 
-export function useAdminSellers(token: string | undefined) {
+export function useAdminSellers(token: string | undefined, page = 1) {
+  const cacheKey = `page=${page}`
   const { data, error, isLoading, mutate } = useSWR(
-    token ? SWR_KEYS.adminSellers(token) : null,
-    ([, t]) => fetchAdminSellers(t),
+    token ? [...SWR_KEYS.adminSellers(token), cacheKey] : null,
+    ([, t]) => fetchAdminSellers(t, page),
     { revalidateOnFocus: false }
   )
+  const envelope = (data as any)?.data as AdminSellersData | undefined
   return {
-    sellers: ((data as any)?.data?.sellers ?? []) as AdminSeller[],
+    sellers: envelope?.sellers ?? [] as AdminSeller[],
+    pagination: envelope?.pagination ?? null,
     loading: isLoading,
     error,
     mutate,

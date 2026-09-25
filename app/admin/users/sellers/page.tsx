@@ -2,7 +2,7 @@
 
 import { useState } from "react"
 import Link from "next/link"
-import { Check, Ban, Store, Edit, Plus } from "lucide-react"
+import { Check, Ban, Store, Edit, Plus, ChevronLeft, ChevronRight } from "lucide-react"
 import { DataTable, type Column } from "@/components/DataTable"
 import { StatusBadge } from "@/components/StatusBadge"
 import { ConfirmDialog } from "@/components/ConfirmDialog"
@@ -18,8 +18,9 @@ export default function AdminSellersPage() {
   const { data: session } = useSession()
   const token = session?.accessToken as string | undefined
   const [tab, setTab] = useState<Tab>("all")
+  const [page, setPage] = useState(1)
 
-  const { sellers, loading, mutate } = useAdminSellers(token)
+  const { sellers, pagination, loading, mutate } = useAdminSellers(token, page)
 
   const [confirmAction, setConfirmAction] = useState<{ seller: AdminSeller; action: "approval" | "suspension" } | null>(null)
   const [actionLoading, setActionLoading] = useState(false)
@@ -54,12 +55,22 @@ export default function AdminSellersPage() {
     }
   }
 
+  // Tab counts are scoped to the current page since we can't know totals across pages.
+  // The "All" tab shows the server total when available.
   const tabs: { key: Tab; label: string; count: number }[] = [
-    { key: "all", label: "All Sellers", count: sellers.length },
+    { key: "all", label: "All Sellers", count: pagination?.total ?? sellers.length },
     { key: "approved", label: "Approved", count: sellers.filter((s) => s.status === "approved").length },
     { key: "pending", label: "Pending", count: sellers.filter((s) => s.status === "pending").length },
     { key: "suspended", label: "Suspended", count: sellers.filter((s) => s.status === "suspended").length },
   ]
+
+  const lastPage = pagination?.last_page ?? 1
+  const perPage = pagination?.per_page ?? 10
+
+  const handleTabChange = (t: Tab) => {
+    setTab(t)
+    setPage(1) // reset to first page when switching tabs
+  }
 
   const columns: Column<AdminSeller>[] = [
     {
@@ -153,12 +164,11 @@ export default function AdminSellersPage() {
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex gap-1 rounded-xl bg-surface/60 p-1 w-full max-w-lg">
           {tabs.map((t) => (
-
             <Button
               type="button"
               variant="ghost"
               key={t.key}
-              onClick={() => setTab(t.key)}
+              onClick={() => handleTabChange(t.key)}
               className={`h-auto flex-1 rounded-lg px-3 py-2 text-xs font-semibold ${tab === t.key
                 ? "bg-card text-foreground shadow-sm"
                 : "text-muted-foreground hover:text-foreground"
@@ -187,18 +197,52 @@ export default function AdminSellersPage() {
           <div className="h-6 w-6 animate-spin rounded-full border-2 border-brand border-r-transparent"></div>
         </div>
       ) : (
-        <DataTable
-          columns={columns}
-          data={filtered}
-          rowKey={(s) => s.id}
-          searchPlaceholder="Search shop or owner name…"
-          searchFilter={(s, q) =>
-            s.shop_name.toLowerCase().includes(q) ||
-            !!(s.user?.full_name && s.user.full_name.toLowerCase().includes(q)) ||
-            !!(s.user?.email && s.user.email.toLowerCase().includes(q))
-          }
-          pageSize={10}
-        />
+        <>
+          <DataTable
+            columns={columns}
+            data={filtered}
+            rowKey={(s) => s.id}
+            searchPlaceholder="Search shop or owner name…"
+            searchFilter={(s, q) =>
+              s.shop_name.toLowerCase().includes(q) ||
+              !!(s.user?.full_name && s.user.full_name.toLowerCase().includes(q)) ||
+              !!(s.user?.email && s.user.email.toLowerCase().includes(q))
+            }
+            pageSize={perPage}
+          />
+
+          {/* Server-side pagination */}
+          {lastPage > 1 && (
+            <div className="flex items-center justify-between pt-1">
+              <p className="text-xs text-muted-foreground">
+                Page {page} of {lastPage} &mdash; {pagination?.total} total sellers
+              </p>
+              <div className="flex items-center gap-1">
+                <Button
+                  variant="ghost"
+                  type="button"
+                  disabled={page <= 1}
+                  onClick={() => setPage((p) => p - 1)}
+                  className="rounded-lg border border-border p-1.5 text-muted-foreground transition-colors hover:bg-surface disabled:opacity-40"
+                >
+                  <ChevronLeft className="h-4 w-4" />
+                </Button>
+                <span className="px-3 text-xs font-medium">
+                  {page} / {lastPage}
+                </span>
+                <Button
+                  variant="ghost"
+                  type="button"
+                  disabled={page >= lastPage}
+                  onClick={() => setPage((p) => p + 1)}
+                  className="rounded-lg border border-border p-1.5 text-muted-foreground transition-colors hover:bg-surface disabled:opacity-40"
+                >
+                  <ChevronRight className="h-4 w-4" />
+                </Button>
+              </div>
+            </div>
+          )}
+        </>
       )}
 
       {/* Confirm dialog */}

@@ -4,7 +4,7 @@ import { useCallback, useEffect, useState } from "react"
 import Link from "next/link"
 import { DataTable, type Column } from "@/components/DataTable"
 import { ConfirmDialog } from "@/components/ConfirmDialog"
-import { Shield, ShieldAlert, Shield as ShieldIcon, Loader2, Plus, Edit2, Ban, ArrowLeft, KeyRound } from "lucide-react"
+import { Shield, ShieldAlert, Shield as ShieldIcon, Loader2, Plus, Edit2, Ban, ArrowLeft, KeyRound, ChevronLeft, ChevronRight } from "lucide-react"
 import {
   fetchAdmins, fetchAdminRoles, createAdmin, updateAdmin, toggleAdminSuspension,
   type AdminStaff, type AdminRole,
@@ -26,6 +26,8 @@ export default function AdminStaffPage() {
   const [admins, setAdmins] = useState<AdminStaff[]>([])
   const [roles, setRoles] = useState<AdminRole[]>([])
   const [loading, setLoading] = useState(true)
+  const [page, setPage] = useState(1)
+  const [pagination, setPagination] = useState<{ current_page: number; per_page: number; total: number; last_page: number } | null>(null)
 
   const [modalOpen, setModalOpen] = useState(false)
   const [editing, setEditing] = useState<AdminStaff | null>(null)
@@ -35,12 +37,13 @@ export default function AdminStaffPage() {
   const [suspendTarget, setSuspendTarget] = useState<AdminStaff | null>(null)
   const [suspending, setSuspending] = useState(false)
 
-  const load = useCallback(async () => {
+  const load = useCallback(async (pageNum = 1) => {
     if (!token) return
     setLoading(true)
     try {
-      const [adminsRes, rolesRes] = await Promise.all([fetchAdmins(token), fetchAdminRoles(token)])
+      const [adminsRes, rolesRes] = await Promise.all([fetchAdmins(token, pageNum), fetchAdminRoles(token)])
       setAdmins(adminsRes.data?.admins ?? [])
+      setPagination(adminsRes.data?.pagination ?? null)
       setRoles(rolesRes.data?.roles ?? [])
     } catch (e: any) {
       toast.error(e.message || "Failed to load administrators")
@@ -49,7 +52,7 @@ export default function AdminStaffPage() {
     }
   }, [token])
 
-  useEffect(() => { load() }, [load])
+  useEffect(() => { load(page) }, [load, page])
 
   const upd = (k: keyof FormState, v: string) => setForm((f) => ({ ...f, [k]: v }))
 
@@ -87,7 +90,7 @@ export default function AdminStaffPage() {
         toast.success("Administrator created.")
       }
       setModalOpen(false)
-      load()
+      load(page)
     } catch (e: any) {
       toast.error(e.message || "Failed to save administrator")
     } finally {
@@ -102,13 +105,16 @@ export default function AdminStaffPage() {
       await toggleAdminSuspension(suspendTarget.id, token)
       toast.success(suspendTarget.is_suspended ? "Administrator reinstated." : "Administrator suspended.")
       setSuspendTarget(null)
-      load()
+      load(page)
     } catch (e: any) {
       toast.error(e.message || "Failed to update suspension")
     } finally {
       setSuspending(false)
     }
   }
+
+  const lastPage = pagination?.last_page ?? 1
+  const perPage = pagination?.per_page ?? 15
 
   const columns: Column<AdminStaff>[] = [
     {
@@ -155,7 +161,7 @@ export default function AdminStaffPage() {
       key: "created_at",
       label: "Joined",
       sortable: true,
-      render: (a) => <span className="text-xs text-muted-foreground">{a.created_at ? new Date(a.created_at.item).toLocaleDateString() : "—"}</span>,
+      render: (a) => <span className="text-xs text-muted-foreground">{a.created_at?.item ? new Date(a.created_at.item).toLocaleDateString() : "—"}</span>,
     },
     {
       key: "actions",
@@ -202,14 +208,48 @@ export default function AdminStaffPage() {
           <p className="text-sm font-medium text-muted-foreground">Loading administrators…</p>
         </div>
       ) : (
-        <DataTable
-          columns={columns}
-          data={admins}
-          rowKey={(a) => a.id}
-          searchPlaceholder="Search staff by name or email…"
-          searchFilter={(a, q) => (a.full_name || "").toLowerCase().includes(q) || (a.email || "").toLowerCase().includes(q)}
-          pageSize={15}
-        />
+        <>
+          <DataTable
+            columns={columns}
+            data={admins}
+            rowKey={(a) => a.id}
+            searchPlaceholder="Search staff by name or email…"
+            searchFilter={(a, q) => (a.full_name || "").toLowerCase().includes(q) || (a.email || "").toLowerCase().includes(q)}
+            pageSize={perPage}
+          />
+
+          {/* Server-side pagination */}
+          {lastPage > 1 && (
+            <div className="flex items-center justify-between pt-1">
+              <p className="text-xs text-muted-foreground">
+                Page {page} of {lastPage} &mdash; {pagination?.total} total administrators
+              </p>
+              <div className="flex items-center gap-1">
+                <Button
+                  variant="ghost"
+                  type="button"
+                  disabled={page <= 1}
+                  onClick={() => setPage((p) => p - 1)}
+                  className="rounded-lg border border-border p-1.5 text-muted-foreground transition-colors hover:bg-surface disabled:opacity-40"
+                >
+                  <ChevronLeft className="h-4 w-4" />
+                </Button>
+                <span className="px-3 text-xs font-medium">
+                  {page} / {lastPage}
+                </span>
+                <Button
+                  variant="ghost"
+                  type="button"
+                  disabled={page >= lastPage}
+                  onClick={() => setPage((p) => p + 1)}
+                  className="rounded-lg border border-border p-1.5 text-muted-foreground transition-colors hover:bg-surface disabled:opacity-40"
+                >
+                  <ChevronRight className="h-4 w-4" />
+                </Button>
+              </div>
+            </div>
+          )}
+        </>
       )}
 
       {/* Create / Edit modal */}

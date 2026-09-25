@@ -198,13 +198,14 @@ export type AdminSeller = {
   user: { id: string; full_name: string; email: string } | null
 }
 
-type AdminSellersData = {
+export type AdminSellersData = {
   sellers: AdminSeller[]
   pagination: { current_page: number; per_page: number; total: number; last_page: number }
 }
 
-export async function fetchAdminSellers(token: string) {
-  return proxyFetch<AdminSellersData>("/admin/sellers", token)
+export async function fetchAdminSellers(token: string, page = 1) {
+  const qs = page > 1 ? `?page=${page}` : ""
+  return proxyFetch<AdminSellersData>(`/admin/sellers${qs}`, token)
 }
 
 export async function fetchAdminSeller(id: string, token: string) {
@@ -536,7 +537,7 @@ export type AdminStaff = {
   created_at: { item: string }
 }
 
-type AdminStaffData = {
+export type AdminStaffData = {
   admins: AdminStaff[]
   pagination: { current_page: number; per_page: number; total: number; last_page: number }
 }
@@ -568,8 +569,9 @@ export async function deleteAdminRole(name: string, token: string) {
   return proxyFetch<null>(`/admin/roles/${name}`, token, "DELETE")
 }
 
-export async function fetchAdmins(token: string) {
-  return proxyFetch<AdminStaffData>("/admin/admins?per_page=100", token)
+export async function fetchAdmins(token: string, page = 1) {
+  const qs = page > 1 ? `?page=${page}` : ""
+  return proxyFetch<AdminStaffData>(`/admin/admins${qs}`, token)
 }
 
 export async function fetchAdmin(id: string, token: string) {
