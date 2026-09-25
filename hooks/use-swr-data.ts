@@ -72,6 +72,7 @@ import {
   type DashboardData,
   type AdminOrder,
   type AdminUser,
+  type AdminUsersData,
   type AdminSeller,
   type AdminProduct,
   type AdminCategory,
@@ -395,15 +396,21 @@ export function useAdminOrders(token: string | undefined) {
   }
 }
 
-export function useAdminUsers(token: string | undefined, opts?: { has_seller?: 0 | 1; search?: string }) {
-  const cacheKey = opts?.has_seller !== undefined ? `has_seller=${opts.has_seller}` : "all"
+export function useAdminUsers(token: string | undefined, opts?: { has_seller?: 0 | 1; search?: string; page?: number }) {
+  const page = opts?.page ?? 1
+  const cacheKey = [
+    opts?.has_seller !== undefined ? `has_seller=${opts.has_seller}` : "all",
+    `page=${page}`,
+  ].join("&")
   const { data, error, isLoading, mutate } = useSWR(
     token ? SWR_KEYS.adminUsers(token, cacheKey) : null,
     ([, , t]) => fetchAdminUsers(t, opts),
     { revalidateOnFocus: false }
   )
+  const envelope = (data as any)?.data as AdminUsersData | undefined
   return {
-    users: ((data as any)?.data?.users ?? []) as AdminUser[],
+    users: envelope?.users ?? [] as AdminUser[],
+    pagination: envelope?.pagination ?? null,
     loading: isLoading,
     error,
     mutate,

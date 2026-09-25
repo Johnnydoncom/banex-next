@@ -475,7 +475,7 @@ export type AdminUser = {
   updated_at?: { item: string }
 }
 
-type AdminUsersData = {
+export type AdminUsersData = {
   users: AdminUser[]
   pagination: { current_page: number; per_page: number; total: number; last_page: number }
 }
@@ -485,10 +485,11 @@ type AdminUsersData = {
  * who own a shop) and `search`, NOT by a `type` field. Admin accounts are
  * distinguished by `type === "admin"` in the payload.
  */
-export async function fetchAdminUsers(token: string, opts?: { has_seller?: 0 | 1; search?: string }) {
+export async function fetchAdminUsers(token: string, opts?: { has_seller?: 0 | 1; search?: string; page?: number }) {
   const params = new URLSearchParams()
   if (opts?.has_seller !== undefined) params.set("has_seller", String(opts.has_seller))
   if (opts?.search) params.set("search", opts.search)
+  if (opts?.page && opts.page > 1) params.set("page", String(opts.page))
   const qs = params.toString() ? `?${params.toString()}` : ""
   return proxyFetch<AdminUsersData>(`/admin/users${qs}`, token)
 }
