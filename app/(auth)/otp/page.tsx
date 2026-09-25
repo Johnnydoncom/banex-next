@@ -5,6 +5,7 @@ import { useState, type FormEvent, Suspense } from "react"
 import { Loader2 } from "lucide-react"
 import { toast } from "sonner"
 import { z } from "zod"
+import { signIn, getSession } from "next-auth/react"
 import { AuthShell } from "@/components/AuthShell"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -52,8 +53,28 @@ function OTPForm() {
         return
       }
 
-      toast.success("Email verified successfully!")
-      router.push("/")
+      const userData = data?.data?.user
+      const token = data?.data?.token
+
+      // Auto-login using the token returned by the verification endpoint.
+      // Reuses the same "isRegister" bypass already used by the signup page.
+      if (userData && token) {
+        await signIn("credentials", {
+          redirect: false,
+          isRegister: "true",
+          id: userData.id,
+          name: userData.full_name || userData.name || "",
+          email: userData.email,
+          token,
+        })
+      }
+
+      toast.success(data.message || "Email verified successfully!")
+
+      // Redirect based on role; fall back to home if session isn't ready yet.
+      const session = await getSession()
+      const role = (session?.user as any)?.role
+      router.push(role === "admin" ? "/admin" : "/account")
       router.refresh()
     } catch (err) {
       toast.error("Something went wrong. Please try again.")
