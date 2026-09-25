@@ -13,8 +13,8 @@ import Link from "next/link"
 export default function AdminCustomersPage() {
   const { session } = useAuth()
   const token = (session as any)?.accessToken
-  
-  const { users, loading } = useAdminUsers(token, { has_seller: 0 })
+
+  const { users, loading } = useAdminUsers(token, {})
   const customers = users.filter((u) => u.type !== "admin")
 
   const columns: Column<AdminUser>[] = [
@@ -60,9 +60,9 @@ export default function AdminCustomersPage() {
       className: "text-right",
       render: (c) => (
         <div className="flex items-center justify-end gap-1">
-           <Link href={`/admin/users/${c.id}`} className="text-xs font-medium text-brand hover:underline">
-             View
-           </Link>
+          <Link href={`/admin/users/${c.id}`} className="text-xs font-medium text-brand hover:underline">
+            View
+          </Link>
         </div>
       ),
     },
