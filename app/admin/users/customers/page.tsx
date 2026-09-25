@@ -14,7 +14,7 @@ export default function AdminCustomersPage() {
   const { session } = useAuth()
   const token = (session as any)?.accessToken
 
-  const { users, loading } = useAdminUsers(token, {})
+  const { users, loading } = useAdminUsers(token, { has_seller: undefined })
   const customers = users.filter((u) => u.type !== "admin")
 
   const columns: Column<AdminUser>[] = [
