@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import Link from "next/link"
 import Image from "next/image"
 import {
@@ -23,13 +23,17 @@ import {
   duplicateAdminProduct,
   bulkAdminProductAction,
   fetchAdminSellers,
+  fetchAdminProduct,
+  fetchAdminWhatsAppContacts,
   type AdminProduct,
   type AdminSeller,
+  type AdminWhatsAppContact,
   type BulkProductAction,
   type BulkProductOutcome,
 } from "@/lib/admin-api"
 import { BulkActionBar, BulkResultDialog, BULK_COPY, BULK_RULES, plural, type BulkKind, type BulkResult } from "./BulkActions"
 import { BulkEditModal } from "./BulkEditModal"
+import { ProductPreviewDialog, previewFromAdminProduct, type ProductPreview } from "./ProductPreviewDialog"
 import { useAdminProducts } from "@/hooks/use-swr-data"
 import { saleInfo } from "@/lib/products"
 import { Button } from "@/components/ui/button"
@@ -123,22 +127,31 @@ function RejectReasonModal({
 function ProductActionButtons({
   product,
   onAction,
+  onPreview,
+  previewLoading,
 }: {
   product: AdminProduct
   onAction: (action: ActionType) => void
+  onPreview: () => void
+  previewLoading: boolean
 }) {
   const can = (action: ActionType) => BULK_RULES[action](product)
 
   return (
     <div className="flex items-center justify-end gap-1">
-      {/* View */}
-      <Link
-        href={`/admin/products/${product.id}`}
-        className="rounded-lg p-1.5 text-muted-foreground hover:bg-surface hover:text-foreground"
-        title="View details"
+      {/* Preview — the product page exactly as customers see it */}
+      <Button
+        type="button"
+        variant="ghost"
+        size="icon"
+        onClick={onPreview}
+        disabled={previewLoading}
+        aria-label={`Preview ${product.name} as a customer`}
+        title="Preview as customer"
+        className="h-auto w-auto rounded-lg p-1.5 text-muted-foreground hover:bg-surface hover:text-foreground"
       >
-        <Eye className="h-3.5 w-3.5" />
-      </Link>
+        {previewLoading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Eye className="h-3.5 w-3.5" />}
+      </Button>
 
       {/* Edit */}
       <Link
@@ -245,6 +258,32 @@ export default function AdminProductsPage() {
   const [bulkLoading, setBulkLoading] = useState(false)
   const [bulkEditOpen, setBulkEditOpen] = useState(false)
   const [bulkResult, setBulkResult] = useState<BulkResult | null>(null)
+
+  // Customer preview (eye button): the saved product rendered with the storefront's own view.
+  const [preview, setPreview] = useState<ProductPreview | null>(null)
+  const [previewLoadingId, setPreviewLoadingId] = useState<string | null>(null)
+  const contactsRef = useRef<AdminWhatsAppContact[] | null>(null)
+
+  const openPreview = async (p: AdminProduct) => {
+    if (!token || previewLoadingId) return
+    setPreviewLoadingId(p.id)
+    try {
+      const [product, contacts] = await Promise.all([
+        // The full record (variants, description, specifications). If it can't be
+        // loaded, the list row still has enough to preview.
+        fetchAdminProduct(p.id, token).then((r) => r.data?.product ?? p).catch(() => p),
+        // Only needed for the seller's contact buttons — optional, fetched once.
+        contactsRef.current ??
+          fetchAdminWhatsAppContacts(token).then((r) => r.data?.whatsapp_contacts ?? null).catch(() => null),
+      ])
+      if (contacts) contactsRef.current = contacts
+      const seller = sellers.find((s) => s.id === (product.seller?.id || product.seller_id))
+      const contact = contacts?.find((c) => c.id === seller?.whatsapp_contact_id && c.is_active)
+      setPreview(previewFromAdminProduct(product, contact?.phone_number))
+    } finally {
+      setPreviewLoadingId(null)
+    }
+  }
 
   const openDuplicate = (p: AdminProduct) => {
     setDupTarget(p)
@@ -572,7 +611,12 @@ export default function AdminProductsPage() {
           >
             <Copy className="h-3.5 w-3.5" />
           </Button>
-          <ProductActionButtons product={p} onAction={(action) => triggerAction(p, action)} />
+          <ProductActionButtons
+            product={p}
+            onAction={(action) => triggerAction(p, action)}
+            onPreview={() => openPreview(p)}
+            previewLoading={previewLoadingId === p.id}
+          />
         </div>
       ),
     },
@@ -734,6 +778,9 @@ export default function AdminProductsPage() {
           }}
         />
       )}
+
+      {/* Customer preview of a saved product */}
+      {preview && <ProductPreviewDialog preview={preview} onClose={() => setPreview(null)} backLabel="Back to products" />}
 
       {/* Per-product outcome when a bulk action only partly succeeded */}
       <BulkResultDialog result={bulkResult} onClose={() => setBulkResult(null)} />

@@ -3,6 +3,7 @@
 import { useEffect } from "react"
 import { createPortal } from "react-dom"
 import { ArrowLeft, Eye, Info } from "lucide-react"
+import type { AdminProduct } from "@/lib/admin-api"
 import type { GenericProduct, ProductVariant } from "@/lib/generic-api"
 import type { AttrKey, VariantRow } from "@/components/VariantsEditor"
 import { ProductDetailView } from "@/app/(site)/product/[slug]/components/ProductDetailView"
@@ -12,6 +13,8 @@ export type ProductPreview = {
   product: GenericProduct
   /** What the form still lacks — shown as a hint above the preview. */
   missing: string[]
+  /** True when the product is already visible to shoppers (an active listing). */
+  live?: boolean
 }
 
 type PreviewInput = {
@@ -135,11 +138,63 @@ export function buildProductPreview(input: PreviewInput): ProductPreview {
   }
 }
 
+/** Shape a SAVED product (as the admin API returns it) into the storefront's product object. */
+export function previewFromAdminProduct(p: AdminProduct, whatsapp?: string | null): ProductPreview {
+  const images = p.images ?? []
+  const description = (p.description ?? "").replace(/<[^>]*>/g, "").replace(/&nbsp;/g, " ").trim() ? p.description : null
+
+  const missing: string[] = []
+  if (images.length === 0) missing.push("images")
+  if (!(Number(p.price) > 0)) missing.push("a price")
+  if (!p.category) missing.push("a category")
+  if (!description) missing.push("a description")
+
+  return {
+    missing,
+    live: p.status === "active",
+    product: {
+      id: p.id,
+      slug: p.slug,
+      name: p.name,
+      brand: p.brand,
+      price: Number(p.price),
+      regular_price: p.regular_price,
+      sales_price: p.sales_price,
+      currency: p.currency,
+      location: p.location,
+      in_stock: p.in_stock,
+      has_variants: p.has_variants,
+      variants: p.variants ?? [],
+      rating_average: p.rating_average,
+      reviews_count: p.reviews_count,
+      is_featured: p.is_featured,
+      is_nationwide_delivery: p.is_nationwide_delivery,
+      is_authentic_only: p.is_authentic_only,
+      images,
+      seller: p.seller ? { id: p.seller.id, shop_name: p.seller.shop_name, slug: p.seller.slug, whatsapp: whatsapp ?? null } : null,
+      category: p.category,
+      description,
+      specifications: p.specifications ?? [],
+      delivery_estimate: p.delivery_estimate,
+    },
+  }
+}
+
 /**
- * Full-screen "as a shopper sees it" preview of an unsaved product. It renders the
- * storefront's own product view, in preview mode so nothing is bought or saved.
+ * Full-screen "as a shopper sees it" preview of a product — an unsaved form or a
+ * saved listing. It renders the storefront's own product view, in preview mode so
+ * nothing is bought or saved.
  */
-export function ProductPreviewDialog({ preview, onClose }: { preview: ProductPreview; onClose: () => void }) {
+export function ProductPreviewDialog({
+  preview,
+  onClose,
+  backLabel = "Back to editing",
+}: {
+  preview: ProductPreview
+  onClose: () => void
+  /** Where closing returns to, e.g. "Back to products" when opened from the list. */
+  backLabel?: string
+}) {
   useEffect(() => {
     const previousOverflow = document.body.style.overflow
     document.body.style.overflow = "hidden"
@@ -167,7 +222,7 @@ export function ProductPreviewDialog({ preview, onClose }: { preview: ProductPre
           onClick={onClose}
           className="h-auto flex-none gap-1.5 rounded-xl px-3 py-2 text-xs font-semibold"
         >
-          <ArrowLeft className="h-3.5 w-3.5" /> <span className="hidden sm:inline">Back to editing</span>
+          <ArrowLeft className="h-3.5 w-3.5" /> <span className="hidden sm:inline">{backLabel}</span>
           <span className="sm:hidden">Back</span>
         </Button>
         <div className="min-w-0 border-l border-border pl-3">
@@ -175,7 +230,8 @@ export function ProductPreviewDialog({ preview, onClose }: { preview: ProductPre
             <Eye className="h-4 w-4 flex-none text-brand" /> Customer preview
           </p>
           <p className="truncate text-xs text-muted-foreground">
-            How shoppers will see this product once it&apos;s live — nothing here is saved or purchasable.
+            {preview.live ? "How shoppers see this product right now" : "How shoppers will see this product once it's live"}
+            {" — nothing here is saved or purchasable."}
           </p>
         </div>
       </header>
