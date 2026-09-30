@@ -21,10 +21,15 @@ import {
   updateAdminProductStock,
   reassignAdminProductSeller,
   duplicateAdminProduct,
+  bulkAdminProductAction,
   fetchAdminSellers,
   type AdminProduct,
   type AdminSeller,
+  type BulkProductAction,
+  type BulkProductOutcome,
 } from "@/lib/admin-api"
+import { BulkActionBar, BulkResultDialog, BULK_COPY, BULK_RULES, plural, type BulkKind, type BulkResult } from "./BulkActions"
+import { BulkEditModal } from "./BulkEditModal"
 import { useAdminProducts } from "@/hooks/use-swr-data"
 import { saleInfo } from "@/lib/products"
 import { Button } from "@/components/ui/button"
@@ -122,7 +127,7 @@ function ProductActionButtons({
   product: AdminProduct
   onAction: (action: ActionType) => void
 }) {
-  const s = product.status
+  const can = (action: ActionType) => BULK_RULES[action](product)
 
   return (
     <div className="flex items-center justify-end gap-1">
@@ -145,7 +150,7 @@ function ProductActionButtons({
       </Link>
 
       {/* Approve — for pending */}
-      {s === "pending" && (
+      {can("approve") && (
         <Button
           type="button"
           variant="ghost"
@@ -159,7 +164,7 @@ function ProductActionButtons({
       )}
 
       {/* Reject — for pending */}
-      {s === "pending" && (
+      {can("reject") && (
         <Button
           type="button"
           variant="ghost"
@@ -172,8 +177,8 @@ function ProductActionButtons({
         </Button>
       )}
 
-      {/* Activate — for inactive OR rejected */}
-      {(s === "inactive" || s === "rejected" || s === "draft") && (
+      {/* Activate — for inactive, rejected OR draft */}
+      {can("activate") && (
         <Button
           type="button"
           variant="ghost"
@@ -187,7 +192,7 @@ function ProductActionButtons({
       )}
 
       {/* Deactivate — for active */}
-      {s === "active" && (
+      {can("deactivate") && (
         <Button
           type="button"
           variant="ghost"
@@ -233,6 +238,13 @@ export default function AdminProductsPage() {
   const [dupName, setDupName] = useState("")
   const [dupImages, setDupImages] = useState<File[]>([])
   const [dupSaving, setDupSaving] = useState(false)
+
+  // Bulk selection + actions (POST /admin/products/bulk/*)
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
+  const [bulkConfirm, setBulkConfirm] = useState<BulkProductAction | null>(null)
+  const [bulkLoading, setBulkLoading] = useState(false)
+  const [bulkEditOpen, setBulkEditOpen] = useState(false)
+  const [bulkResult, setBulkResult] = useState<BulkResult | null>(null)
 
   const openDuplicate = (p: AdminProduct) => {
     setDupTarget(p)
@@ -308,6 +320,40 @@ export default function AdminProductsPage() {
 
   const count = (s?: string) =>
     s ? products.filter((p) => p.status === s).length : products.length
+
+  // ── Bulk actions ───────────────────────────────────────────────────────────
+  // Only products in the current tab count as selected — ids left behind by a
+  // refreshed list (e.g. deleted products) simply drop out here.
+  const selected = filtered.filter((p) => selectedIds.has(p.id))
+  const bulkTargets = bulkConfirm ? selected.filter(BULK_RULES[bulkConfirm]) : []
+  const bulkSkipped = selected.length - bulkTargets.length
+
+  const finishBulk = (kind: BulkKind, outcome: BulkProductOutcome, targets: AdminProduct[]) => {
+    mutate()
+    // Keep just the failures selected so they can be adjusted and retried.
+    setSelectedIds(new Set(outcome.results.filter((r) => !r.success).map((r) => r.id)))
+    if (outcome.failed === 0) {
+      toast.success(`${plural(outcome.succeeded)} ${BULK_COPY[kind].done}.`)
+    } else {
+      setBulkResult({ kind, outcome, names: Object.fromEntries(targets.map((p) => [p.id, p.name])) })
+    }
+  }
+
+  const handleBulkConfirmed = async () => {
+    if (!bulkConfirm || !token || bulkTargets.length === 0) return
+    const kind = bulkConfirm
+    const targets = bulkTargets
+    setBulkLoading(true)
+    try {
+      const outcome = await bulkAdminProductAction(kind, targets.map((p) => p.id), token)
+      finishBulk(kind, outcome, targets)
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : `Failed to ${kind} products`)
+    } finally {
+      setBulkLoading(false)
+      setBulkConfirm(null)
+    }
+  }
 
   const tabs: { key: Tab; label: string; count: number }[] = [
     { key: "all", label: "All", count: count() },
@@ -457,10 +503,10 @@ export default function AdminProductsPage() {
       render: (p) => (
         <span
           className={`text-sm font-semibold ${p.stock_quantity <= 0
-              ? "text-rose-600"
-              : p.stock_quantity <= 5
-                ? "text-amber-600"
-                : "text-foreground"
+            ? "text-rose-600"
+            : p.stock_quantity <= 5
+              ? "text-amber-600"
+              : "text-foreground"
             }`}
         >
           {p.stock_quantity ?? 0}
@@ -539,7 +585,7 @@ export default function AdminProductsPage() {
         <div>
           <h1 className="font-display text-2xl font-bold">Products</h1>
           <p className="mt-1 text-sm text-muted-foreground">
-            Manage all marketplace products — approve, reject, activate or deactivate.
+            Manage all marketplace products — approve, reject, activate or deactivate. Tick products to act on several at once.
           </p>
         </div>
         <Link
@@ -585,20 +631,23 @@ export default function AdminProductsPage() {
             type="button"
             variant="ghost"
             key={t.key}
-            onClick={() => setTab(t.key)}
+            onClick={() => {
+              setTab(t.key)
+              setSelectedIds(new Set())
+            }}
             className={`h-auto rounded-lg px-3 py-2 text-xs font-semibold ${tab === t.key
-                ? "bg-card text-foreground shadow-sm"
-                : "text-muted-foreground hover:text-foreground"
+              ? "bg-card text-foreground shadow-sm"
+              : "text-muted-foreground hover:text-foreground"
               }`}
           >
             {t.label}
             {t.count > 0 && (
               <span
                 className={`ml-1.5 rounded-full px-1.5 py-0.5 text-[10px] font-bold ${t.key === "pending"
-                    ? "bg-amber-500/20 text-amber-700"
-                    : t.key === "rejected"
-                      ? "bg-rose-500/15 text-rose-700"
-                      : "bg-brand/15 text-brand"
+                  ? "bg-amber-500/20 text-amber-700"
+                  : t.key === "rejected"
+                    ? "bg-rose-500/15 text-rose-700"
+                    : "bg-brand/15 text-brand"
                   }`}
               >
                 {t.count}
@@ -625,8 +674,69 @@ export default function AdminProductsPage() {
             (p.category?.name?.toLowerCase() ?? "").includes(q)
           }
           pageSize={10}
+          selectedKeys={new Set(selected.map((p) => p.id))}
+          onSelectionChange={setSelectedIds}
+          selectionLabel="products"
         />
       )}
+
+      {/* Bulk action bar — appears once at least one product is ticked */}
+      <BulkActionBar
+        selected={selected}
+        onAction={setBulkConfirm}
+        onEdit={() => setBulkEditOpen(true)}
+        onClear={() => setSelectedIds(new Set())}
+      />
+
+      {/* Confirm dialog for a bulk approve / reject / activate / deactivate / delete */}
+      <ConfirmDialog
+        open={!!bulkConfirm}
+        onOpenChange={(open) => !open && !bulkLoading && setBulkConfirm(null)}
+        title={bulkConfirm ? `${BULK_COPY[bulkConfirm].label} ${plural(bulkTargets.length)}?` : ""}
+        description={bulkConfirm ? BULK_COPY[bulkConfirm].description : ""}
+        confirmLabel={bulkConfirm ? BULK_COPY[bulkConfirm].label : ""}
+        destructive={bulkConfirm === "reject" || bulkConfirm === "deactivate" || bulkConfirm === "delete"}
+        onConfirm={handleBulkConfirmed}
+        loading={bulkLoading}
+      >
+        {bulkConfirm && (
+          <div className="space-y-2 pt-1 text-left">
+            {bulkSkipped > 0 && (
+              <p className="rounded-lg bg-amber-500/10 px-3 py-2 text-xs text-amber-800 dark:text-amber-300">
+                {plural(bulkSkipped)} in your selection will be skipped. {BULK_COPY[bulkConfirm].needs}
+              </p>
+            )}
+            <ul className="max-h-44 divide-y divide-border/60 overflow-y-auto rounded-xl border border-border">
+              {bulkTargets.slice(0, 50).map((p) => (
+                <li key={p.id} className="flex w-full items-center justify-between gap-3 px-3 py-2">
+                  <span className="min-w-0 text-sm">{p.name}</span>
+                  <StatusBadge status={p.status} className="flex-none" />
+                </li>
+              ))}
+              {bulkTargets.length > 50 && (
+                <li className="px-3 py-2 text-xs text-muted-foreground">+ {bulkTargets.length - 50} more</li>
+              )}
+            </ul>
+          </div>
+        )}
+      </ConfirmDialog>
+
+      {/* Bulk edit modal */}
+      {bulkEditOpen && token && selected.length > 0 && (
+        <BulkEditModal
+          products={selected}
+          sellers={sellers}
+          token={token}
+          onClose={() => setBulkEditOpen(false)}
+          onDone={(outcome) => {
+            setBulkEditOpen(false)
+            finishBulk("update", outcome, selected)
+          }}
+        />
+      )}
+
+      {/* Per-product outcome when a bulk action only partly succeeded */}
+      <BulkResultDialog result={bulkResult} onClose={() => setBulkResult(null)} />
 
       {/* Confirm dialog for approve / activate / deactivate */}
       <ConfirmDialog

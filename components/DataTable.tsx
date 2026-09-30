@@ -30,6 +30,39 @@ type DataTableProps<T> = {
   pageSize?: number
   /** Empty state component */
   emptyState?: React.ReactNode
+  /** Row selection (opt-in) — pass both to render a checkbox per row. */
+  selectedKeys?: Set<string>
+  onSelectionChange?: (keys: Set<string>) => void
+  /** Plural noun used in the selection hints (default "rows"). */
+  selectionLabel?: string
+}
+
+/* Native checkbox so the header can show the indeterminate (some selected) state. */
+function SelectBox({
+  checked,
+  indeterminate = false,
+  onChange,
+  label,
+  className = "",
+}: {
+  checked: boolean
+  indeterminate?: boolean
+  onChange: (checked: boolean) => void
+  label: string
+  className?: string
+}) {
+  return (
+    <input
+      type="checkbox"
+      ref={(el) => {
+        if (el) el.indeterminate = indeterminate
+      }}
+      checked={checked}
+      onChange={(e) => onChange(e.target.checked)}
+      aria-label={label}
+      className={`h-4 w-4 flex-none cursor-pointer rounded accent-brand ${className}`}
+    />
+  )
 }
 
 /* ------------------------------------------------------------------ */
@@ -44,6 +77,9 @@ export function DataTable<T>({
   searchFilter,
   pageSize = 10,
   emptyState,
+  selectedKeys,
+  onSelectionChange,
+  selectionLabel = "rows",
 }: DataTableProps<T>) {
   const [query, setQuery] = useState("")
   const [sortKey, setSortKey] = useState<string | null>(null)
@@ -69,14 +105,48 @@ export function DataTable<T>({
     })
   }, [filtered, sortKey, sortDir])
 
-  /* Paginate */
+  /* Paginate — clamp so a shrinking list (tab change, deletions) never strands
+     the table on a page that no longer exists. */
   const totalPages = Math.max(1, Math.ceil(sorted.length / pageSize))
-  const paged = sorted.slice(page * pageSize, (page + 1) * pageSize)
+  const current = Math.min(page, totalPages - 1)
+  const paged = sorted.slice(current * pageSize, (current + 1) * pageSize)
+
+  /* Selection */
+  const selectable = !!selectedKeys && !!onSelectionChange
+  const selected = useMemo(() => selectedKeys ?? new Set<string>(), [selectedKeys])
+  const pageKeys = paged.map(rowKey)
+  const selectedOnPage = pageKeys.filter((k) => selected.has(k)).length
+  const allOnPage = pageKeys.length > 0 && selectedOnPage === pageKeys.length
+  const allInView = selectable && sorted.length > 0 && sorted.every((row) => selected.has(rowKey(row)))
+  // Offer "select all N" once a whole page is ticked; confirm it once everything is.
+  const selectionHint = (allOnPage && !allInView) || (allInView && totalPages > 1)
+
+  const toggleRow = (key: string, checked: boolean) => {
+    const next = new Set(selected)
+    if (checked) next.add(key)
+    else next.delete(key)
+    onSelectionChange?.(next)
+  }
+
+  const togglePage = (checked: boolean) => {
+    const next = new Set(selected)
+    pageKeys.forEach((k) => (checked ? next.add(k) : next.delete(k)))
+    onSelectionChange?.(next)
+  }
 
   /* Reset page on filter */
   const handleSearch = (v: string) => {
     setQuery(v)
     setPage(0)
+    // Rows hidden by the search are dropped from the selection, so a bulk action
+    // only ever touches rows the user can still see.
+    if (selectable && selected.size > 0) {
+      const q = v.trim().toLowerCase()
+      const visible = !q || !searchFilter ? data : data.filter((row) => searchFilter(row, q))
+      const visibleKeys = new Set(visible.map(rowKey))
+      const next = new Set(Array.from(selected).filter((k) => visibleKeys.has(k)))
+      if (next.size !== selected.size) onSelectionChange?.(next)
+    }
   }
 
   const toggleSort = (key: string) => {
@@ -121,6 +191,42 @@ export function DataTable<T>({
         )
       ) : (
         <>
+          {selectable && (
+            <div
+              className={`flex flex-wrap items-center gap-x-4 gap-y-2 text-xs text-muted-foreground ${
+                selectionHint ? "" : "md:hidden"
+              }`}
+            >
+              {/* The header checkbox is hidden along with the <thead> on small screens. */}
+              <label className="flex cursor-pointer items-center gap-2 font-medium md:hidden">
+                <SelectBox
+                  checked={allOnPage}
+                  indeterminate={selectedOnPage > 0 && !allOnPage}
+                  onChange={togglePage}
+                  label="Select all on this page"
+                />
+                Select all on this page
+              </label>
+              {allOnPage && !allInView && (
+                <span>
+                  All {pageKeys.length} {selectionLabel} on this page are selected.{" "}
+                  <button
+                    type="button"
+                    onClick={() => onSelectionChange?.(new Set(sorted.map(rowKey)))}
+                    className="font-semibold text-brand hover:underline"
+                  >
+                    Select all {sorted.length} {selectionLabel}
+                  </button>
+                </span>
+              )}
+              {allInView && totalPages > 1 && (
+                <span>
+                  All {sorted.length} {selectionLabel} are selected.
+                </span>
+              )}
+            </div>
+          )}
+
           {/*
             Single responsive table (one DOM tree for all screen sizes).
             - md+  : renders as a normal table inside a bordered card.
@@ -131,6 +237,16 @@ export function DataTable<T>({
             <table className="block w-full text-sm md:table">
               <thead className="hidden md:table-header-group">
                 <tr className="border-b border-border bg-surface/60">
+                  {selectable && (
+                    <th className="w-10 py-3 pl-4 text-left">
+                      <SelectBox
+                        checked={allOnPage}
+                        indeterminate={selectedOnPage > 0 && !allOnPage}
+                        onChange={togglePage}
+                        label="Select all on this page"
+                      />
+                    </th>
+                  )}
                   {columns.map((col) => (
                     <th
                       key={col.key}
@@ -154,33 +270,58 @@ export function DataTable<T>({
                 </tr>
               </thead>
               <tbody className="block space-y-3 md:table-row-group md:space-y-0">
-                {paged.map((row) => (
-                  <tr
-                    key={rowKey(row)}
-                    className="block overflow-hidden rounded-2xl border border-border bg-card shadow-soft transition-colors md:table-row md:rounded-none md:border-0 md:border-b md:border-border md:bg-transparent md:shadow-none md:last:border-b-0 md:hover:bg-surface/40"
-                  >
-                    {columns.map((col, idx) =>
-                      idx === 0 ? (
-                        // Primary/identity column → full-width card header on mobile
-                        <td
-                          key={col.key}
-                          className={`block border-b border-border/50 bg-surface/40 px-4 py-3 text-sm last:border-b-0 w-full max-w-sm md:table-cell md:border-0 md:bg-transparent md:py-3.5 md:align-middle ${col.className ?? ""}`}
-                        >
-                          {col.render(row)}
+                {paged.map((row) => {
+                  const key = rowKey(row)
+                  const isSelected = selectable && selected.has(key)
+                  return (
+                    <tr
+                      key={key}
+                      className={`block overflow-hidden rounded-2xl border border-border bg-card shadow-soft transition-colors md:table-row md:rounded-none md:border-0 md:border-b md:border-border md:shadow-none md:last:border-b-0 ${
+                        isSelected
+                          ? "ring-1 ring-brand/60 md:bg-brand/5 md:ring-0"
+                          : "md:bg-transparent md:hover:bg-surface/40"
+                      }`}
+                    >
+                      {selectable && (
+                        <td className="hidden w-10 py-3.5 pl-4 md:table-cell md:align-middle">
+                          <SelectBox checked={isSelected} onChange={(c) => toggleRow(key, c)} label="Select row" />
                         </td>
-                      ) : (
-                        // Remaining columns → label / value rows on mobile
-                        <td
-                          key={col.key}
-                          data-label={col.label}
-                          className={`flex items-center justify-between gap-3 border-b border-border/50 px-4 py-2.5 text-sm last:border-b-0 before:shrink-0 before:text-[11px] before:font-semibold before:uppercase before:tracking-wide before:text-muted-foreground before:content-[attr(data-label)] md:table-cell md:border-0 md:py-3.5 md:align-middle md:before:content-none ${col.className ?? ""}`}
-                        >
-                          {col.render(row)}
-                        </td>
-                      )
-                    )}
-                  </tr>
-                ))}
+                      )}
+                      {columns.map((col, idx) =>
+                        idx === 0 ? (
+                          // Primary/identity column → full-width card header on mobile
+                          <td
+                            key={col.key}
+                            className={`block border-b border-border/50 bg-surface/40 px-4 py-3 text-sm last:border-b-0 w-full max-w-sm md:table-cell md:border-0 md:bg-transparent md:py-3.5 md:align-middle ${col.className ?? ""}`}
+                          >
+                            {selectable ? (
+                              <div className="flex items-center gap-3">
+                                <SelectBox
+                                  className="md:hidden"
+                                  checked={isSelected}
+                                  onChange={(c) => toggleRow(key, c)}
+                                  label="Select row"
+                                />
+                                <div className="min-w-0 flex-1">{col.render(row)}</div>
+                              </div>
+                            ) : (
+                              col.render(row)
+                            )}
+                          </td>
+                        ) : (
+                          // Remaining columns → label / value rows on mobile
+                          <td
+                            key={col.key}
+                            data-label={col.label}
+                            className={`flex items-center justify-between gap-3 border-b border-border/50 px-4 py-2.5 text-sm last:border-b-0 before:shrink-0 before:text-[11px] before:font-semibold before:uppercase before:tracking-wide before:text-muted-foreground before:content-[attr(data-label)] md:table-cell md:border-0 md:py-3.5 md:align-middle md:before:content-none ${col.className ?? ""}`}
+                          >
+                            {col.render(row)}
+                          </td>
+                        )
+                      )}
+                    </tr>
+                  )
+                })}
               </tbody>
             </table>
           </div>
@@ -189,23 +330,23 @@ export function DataTable<T>({
           {totalPages > 1 && (
             <div className="flex items-center justify-between pt-2">
               <p className="text-xs text-muted-foreground">
-                Showing {page * pageSize + 1}–{Math.min((page + 1) * pageSize, sorted.length)} of{" "}
+                Showing {current * pageSize + 1}–{Math.min((current + 1) * pageSize, sorted.length)} of{" "}
                 {sorted.length}
               </p>
               <div className="flex items-center gap-1">
                 <Button variant="ghost" type="button"
-                  disabled={page === 0}
-                  onClick={() => setPage((p) => p - 1)}
+                  disabled={current === 0}
+                  onClick={() => setPage(current - 1)}
                   className="rounded-lg border border-border p-1.5 text-muted-foreground transition-colors hover:bg-surface disabled:opacity-40"
                 >
                   <ChevronLeft className="h-4 w-4" />
                 </Button>
                 <span className="px-3 text-xs font-medium">
-                  {page + 1} / {totalPages}
+                  {current + 1} / {totalPages}
                 </span>
                 <Button variant="ghost" type="button"
-                  disabled={page >= totalPages - 1}
-                  onClick={() => setPage((p) => p + 1)}
+                  disabled={current >= totalPages - 1}
+                  onClick={() => setPage(current + 1)}
                   className="rounded-lg border border-border p-1.5 text-muted-foreground transition-colors hover:bg-surface disabled:opacity-40"
                 >
                   <ChevronRight className="h-4 w-4" />

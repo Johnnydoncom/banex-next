@@ -244,6 +244,10 @@ export async function toggleAdminSellerSuspension(id: string, token: string, not
 
 // ─── Admin Products ───────────────────────────────────────────────────────────
 
+// The Banex Mall house account can list under any category; other sellers are
+// restricted to their own department's subcategories.
+export const BANEX_MALL_SELLER_ID = "019e8813-b50f-7270-98a9-bf5889e4161c"
+
 export type AdminProduct = {
   id: string
   seller_id: string
@@ -432,6 +436,130 @@ export async function activateAdminProduct(id: string, token: string) {
 
 export async function deactivateAdminProduct(id: string, token: string) {
   return proxyFetch<{ product: AdminProduct }>(`/admin/products/${id}/deactivate`, token, "POST")
+}
+
+// ─── Admin Products: bulk actions ─────────────────────────────────────────────
+// POST /admin/products/bulk/{update|activate|deactivate|approve|reject|delete}
+// Body is x-www-form-urlencoded with a repeated `product_ids[]`. The response
+// reports per product: data.results[{ id, success, error? }] + data.summary.
+// When NO product succeeds the API answers HTTP 400 ("Bulk action failed.") but
+// still carries the per-product results — so that body is read, not thrown.
+
+export type BulkProductAction = "activate" | "deactivate" | "approve" | "reject" | "delete"
+
+export type BulkProductResult = { id: string; success: boolean; error: string | null }
+
+export type BulkProductOutcome = {
+  results: BulkProductResult[]
+  succeeded: number
+  failed: number
+}
+
+// Fields the bulk update accepts. Only the keys present are sent (and changed).
+export type BulkProductUpdate = {
+  brand?: string
+  category_id?: string
+  seller_id?: string
+  location?: string
+  delivery_estimate?: string
+  is_nationwide_delivery?: boolean
+  is_authentic_only?: boolean
+  is_featured?: boolean
+}
+
+// Ids per request — keeps each body well under PHP's max_input_vars (1000).
+const BULK_PRODUCT_CHUNK = 100
+
+async function postBulkProductChunk(
+  endpoint: string,
+  ids: string[],
+  fields: [string, string][],
+  token: string,
+): Promise<BulkProductResult[]> {
+  const body = new URLSearchParams()
+  ids.forEach((id) => body.append("product_ids[]", id))
+  fields.forEach(([key, value]) => body.append(key, value))
+
+  const res = await fetch(`/api/proxy/admin/products/bulk/${endpoint}`, {
+    method: "POST",
+    headers: {
+      Accept: "application/json",
+      Authorization: `Bearer ${token}`,
+      "Content-Type": "application/x-www-form-urlencoded",
+    },
+    body: body.toString(),
+  })
+
+  type RawResult = { id?: string; success?: boolean; error?: string | null; message?: string | null }
+  const text = await res.text()
+  let json: { success?: boolean; message?: string; data?: { results?: RawResult[] } | null } | null = null
+  try {
+    json = text ? JSON.parse(text) : null
+  } catch {
+    json = null
+  }
+
+  const raw = json?.data?.results
+  if (Array.isArray(raw)) {
+    const byId = new Map(raw.map((r) => [String(r?.id), r]))
+    return ids.map((id) => {
+      const r = byId.get(id)
+      if (!r) return { id, success: false, error: "The server returned no result for this product." }
+      return r.success
+        ? { id, success: true, error: null }
+        : { id, success: false, error: r.error || r.message || "Failed." }
+    })
+  }
+
+  if (!res.ok || json?.success === false) {
+    throw new Error(json?.message || `Request failed with status ${res.status}`)
+  }
+  // Succeeded without a per-product breakdown → the whole chunk was applied.
+  return ids.map((id) => ({ id, success: true, error: null }))
+}
+
+async function runBulkProducts(
+  endpoint: string,
+  ids: string[],
+  fields: [string, string][],
+  token: string,
+): Promise<BulkProductOutcome> {
+  const unique = Array.from(new Set(ids))
+  const results: BulkProductResult[] = []
+
+  for (let i = 0; i < unique.length; i += BULK_PRODUCT_CHUNK) {
+    try {
+      results.push(...(await postBulkProductChunk(endpoint, unique.slice(i, i + BULK_PRODUCT_CHUNK), fields, token)))
+    } catch (err) {
+      // Nothing applied yet → a plain error. Otherwise earlier chunks already
+      // went through, so report the remainder as not processed instead.
+      if (i === 0) throw err
+      const reason = err instanceof Error ? err.message : "Request failed"
+      unique.slice(i).forEach((id) => results.push({ id, success: false, error: `Not processed — ${reason}` }))
+      break
+    }
+  }
+
+  const succeeded = results.filter((r) => r.success).length
+  return { results, succeeded, failed: results.length - succeeded }
+}
+
+export async function bulkAdminProductAction(action: BulkProductAction, ids: string[], token: string) {
+  return runBulkProducts(action, ids, [], token)
+}
+
+export async function bulkUpdateAdminProducts(ids: string[], changes: BulkProductUpdate, token: string) {
+  const fields: [string, string][] = []
+  const flag = (v: boolean) => (v ? "1" : "0")
+  if (changes.brand !== undefined) fields.push(["brand", changes.brand])
+  if (changes.category_id !== undefined) fields.push(["category_id", changes.category_id])
+  if (changes.seller_id !== undefined) fields.push(["seller_id", changes.seller_id])
+  if (changes.location !== undefined) fields.push(["location", changes.location])
+  if (changes.delivery_estimate !== undefined) fields.push(["delivery_estimate", changes.delivery_estimate])
+  if (changes.is_nationwide_delivery !== undefined) fields.push(["is_nationwide_delivery", flag(changes.is_nationwide_delivery)])
+  if (changes.is_authentic_only !== undefined) fields.push(["is_authentic_only", flag(changes.is_authentic_only)])
+  if (changes.is_featured !== undefined) fields.push(["is_featured", flag(changes.is_featured)])
+  return runBulkProducts("update", ids, fields, token)
 }
 
 // ─── Admin WhatsApp Contacts ──────────────────────────────────────────────────

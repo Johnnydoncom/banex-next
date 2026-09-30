@@ -7,7 +7,7 @@ import { useRouter } from "next/navigation"
 import {
   ArrowLeft, X, Loader2, Star, Ban,
   Power, PowerOff, ShieldCheck, Trash2, ImagePlus, Save,
-  FileText, ImageIcon, Tag, ListChecks, CheckCircle2, Search,
+  FileText, ImageIcon, Tag, ListChecks, CheckCircle2, Search, Eye,
 } from "lucide-react"
 import { toast } from "sonner"
 import { useSession } from "next-auth/react"
@@ -15,16 +15,20 @@ import {
   fetchAdminCategories,
   fetchAdminSellers,
   fetchAdminProduct,
+  fetchAdminWhatsAppContacts,
   updateAdminProduct,
   approveAdminProduct,
   rejectAdminProduct,
   activateAdminProduct,
   deactivateAdminProduct,
   appendSeoFields,
+  BANEX_MALL_SELLER_ID,
   type AdminCategory,
   type AdminSeller,
   type AdminProduct,
+  type AdminWhatsAppContact,
 } from "@/lib/admin-api"
+import { ProductPreviewDialog, buildProductPreview, type ProductPreview } from "../../ProductPreviewDialog"
 import { SeoFieldsEditor, emptySeo, seoFromApi, type SeoFields } from "@/components/SeoFieldsEditor"
 import { RichTextEditor } from "@/components/RichTextEditor"
 import { VariantsEditor, variantsFromProduct, inferAttrs, appendVariants, validateVariants, type VariantRow, type AttrKey } from "@/components/VariantsEditor"
@@ -40,9 +44,6 @@ import { Switch } from "@/components/ui/switch"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { StatusBadge } from "@/components/StatusBadge"
 import { ConfirmDialog } from "@/components/ConfirmDialog"
-
-// Banex Mall house account → all categories; other sellers → own department only.
-const BANEX_MALL_SELLER_ID = "019e8813-b50f-7270-98a9-bf5889e4161c"
 
 const STEPS: WizardStep[] = [
   { key: "details", label: "Details", icon: FileText },
@@ -142,6 +143,9 @@ export default function AdminEditProductPage({ params }: { params: Promise<{ id:
   const [sellers, setSellers] = useState<AdminSeller[]>([])
   const [loadingData, setLoadingData] = useState(true)
   const [submitting, setSubmitting] = useState(false)
+  // Customer preview — a snapshot of the form rendered with the storefront's product view.
+  const [contacts, setContacts] = useState<AdminWhatsAppContact[]>([])
+  const [preview, setPreview] = useState<ProductPreview | null>(null)
 
   // Status action states
   const [confirmOpen, setConfirmOpen] = useState(false)
@@ -183,13 +187,16 @@ export default function AdminEditProductPage({ params }: { params: Promise<{ id:
   const loadAll = async (token: string) => {
     try {
       setLoadingData(true)
-      const [catsRes, sellersRes, productRes] = await Promise.all([
+      const [catsRes, sellersRes, productRes, contactsRes] = await Promise.all([
         fetchAdminCategories(token),
         fetchAdminSellers(token),
         fetchAdminProduct(id, token),
+        // Only used to show the seller's contact buttons in the preview — optional.
+        fetchAdminWhatsAppContacts(token).catch(() => null),
       ])
       setCategories(catsRes.data?.categories ?? [])
       setSellers(sellersRes.data?.sellers ?? [])
+      setContacts(contactsRes?.data?.whatsapp_contacts ?? [])
 
       const p = productRes.data?.product
       if (p) {
@@ -416,6 +423,27 @@ export default function AdminEditProductPage({ params }: { params: Promise<{ id:
 
   const activeExisting = existingImages.filter((i) => !i.toDelete)
 
+  const openPreview = () => {
+    const contact = contacts.find((c) => c.id === selectedSeller?.whatsapp_contact_id && c.is_active)
+    setPreview(
+      buildProductPreview({
+        ...form,
+        hasVariants,
+        variantRows,
+        variantAttrs,
+        specifications,
+        images: [
+          ...activeExisting.map((img) => ({ url: img.url, is_primary: primaryKey === `existing:${img.id}` })),
+          ...newImages.map((img, i) => ({ url: img.preview, is_primary: primaryKey === `new:${i}` })),
+        ],
+        category: currentCat,
+        // Fall back to the saved owner when the picked seller isn't in the loaded list.
+        seller: selectedSeller ?? (form.seller_id === product.seller?.id ? product.seller : null),
+        whatsapp: contact?.phone_number,
+      }),
+    )
+  }
+
   return (
     <div className="mx-auto max-w-3xl space-y-6">
       {/* Header */}
@@ -429,7 +457,12 @@ export default function AdminEditProductPage({ params }: { params: Promise<{ id:
             <p className="mt-0.5 max-w-xs truncate text-sm text-muted-foreground">{product.name}</p>
           </div>
         </div>
-        <StatusBadge status={product.status} />
+        <div className="flex items-center gap-3">
+          <StatusBadge status={product.status} />
+          <Button type="button" variant="outline" onClick={openPreview} className="h-auto gap-2 rounded-xl px-4 py-2.5 text-xs font-semibold">
+            <Eye className="h-4 w-4" /> Preview
+          </Button>
+        </div>
       </div>
 
       {/* Status / moderation actions — always available, independent of the wizard */}
@@ -772,6 +805,8 @@ export default function AdminEditProductPage({ params }: { params: Promise<{ id:
 
       {/* Reject modal */}
       <RejectModal open={rejectOpen} loading={rejectLoading} onConfirm={handleRejectConfirm} onCancel={() => setRejectOpen(false)} />
+
+      {preview && <ProductPreviewDialog preview={preview} onClose={() => setPreview(null)} />}
     </div>
   )
 }

@@ -5,20 +5,24 @@ import Link from "next/link"
 import { useRouter } from "next/navigation"
 import {
   ArrowLeft, Upload, X, Loader2, Star,
-  FileText, ImageIcon, Tag, ListChecks, CheckCircle2, Search,
+  FileText, ImageIcon, Tag, ListChecks, CheckCircle2, Search, Eye,
 } from "lucide-react"
 import { toast } from "sonner"
 import { useSession } from "next-auth/react"
 import {
   fetchAdminCategories,
   fetchAdminSellers,
+  fetchAdminWhatsAppContacts,
   createAdminProduct,
   pricingPreviewAdminProduct,
   appendSeoFields,
+  BANEX_MALL_SELLER_ID,
   AdminCategory,
   AdminSeller,
+  type AdminWhatsAppContact,
   type PricingSummary,
 } from "@/lib/admin-api"
+import { ProductPreviewDialog, buildProductPreview, type ProductPreview } from "../ProductPreviewDialog"
 import { SeoFieldsEditor, emptySeo, type SeoFields } from "@/components/SeoFieldsEditor"
 import { RichTextEditor } from "@/components/RichTextEditor"
 import { LocationSelect } from "@/components/LocationSelect"
@@ -35,10 +39,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 
 const fmtNaira = (n: number | string) =>
   new Intl.NumberFormat("en-NG", { style: "currency", currency: "NGN", maximumFractionDigits: 0 }).format(Number(n) || 0)
-
-// The Banex Mall house account can list under any category; other sellers are
-// restricted to their own department's subcategories.
-const BANEX_MALL_SELLER_ID = "019e8813-b50f-7270-98a9-bf5889e4161c"
 
 const DRAFT_KEY = "banex:draft:admin-product-new"
 
@@ -109,6 +109,9 @@ export default function AdminNewProductPage() {
   const [loadingData, setLoadingData] = useState(true)
   const [submitting, setSubmitting] = useState(false)
   const [pricingPreview, setPricingPreview] = useState<PricingSummary | null>(null)
+  // Customer preview — a snapshot of the form rendered with the storefront's product view.
+  const [contacts, setContacts] = useState<AdminWhatsAppContact[]>([])
+  const [preview, setPreview] = useState<ProductPreview | null>(null)
 
   const update = (key: keyof FormState, value: any) => setForm((f) => ({ ...f, [key]: value }))
 
@@ -180,12 +183,15 @@ export default function AdminNewProductPage() {
   const loadData = async (token: string) => {
     try {
       setLoadingData(true)
-      const [catsRes, sellersRes] = await Promise.all([
+      const [catsRes, sellersRes, contactsRes] = await Promise.all([
         fetchAdminCategories(token),
         fetchAdminSellers(token),
+        // Only used to show the seller's contact buttons in the preview — optional.
+        fetchAdminWhatsAppContacts(token).catch(() => null),
       ])
       setCategories(catsRes.data?.categories || [])
       setSellers(sellersRes.data?.sellers || [])
+      setContacts(contactsRes?.data?.whatsapp_contacts || [])
     } catch (err: any) {
       toast.error(err.message || "Failed to load categories or sellers")
     } finally {
@@ -211,6 +217,23 @@ export default function AdminNewProductPage() {
     })
     if (primaryImageIndex === indexToRemove) setPrimaryImageIndex(0)
     else if (primaryImageIndex > indexToRemove) setPrimaryImageIndex((p) => p - 1)
+  }
+
+  const openPreview = () => {
+    const contact = contacts.find((c) => c.id === selectedSeller?.whatsapp_contact_id && c.is_active)
+    setPreview(
+      buildProductPreview({
+        ...form,
+        hasVariants,
+        variantRows,
+        variantAttrs,
+        specifications,
+        images: images.map((img, i) => ({ url: img.preview, is_primary: i === primaryImageIndex })),
+        category: findCategory(categories, form.category_id),
+        seller: selectedSeller,
+        whatsapp: contact?.phone_number,
+      }),
+    )
   }
 
   // ── Per-step validation ─────────────────────────────────────────────────────
@@ -338,9 +361,14 @@ export default function AdminNewProductPage() {
         <ArrowLeft className="h-4 w-4" /> Back to products
       </Link>
 
-      <div>
-        <h1 className="font-display text-2xl font-bold">Add Product</h1>
-        <p className="mt-1 text-sm text-muted-foreground">Create a new product listing — your progress is saved automatically.</p>
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <h1 className="font-display text-2xl font-bold">Add Product</h1>
+          <p className="mt-1 text-sm text-muted-foreground">Create a new product listing — your progress is saved automatically.</p>
+        </div>
+        <Button type="button" variant="outline" onClick={openPreview} className="h-auto gap-2 rounded-xl px-4 py-2.5 text-xs font-semibold">
+          <Eye className="h-4 w-4" /> Preview
+        </Button>
       </div>
 
       {hasDraft && step === 0 && <DraftRestoredBanner savedAt={savedAt} onDiscard={discardDraft} />}
@@ -573,6 +601,15 @@ export default function AdminNewProductPage() {
                 <div><span className="text-muted-foreground">SEO:</span> <strong>{seo.title || seo.description || seo.keywords ? "Custom" : "Auto"}</strong></div>
               </div>
               <div className="text-xs text-muted-foreground prose prose-sm dark:prose-invert max-w-none line-clamp-3" dangerouslySetInnerHTML={{ __html: form.description || "No description" }} />
+              <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-brand/30 bg-brand-soft/10 p-4">
+                <div>
+                  <p className="text-sm font-semibold">See it the way shoppers will</p>
+                  <p className="text-xs text-muted-foreground">Open the product page exactly as it will appear on the marketplace.</p>
+                </div>
+                <Button type="button" variant="outline" onClick={openPreview} className="h-auto gap-2 rounded-xl bg-card px-4 py-2.5 text-xs font-semibold">
+                  <Eye className="h-4 w-4" /> Preview product page
+                </Button>
+              </div>
             </div>
           )}
         </div>
@@ -589,6 +626,8 @@ export default function AdminNewProductPage() {
           />
         </div>
       </div>
+
+      {preview && <ProductPreviewDialog preview={preview} onClose={() => setPreview(null)} />}
     </div>
   )
 }

@@ -12,6 +12,8 @@ import { Button } from "@/components/ui/button"
 
 interface ProductPurchasePanelProps {
   product: GenericProduct
+  /** Admin preview: renders and lets variants be picked, but never touches the cart or wishlist. */
+  preview?: boolean
 }
 
 const ATTR_ORDER = ["color", "size"] as const
@@ -30,7 +32,7 @@ function optionsFor(variants: ProductVariant[], key: string): string[] {
  * Owns the variant selection so the MAIN price display updates when a variant is
  * picked (price, sale strikethrough, and stock badge all reflect the selection).
  */
-export function ProductPurchasePanel({ product }: ProductPurchasePanelProps) {
+export function ProductPurchasePanel({ product, preview = false }: ProductPurchasePanelProps) {
   const router = useRouter()
   const { add, open } = useCart()
   const { isInWishlist, toggle } = useWishlist()
@@ -107,7 +109,13 @@ export function ProductPurchasePanel({ product }: ProductPurchasePanelProps) {
     }
   }
 
+  const previewOnly = () => {
+    // Fixed id → repeated clicks refresh one toast instead of stacking several.
+    toast.info("This is a preview — shoppers can buy once the product is live.", { id: "product-preview" })
+  }
+
   const addToCart = () => {
+    if (preview) return previewOnly()
     const line = buildLine()
     if (!line) return
     add(line)
@@ -115,6 +123,7 @@ export function ProductPurchasePanel({ product }: ProductPurchasePanelProps) {
   }
 
   const buyNow = () => {
+    if (preview) return previewOnly()
     const line = buildLine()
     if (!line) return
     add(line)
@@ -210,7 +219,7 @@ export function ProductPurchasePanel({ product }: ProductPurchasePanelProps) {
           <ShoppingBag className="h-4 w-4" /> Add to cart
         </Button>
         <Button variant="ghost" type="button"
-          onClick={() => toggle(product)}
+          onClick={() => (preview ? previewOnly() : toggle(product))}
           className={`inline-flex items-center gap-2 rounded-full border px-5 py-3 text-sm font-semibold transition-colors ${
             saved
               ? "border-brand bg-brand-soft/20 text-brand"
