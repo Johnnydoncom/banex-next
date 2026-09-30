@@ -1,3 +1,4 @@
+import { Suspense } from "react"
 import { PageShell } from "@/components/PageShell"
 import { buildMetadata } from "@/lib/seo/metadata"
 import { TrackOrderForm } from "./TrackOrderForm"
@@ -15,9 +16,12 @@ export default function TrackOrderPage() {
     <PageShell
       eyebrow="Order tracking"
       title="Track your order"
-      description="Enter your order ID or tracking number to see real-time status."
+      description="Enter your order reference to see real-time status. Checked out as a guest? Add the email you used."
     >
-      <TrackOrderForm />
+      {/* The form reads ?reference= from the URL, which needs a Suspense boundary. */}
+      <Suspense fallback={<div className="h-24 animate-pulse rounded-2xl border border-border bg-card" />}>
+        <TrackOrderForm />
+      </Suspense>
     </PageShell>
   )
 }

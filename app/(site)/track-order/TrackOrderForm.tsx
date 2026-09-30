@@ -1,8 +1,9 @@
 "use client"
 
-import { useState } from "react"
+import { useEffect, useRef, useState } from "react"
 import Link from "next/link"
 import Image from "next/image"
+import { useSearchParams } from "next/navigation"
 import {
   Check,
   Circle,
@@ -25,6 +26,8 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { useAuth } from "@/hooks/use-auth"
 import { userFetchOrderTracking, type OrderTrackingData } from "@/lib/user-api"
+import { guestTrackOrder, guestApiError } from "@/lib/guest-api"
+import { findGuestOrder, useGuestOrders, resumeGuestPayment, type StoredGuestOrder } from "@/lib/guest-orders"
 import { ApiError } from "@/lib/api-client"
 
 // Human-friendly badge styling for the overall order status.
@@ -112,104 +115,234 @@ function stepVisual(state: string, key: string) {
   }
 }
 
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+
 export function TrackOrderForm() {
-  const { user } = useAuth()
-  const [reference, setReference] = useState("")
+  const { user, status } = useAuth()
+  // Arriving from an order confirmation: /track-order?reference=…
+  const linkedReference = useSearchParams().get("reference")?.trim() ?? ""
+  const [reference, setReference] = useState(linkedReference)
+  const [email, setEmail] = useState("")
+  // Signed-in shoppers track by reference alone; they can still look up an order
+  // they placed as a guest by adding the email used at checkout.
+  const [withEmail, setWithEmail] = useState(false)
   const [loading, setLoading] = useState(false)
   const [tracking, setTracking] = useState<OrderTrackingData | null>(null)
+  // The email a guest order was found with — enables "Complete payment".
+  const [guestEmail, setGuestEmail] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const recent = useGuestOrders()
+  const [paying, setPaying] = useState(false)
+  const autoTracked = useRef(false)
 
-  const submit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    const ref = reference.trim()
-    if (!ref) return
+  const needsEmail = !user || withEmail
 
+  const lookup = async (ref: string, mail: string | null) => {
     setLoading(true)
     setError(null)
     setTracking(null)
+    setGuestEmail(null)
     try {
-      const data = await userFetchOrderTracking(ref)
-      if (!data) {
-        setError("We couldn't find an order with that reference on your account.")
+      if (mail) {
+        // Guest order: reference + the email used at checkout.
+        setTracking(await guestTrackOrder(ref, mail))
+        setGuestEmail(mail)
       } else {
-        setTracking(data)
+        const data = await userFetchOrderTracking(ref)
+        if (data) setTracking(data)
+        else setError("We couldn't find an order with that reference on your account.")
       }
     } catch (err) {
-      if (err instanceof ApiError && (err.status === 401 || err.status === 419)) {
+      const info = guestApiError(err)
+      if (info.status === 404) {
+        if (mail) {
+          setError("We couldn't find an order with that reference and email. Check both and try again.")
+        } else {
+          setError("We couldn't find an order with that reference on your account. If you ordered without signing in, add the email you used at checkout.")
+          setWithEmail(true)
+        }
+      } else if (err instanceof ApiError && (err.status === 401 || err.status === 419)) {
         setError("Please sign in to track your order.")
-      } else if (err instanceof ApiError && err.status === 404) {
-        setError("We couldn't find an order with that reference on your account.")
       } else {
-        const msg = err instanceof Error ? err.message : "Something went wrong. Please try again."
-        setError(msg)
-        toast.error(msg)
+        setError(info.fields.email || info.fields.reference || info.message)
       }
     } finally {
       setLoading(false)
     }
   }
 
-  // Tracking requires an authenticated session (per the API). Prompt the guest to sign in.
-  if (!user) {
-    return (
-      <div className="rounded-2xl border border-border bg-card p-8 text-center shadow-soft">
-        <p className="font-display text-lg font-bold">Sign in to track your order</p>
-        <p className="mx-auto mt-2 max-w-md text-sm text-muted-foreground">
-          For your security, order tracking is available from your account. Sign in with the email you used at
-          checkout to see live delivery status.
-        </p>
-        <div className="mt-5 flex flex-wrap justify-center gap-3">
-          <Link
-            href={`/login?callbackUrl=${encodeURIComponent("/track-order")}`}
-            className="inline-flex items-center justify-center rounded-full bg-gradient-brand px-6 py-3 text-sm font-semibold text-primary-foreground"
-          >
-            Sign in
-          </Link>
-          <Link
-            href="/account/orders"
-            className="inline-flex items-center justify-center rounded-full border border-border bg-background px-6 py-3 text-sm font-medium hover:border-brand hover:text-brand"
-          >
-            View my orders
-          </Link>
-        </div>
-      </div>
-    )
+  const submit = (e: React.FormEvent) => {
+    e.preventDefault()
+    const ref = reference.trim()
+    if (!ref) return
+    const mail = email.trim()
+    if (needsEmail && !EMAIL_RE.test(mail)) {
+      setError("Enter the email address you used at checkout.")
+      return
+    }
+    lookup(ref, needsEmail ? mail : null)
   }
+
+  // The order was placed on this device → we know its email, so track straight away.
+  // Otherwise a signed-in shopper can be looked up by reference alone.
+  const trackLinked = () => {
+    const stored = findGuestOrder(linkedReference)
+    if (stored) trackRecent(stored)
+    else if (status === "authenticated") lookup(linkedReference, null)
+  }
+
+  // Once, when the session state is known.
+  useEffect(() => {
+    if (status === "loading" || autoTracked.current || !linkedReference) return
+    autoTracked.current = true
+    trackLinked()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [status, linkedReference])
+
+  const trackRecent = (order: StoredGuestOrder) => {
+    setReference(order.reference)
+    setEmail(order.email)
+    setWithEmail(true)
+    lookup(order.reference, order.email)
+  }
+
+  // An unpaid guest order can be taken back to the payment page from here.
+  const payNow = async () => {
+    if (!tracking || !guestEmail) return
+    setPaying(true)
+    try {
+      const next = await resumeGuestPayment({
+        reference: tracking.reference,
+        email: guestEmail,
+        paymentReference: findGuestOrder(tracking.reference)?.paymentReference,
+      })
+      if (next.status === "paid") {
+        toast.success("This order has already been paid.")
+        setPaying(false)
+        lookup(tracking.reference, guestEmail)
+        return
+      }
+      window.location.assign(next.url) // stay busy while the browser leaves
+    } catch (err) {
+      toast.error(guestApiError(err, "We couldn't start the payment.").message)
+      setPaying(false)
+    }
+  }
+
+  const awaitingPayment =
+    !!tracking &&
+    !!guestEmail &&
+    tracking.current_status.toLowerCase() === "pending" &&
+    tracking.steps.some((s) => s.key === "payment" && s.state !== "completed")
 
   return (
     <>
       <form
         onSubmit={submit}
-        className="flex flex-col gap-3 rounded-2xl border border-border bg-card p-5 shadow-soft sm:flex-row"
+        noValidate
+        className="flex flex-col gap-3 rounded-2xl border border-border bg-card p-5 shadow-soft"
       >
-        <Input
-          value={reference}
-          onChange={(e) => setReference(e.target.value)}
-          placeholder="Order reference, e.g. OR1782908533425398EC8CC4"
-          className="h-12 flex-1 rounded-xl border border-border bg-background px-4 text-sm outline-none focus:border-brand"
-        />
-        <Button
-          variant="ghost"
-          type="submit"
-          disabled={loading || !reference.trim()}
-          className="inline-flex h-12 items-center justify-center gap-2 rounded-full bg-gradient-brand px-8 text-sm font-semibold text-primary-foreground disabled:opacity-60"
-        >
-          {loading && <Loader2 className="h-4 w-4 animate-spin" />}
-          {loading ? "Tracking…" : "Track"}
-        </Button>
+        <div className="flex flex-col gap-3 sm:flex-row">
+          <Input
+            value={reference}
+            onChange={(e) => setReference(e.target.value)}
+            aria-label="Order reference"
+            placeholder="Order reference, e.g. OR1782908533425398EC8CC4"
+            className="h-12 flex-1 rounded-xl border border-border bg-background px-4 text-sm outline-none focus:border-brand"
+          />
+          {needsEmail && (
+            <Input
+              type="email"
+              inputMode="email"
+              autoComplete="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              aria-label="Email used at checkout"
+              placeholder="Email used at checkout"
+              className="h-12 flex-1 rounded-xl border border-border bg-background px-4 text-sm outline-none focus:border-brand"
+            />
+          )}
+          <Button
+            variant="ghost"
+            type="submit"
+            disabled={loading || !reference.trim() || (needsEmail && !email.trim())}
+            className="inline-flex h-12 items-center justify-center gap-2 rounded-full bg-gradient-brand px-8 text-sm font-semibold text-primary-foreground disabled:opacity-60"
+          >
+            {loading && <Loader2 className="h-4 w-4 animate-spin" />}
+            {loading ? "Tracking…" : "Track"}
+          </Button>
+        </div>
+        {user && (
+          <button
+            type="button"
+            onClick={() => setWithEmail((v) => !v)}
+            className="self-start text-xs font-medium text-brand hover:underline"
+          >
+            {withEmail ? "Track an order on my account instead" : "Ordered without signing in? Track with your email"}
+          </button>
+        )}
       </form>
 
       <p className="mt-3 text-center text-xs text-muted-foreground">
-        Find your reference on your{" "}
-        <Link href="/account/orders" className="font-medium text-brand hover:underline">
-          order history
-        </Link>{" "}
-        or confirmation email.
+        {user ? (
+          <>
+            Find your reference on your{" "}
+            <Link href="/account/orders" className="font-medium text-brand hover:underline">
+              order history
+            </Link>{" "}
+            or confirmation email.
+          </>
+        ) : (
+          <>
+            Your reference was shown when you placed the order. Have an account?{" "}
+            <Link
+              href={`/login?callbackUrl=${encodeURIComponent("/account/orders")}`}
+              className="font-medium text-brand hover:underline"
+            >
+              Sign in
+            </Link>{" "}
+            to see all your orders.
+          </>
+        )}
       </p>
 
+      {recent.length > 0 && (
+        <div className="mt-4 flex flex-wrap items-center justify-center gap-2 text-xs text-muted-foreground">
+          <span>Ordered on this device:</span>
+          {recent.map((order) => (
+            <button
+              key={order.reference}
+              type="button"
+              disabled={loading}
+              onClick={() => trackRecent(order)}
+              className="rounded-full border border-border bg-card px-3 py-1.5 font-medium text-foreground hover:border-brand hover:text-brand disabled:opacity-60"
+            >
+              {order.reference}
+            </button>
+          ))}
+        </div>
+      )}
+
       {error && (
-        <div className="mt-6 rounded-2xl border border-red-200 bg-red-50 p-5 text-sm text-red-700 dark:border-red-500/30 dark:bg-red-500/10 dark:text-red-400">
+        <div role="alert" className="mt-6 rounded-2xl border border-red-200 bg-red-50 p-5 text-sm text-red-700 dark:border-red-500/30 dark:bg-red-500/10 dark:text-red-400">
           {error}
+        </div>
+      )}
+
+      {awaitingPayment && (
+        <div className="mt-6 flex flex-wrap items-center justify-between gap-4 rounded-2xl border border-amber-300/60 bg-amber-50 p-5 dark:border-amber-500/30 dark:bg-amber-500/10">
+          <div>
+            <p className="font-display text-sm font-semibold text-amber-900 dark:text-amber-200">This order hasn&apos;t been paid for yet</p>
+            <p className="mt-0.5 text-xs text-amber-800 dark:text-amber-300">We&apos;ll start preparing it as soon as your payment is confirmed.</p>
+          </div>
+          <Button
+            type="button"
+            onClick={payNow}
+            disabled={paying}
+            className="h-auto gap-2 rounded-full bg-gradient-brand px-5 py-2.5 text-sm font-semibold text-primary-foreground"
+          >
+            {paying && <Loader2 className="h-4 w-4 animate-spin" />} Complete payment
+          </Button>
         </div>
       )}
 
@@ -220,6 +353,7 @@ export function TrackOrderForm() {
 
 function TrackingResult({ tracking }: { tracking: OrderTrackingData }) {
   const address = tracking.fulfillment?.delivery_address
+  const pickup = tracking.fulfillment?.pickup_location
   const rate = tracking.fulfillment?.selected_rate
   const isPickup = tracking.fulfillment_type === "mall_pickup"
 
@@ -325,7 +459,19 @@ function TrackingResult({ tracking }: { tracking: OrderTrackingData }) {
             {isPickup ? "Pickup" : "Delivery to"}
           </p>
           {isPickup ? (
-            <p className="mt-3 text-sm text-muted-foreground">Collect from Banex Mall.</p>
+            pickup ? (
+              <div className="mt-3 flex items-start gap-2 text-sm">
+                <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-brand" />
+                <span className="text-muted-foreground">
+                  <span className="font-medium text-foreground">{pickup.name}</span>
+                  <br />
+                  {[pickup.street, pickup.street_line_2, pickup.city].filter(Boolean).join(", ")}
+                  {pickup.phone ? ` · ${pickup.phone}` : ""}
+                </span>
+              </div>
+            ) : (
+              <p className="mt-3 text-sm text-muted-foreground">Collect from Banex Mall.</p>
+            )
           ) : address ? (
             <div className="mt-3 flex items-start gap-2 text-sm">
               <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-brand" />

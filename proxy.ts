@@ -2,7 +2,9 @@ import { NextResponse } from "next/server"
 import type { NextRequest } from "next/server"
 import { getToken } from "next-auth/jwt"
 
-const PROTECTED_ROUTES = ["/checkout"]
+// Non-dashboard routes that still require a session. Checkout is NOT one of them:
+// guests can order and pay without an account (the page picks the guest flow).
+const PROTECTED_ROUTES: string[] = []
 
 /**
  * Next.js proxy (formerly "middleware") — request-time auth + role gating.
@@ -61,5 +63,5 @@ export async function proxy(req: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/checkout", "/login", "/signup", "/admin/:path*", "/account/:path*", "/vendor-dashboard/:path*"],
+  matcher: ["/login", "/signup", "/admin/:path*", "/account/:path*", "/vendor-dashboard/:path*"],
 }

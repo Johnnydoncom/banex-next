@@ -253,7 +253,7 @@ export type ShippingRate = {
   name: string
   fee: number
   currency: string
-  delivery_window: string
+  delivery_window: string | null // null for mall pickup
 }
 
 export type ShippingValidation = {
@@ -385,6 +385,15 @@ export type OrderTrackingData = {
   fulfillment?: {
     type: "delivery" | "mall_pickup"
     delivery_address?: AddressData | null
+    // Present for mall pickup: where to collect the order.
+    pickup_location?: {
+      name: string
+      street: string
+      street_line_2?: string | null
+      city: string
+      state: string
+      phone?: string | null
+    } | null
     selected_rate?: {
       id: string
       code: string

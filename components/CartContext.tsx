@@ -44,6 +44,8 @@ type CartContextValue = {
 
 const CartContext = createContext<CartContextValue | null>(null)
 const STORAGE_KEY = "banex.cart"
+// Guest checkout rejects more than 99 of one item, so a guest cart never holds more.
+const GUEST_MAX_QTY = 99
 
 // The API serialises an empty attribute set as `[]`; normalise to an object (or null).
 function normalizeAttrs(attrs: CartItemData["variant_attributes"]): Record<string, string> | null {
@@ -155,8 +157,12 @@ export function CartProvider({ children }: { children: ReactNode }) {
         `${i.productVariantId ?? i.productId}-${item.sellerId}`
       setItems((prev) => {
         const found = prev.find((i) => lineKey(i) === lineKey(item))
-        if (found) return prev.map((i) => (lineKey(i) === lineKey(item) ? { ...i, qty: i.qty + qty } : i))
-        return [...prev, { ...item, id: lineKey(item), qty }]
+        if (found) {
+          return prev.map((i) =>
+            lineKey(i) === lineKey(item) ? { ...i, qty: Math.min(GUEST_MAX_QTY, i.qty + qty) } : i,
+          )
+        }
+        return [...prev, { ...item, id: lineKey(item), qty: Math.min(GUEST_MAX_QTY, qty) }]
       })
       toast.success("Added to cart")
       setIsOpen(true)
@@ -202,7 +208,8 @@ export function CartProvider({ children }: { children: ReactNode }) {
         toast.error("Failed to update quantity")
       }
     } else {
-      setItems((prev) => prev.map((i) => (i.id === id ? { ...i, qty } : i)))
+      if (qty > GUEST_MAX_QTY) toast.info(`You can order up to ${GUEST_MAX_QTY} of an item at a time.`)
+      setItems((prev) => prev.map((i) => (i.id === id ? { ...i, qty: Math.min(GUEST_MAX_QTY, qty) } : i)))
     }
   }, [status, items, remove])
 
@@ -216,6 +223,11 @@ export function CartProvider({ children }: { children: ReactNode }) {
       }
     } else {
       setItems([])
+      // Persist now rather than in the effect: guest checkout leaves for the
+      // payment page right after clearing, which can beat the effect.
+      try {
+        window.localStorage.setItem(STORAGE_KEY, "[]")
+      } catch {}
     }
   }, [status])
 
