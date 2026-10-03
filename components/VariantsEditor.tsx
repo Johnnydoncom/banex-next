@@ -144,12 +144,12 @@ export function VariantsEditor({
   // Only two possible layouts (1 or 2 attribute columns) → static Tailwind classes.
   const gridCols =
     activeCols.length === 2
-      ? "sm:grid-cols-[1fr_1fr_1fr_1fr_1fr_auto_auto]"
-      : "sm:grid-cols-[1fr_1fr_1fr_1fr_auto_auto]"
+      ? "@xl:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_minmax(0,1fr)_minmax(0,1fr)_minmax(0,1fr)_auto_auto]"
+      : "@xl:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_minmax(0,1fr)_minmax(0,1fr)_auto_auto]"
 
   return (
-    <section className="rounded-2xl border border-border bg-card p-6 shadow-sm">
-      <div className="flex items-center justify-between">
+    <section className="@container rounded-2xl border border-border bg-card p-4 shadow-sm sm:p-6">
+      <div className="flex items-center justify-between gap-4">
         <div>
           <h2 className="flex items-center gap-2 font-display text-lg font-bold">
             <Palette className="h-5 w-5 text-brand" /> Variants
@@ -159,7 +159,7 @@ export function VariantsEditor({
             price &amp; stock.
           </p>
         </div>
-        <Switch checked={enabled} onCheckedChange={onToggle} className="data-[state=checked]:bg-brand" />
+        <Switch checked={enabled} onCheckedChange={onToggle} className="flex-none data-[state=checked]:bg-brand" />
       </div>
 
       {enabled && (
@@ -196,7 +196,7 @@ export function VariantsEditor({
           </div>
 
           {/* Column headers (desktop only) */}
-          <div className={`hidden gap-2 px-1 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground sm:grid sm:items-center ${gridCols}`}>
+          <div className={`hidden gap-2 px-1 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground @xl:grid @xl:items-center ${gridCols}`}>
             {activeCols.map((a) => (
               <span key={a.key}>{a.label}</span>
             ))}
@@ -210,32 +210,32 @@ export function VariantsEditor({
           {rows.map((r, i) => (
             <div
               key={i}
-              className={`grid grid-cols-2 gap-2 rounded-xl border border-border bg-surface/40 p-3 sm:items-center sm:border-0 sm:bg-transparent sm:p-1 ${gridCols}`}
+              className={`grid grid-cols-2 gap-2 rounded-xl border border-border bg-surface/40 p-3 @xl:items-center @xl:border-0 @xl:bg-transparent @xl:p-1 ${gridCols}`}
             >
               {activeCols.map((a) => (
-                <div key={a.key} className="sm:contents">
-                  <Label className="mb-1 block text-[10px] text-muted-foreground sm:hidden">{a.label}</Label>
+                <div key={a.key} className="@xl:contents">
+                  <Label className="mb-1 block text-[10px] text-muted-foreground @xl:hidden">{a.label}</Label>
                   <Input
                     value={r[a.key]}
                     onChange={(e) => setRow(i, { [a.key]: e.target.value } as Partial<VariantRow>)}
                     placeholder={a.placeholder}
-                    className="rounded-lg px-3 py-2 text-sm"
+                    className="rounded-lg px-3 py-2 text-base md:text-sm"
                   />
                 </div>
               ))}
-              <div className="sm:contents">
-                <Label className="mb-1 block text-[10px] text-muted-foreground sm:hidden">Regular price</Label>
-                <Input type="number" min="0" value={r.regular_price} onChange={(e) => setRow(i, { regular_price: e.target.value })} placeholder="10000" className="rounded-lg px-3 py-2 text-sm" />
+              <div className="@xl:contents">
+                <Label className="mb-1 block text-[10px] text-muted-foreground @xl:hidden">Regular price</Label>
+                <Input type="number" min="0" value={r.regular_price} onChange={(e) => setRow(i, { regular_price: e.target.value })} placeholder="10000" className="rounded-lg px-3 py-2 text-base md:text-sm" />
               </div>
-              <div className="sm:contents">
-                <Label className="mb-1 block text-[10px] text-muted-foreground sm:hidden">Sale price (optional)</Label>
-                <Input type="number" min="0" value={r.sales_price} onChange={(e) => setRow(i, { sales_price: e.target.value })} placeholder="—" className="rounded-lg px-3 py-2 text-sm" />
+              <div className="@xl:contents">
+                <Label className="mb-1 block text-[10px] text-muted-foreground @xl:hidden">Sale price (optional)</Label>
+                <Input type="number" min="0" value={r.sales_price} onChange={(e) => setRow(i, { sales_price: e.target.value })} placeholder="—" className="rounded-lg px-3 py-2 text-base md:text-sm" />
               </div>
-              <div className="sm:contents">
-                <Label className="mb-1 block text-[10px] text-muted-foreground sm:hidden">Stock</Label>
-                <Input type="number" min="0" value={r.stock} onChange={(e) => setRow(i, { stock: e.target.value })} placeholder="10" className="rounded-lg px-3 py-2 text-sm" />
+              <div className="@xl:contents">
+                <Label className="mb-1 block text-[10px] text-muted-foreground @xl:hidden">Stock</Label>
+                <Input type="number" min="0" value={r.stock} onChange={(e) => setRow(i, { stock: e.target.value })} placeholder="10" className="rounded-lg px-3 py-2 text-base md:text-sm" />
               </div>
-              <label className="flex items-center gap-1.5 text-xs font-medium sm:justify-center">
+              <label className="flex items-center gap-1.5 text-xs font-medium @xl:justify-center">
                 <input
                   type="radio"
                   name="variant-default"
@@ -243,7 +243,7 @@ export function VariantsEditor({
                   onChange={() => setDefault(i)}
                   className="h-4 w-4 accent-brand"
                 />
-                <span className="sm:hidden">Default</span>
+                <span className="@xl:hidden">Default</span>
               </label>
               <Button
                 type="button"

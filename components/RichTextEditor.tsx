@@ -153,7 +153,7 @@ export function RichTextEditor({ value, onChange, placeholder }: RichTextEditorP
     content: value,
     editorProps: {
       attributes: {
-        class: "prose prose-sm dark:prose-invert max-w-none focus:outline-none min-h-[150px] p-4",
+        class: "prose prose-base md:prose-sm dark:prose-invert max-w-none focus:outline-none min-h-[150px] p-4",
       },
     },
     onUpdate: ({ editor }) => {

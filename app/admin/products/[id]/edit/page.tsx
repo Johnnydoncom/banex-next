@@ -71,7 +71,7 @@ function RejectModal({ open, loading, onConfirm, onCancel }: {
   const [reason, setReason] = useState("")
   if (!open) return null
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm">
       <div className="w-full max-w-md rounded-2xl border border-border bg-card p-6 shadow-2xl">
         <div className="mb-4 flex items-center gap-3">
           <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-rose-500/15">
@@ -454,7 +454,7 @@ export default function AdminEditProductPage({ params }: { params: Promise<{ id:
           </Link>
           <div>
             <h1 className="font-display text-2xl font-bold">Edit Product</h1>
-            <p className="mt-0.5 max-w-xs truncate text-sm text-muted-foreground">{product.name}</p>
+            <p className="mt-0.5 max-w-[14rem] truncate text-sm text-muted-foreground sm:max-w-xs">{product.name}</p>
           </div>
         </div>
         <div className="flex items-center gap-3">
@@ -501,7 +501,7 @@ export default function AdminEditProductPage({ params }: { params: Promise<{ id:
       </div>
 
       {/* Wizard */}
-      <div className="rounded-2xl border border-border bg-card p-6">
+      <div className="rounded-2xl border border-border bg-card p-4 sm:p-6">
         <WizardStepper steps={STEPS} current={step} furthest={furthest} onStepClick={jumpTo} />
 
         <div className="mt-8">
@@ -577,7 +577,7 @@ export default function AdminEditProductPage({ params }: { params: Promise<{ id:
                         )}
                         <p className="mt-0.5 truncate text-[11px] text-muted-foreground">{img.url.split("/").pop()}</p>
                       </div>
-                      <div className="flex flex-col gap-1 opacity-0 transition-opacity group-hover:opacity-100">
+                      <div className="flex flex-col gap-1 transition-opacity focus-within:opacity-100 pointer-fine:opacity-0 pointer-fine:group-hover:opacity-100">
                         {!isThisPrimary && (
                           <Button type="button" variant="ghost" size="icon" onClick={() => setPrimaryKey(`existing:${img.id}`)} title="Set as primary" className="h-auto w-auto rounded-lg p-1 text-muted-foreground hover:bg-brand/10 hover:text-brand">
                             <Star className="h-3.5 w-3.5" />
@@ -607,7 +607,7 @@ export default function AdminEditProductPage({ params }: { params: Promise<{ id:
                         <p className="mt-0.5 text-[11px] font-medium text-emerald-600">New upload</p>
                         <p className="truncate text-[11px] text-muted-foreground">{img.file.name}</p>
                       </div>
-                      <div className="flex flex-col gap-1 opacity-0 transition-opacity group-hover:opacity-100">
+                      <div className="flex flex-col gap-1 transition-opacity focus-within:opacity-100 pointer-fine:opacity-0 pointer-fine:group-hover:opacity-100">
                         {!isThisPrimary && (
                           <Button type="button" variant="ghost" size="icon" onClick={() => setPrimaryKey(key)} title="Set as primary" className="h-auto w-auto rounded-lg p-1 text-muted-foreground hover:bg-brand/10 hover:text-brand">
                             <Star className="h-3.5 w-3.5" />
@@ -707,8 +707,8 @@ export default function AdminEditProductPage({ params }: { params: Promise<{ id:
                 <div className="space-y-2">
                   {specifications.map((spec, i) => (
                     <div key={i} className="flex items-center gap-2">
-                      <Input type="text" value={spec.key} onChange={(e) => updateSpec(i, "key", e.target.value)} placeholder="Key (e.g. Storage)" className="flex-1 rounded-xl px-3.5 py-2.5 focus-visible:border-brand focus-visible:ring-brand" />
-                      <Input type="text" value={spec.value} onChange={(e) => updateSpec(i, "value", e.target.value)} placeholder="Value (e.g. 512GB)" className="flex-1 rounded-xl px-3.5 py-2.5 focus-visible:border-brand focus-visible:ring-brand" />
+                      <Input type="text" value={spec.key} onChange={(e) => updateSpec(i, "key", e.target.value)} placeholder="Key (e.g. Storage)" className="min-w-0 flex-1 rounded-xl px-3.5 py-2.5 focus-visible:border-brand focus-visible:ring-brand" />
+                      <Input type="text" value={spec.value} onChange={(e) => updateSpec(i, "value", e.target.value)} placeholder="Value (e.g. 512GB)" className="min-w-0 flex-1 rounded-xl px-3.5 py-2.5 focus-visible:border-brand focus-visible:ring-brand" />
                       <Button type="button" variant="outline" size="icon" onClick={() => removeSpec(i)} className="h-auto w-auto rounded-xl p-2.5 text-muted-foreground hover:border-rose-300 hover:bg-rose-500/10 hover:text-rose-500">
                         <X className="h-4 w-4" />
                       </Button>
@@ -777,7 +777,8 @@ export default function AdminEditProductPage({ params }: { params: Promise<{ id:
         </div>
 
         {/* Footer */}
-        <div className="mt-8 border-t border-border pt-4">
+        {/* Sticky so Back / Continue stay reachable on long steps and small screens */}
+        <div className="sticky bottom-0 z-10 -mx-4 -mb-4 mt-8 rounded-b-2xl border-t border-border bg-card px-4 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] sm:-mx-6 sm:-mb-6 sm:px-6 sm:py-4">
           <WizardFooter
             isFirst={step === 0}
             isLast={step === STEPS.length - 1}

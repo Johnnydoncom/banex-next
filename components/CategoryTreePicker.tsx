@@ -172,7 +172,7 @@ export function CategoryTreePicker({
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           placeholder="Search categories…"
-          className="h-8 rounded-lg pl-8 text-xs"
+          className="h-8 rounded-lg pl-8 text-base md:text-xs"
         />
       </div>
 

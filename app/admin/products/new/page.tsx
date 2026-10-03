@@ -373,7 +373,7 @@ export default function AdminNewProductPage() {
 
       {hasDraft && step === 0 && <DraftRestoredBanner savedAt={savedAt} onDiscard={discardDraft} />}
 
-      <div className="rounded-2xl border border-border bg-card p-6">
+      <div className="rounded-2xl border border-border bg-card p-4 sm:p-6">
         <WizardStepper steps={STEPS} current={step} furthest={furthest} onStepClick={jumpTo} />
 
         <div className="mt-8">
@@ -437,7 +437,7 @@ export default function AdminNewProductPage() {
                     <Button type="button" variant="ghost" size="icon" onClick={() => setPrimaryImageIndex(i)} title="Set as primary" className={`absolute left-1 top-1 h-auto w-auto rounded-full p-1.5 ${primaryImageIndex === i ? "bg-brand text-white hover:bg-brand" : "bg-black/50 text-white/50 hover:text-white hover:bg-black/50"}`}>
                       <Star className="h-3 w-3" fill={primaryImageIndex === i ? "currentColor" : "none"} />
                     </Button>
-                    <Button type="button" variant="ghost" size="icon" onClick={() => removeImage(i)} className="absolute right-1 top-1 h-auto w-auto rounded-full bg-black/50 p-1.5 text-white opacity-0 transition-opacity group-hover:opacity-100 hover:bg-black/50">
+                    <Button type="button" variant="ghost" size="icon" onClick={() => removeImage(i)} className="absolute right-1 top-1 h-auto w-auto rounded-full bg-black/50 p-1.5 text-white transition-opacity hover:bg-black/50 focus-visible:opacity-100 pointer-fine:opacity-0 pointer-fine:group-hover:opacity-100">
                       <X className="h-3 w-3" />
                     </Button>
                   </div>
@@ -477,7 +477,7 @@ export default function AdminNewProductPage() {
                   {pricingPreview && (
                     <div className="sm:col-span-2 rounded-xl border border-brand/30 bg-brand-soft/10 p-4">
                       <p className="text-[11px] font-semibold uppercase tracking-widest text-brand-deep">Pricing breakdown</p>
-                      <div className="mt-2 grid grid-cols-3 gap-3 text-sm">
+                      <div className="mt-2 grid grid-cols-1 gap-3 text-sm sm:grid-cols-3">
                         <div>
                           <p className="text-[10px] uppercase text-muted-foreground">Listing price</p>
                           <p className="font-display font-bold">
@@ -533,8 +533,8 @@ export default function AdminNewProductPage() {
                 <div className="space-y-2">
                   {specifications.map((spec, i) => (
                     <div key={i} className="flex items-center gap-2">
-                      <Input type="text" value={spec.key} onChange={(e) => updateSpecification(i, "key", e.target.value)} placeholder="Key (e.g. Storage)" className="flex-1 rounded-xl px-4 py-2.5 focus-visible:border-brand focus-visible:ring-brand" />
-                      <Input type="text" value={spec.value} onChange={(e) => updateSpecification(i, "value", e.target.value)} placeholder="Value (e.g. 512GB)" className="flex-1 rounded-xl px-4 py-2.5 focus-visible:border-brand focus-visible:ring-brand" />
+                      <Input type="text" value={spec.key} onChange={(e) => updateSpecification(i, "key", e.target.value)} placeholder="Key (e.g. Storage)" className="min-w-0 flex-1 rounded-xl px-4 py-2.5 focus-visible:border-brand focus-visible:ring-brand" />
+                      <Input type="text" value={spec.value} onChange={(e) => updateSpecification(i, "value", e.target.value)} placeholder="Value (e.g. 512GB)" className="min-w-0 flex-1 rounded-xl px-4 py-2.5 focus-visible:border-brand focus-visible:ring-brand" />
                       <Button type="button" variant="outline" size="icon" onClick={() => removeSpecification(i)} className="h-auto w-auto rounded-xl p-2.5 text-muted-foreground hover:bg-red-500/10 hover:text-red-500">
                         <X className="h-4 w-4" />
                       </Button>
@@ -614,7 +614,8 @@ export default function AdminNewProductPage() {
           )}
         </div>
 
-        <div className="mt-8 border-t border-border pt-4">
+        {/* Sticky so Back / Continue stay reachable on long steps and small screens */}
+        <div className="sticky bottom-0 z-10 -mx-4 -mb-4 mt-8 rounded-b-2xl border-t border-border bg-card px-4 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] sm:-mx-6 sm:-mb-6 sm:px-6 sm:py-4">
           <WizardFooter
             isFirst={step === 0}
             isLast={step === STEPS.length - 1}

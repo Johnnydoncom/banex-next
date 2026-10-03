@@ -272,13 +272,14 @@ export function ProductWizardModal({
     !hasVariants && form.sales_price.trim() !== "" && Number(form.sales_price) > 0 && Number(form.sales_price) >= Number(form.regular_price)
 
   return (
-    <div className="fixed inset-0 z-50 flex items-start justify-end bg-black/40 backdrop-blur-sm" onClick={onClose}>
+    <div className="fixed inset-0 z-50 flex justify-end bg-black/40 backdrop-blur-sm" onClick={onClose}>
+      {/* h-full of the fixed overlay (not h-screen/100vh) so the footer stays above mobile browser toolbars */}
       <div
-        className="relative flex h-screen w-full max-w-xl flex-col overflow-hidden border-l border-border bg-card shadow-2xl"
+        className="relative flex h-full max-h-dvh w-full max-w-xl flex-col overflow-hidden border-border bg-card shadow-2xl sm:border-l"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header + stepper */}
-        <div className="space-y-4 border-b border-border px-6 py-4">
+        <div className="shrink-0 space-y-4 border-b border-border px-4 py-4 sm:px-6">
           <div className="flex items-center justify-between">
             <div>
               <h2 className="font-display text-lg font-bold">{isEdit ? "Edit Product" : "Add Product"}</h2>
@@ -294,7 +295,7 @@ export function ProductWizardModal({
         </div>
 
         {/* Body */}
-        <div className="flex-1 space-y-5 overflow-y-auto p-6">
+        <div className="min-h-0 flex-1 space-y-5 overflow-y-auto overscroll-contain p-4 sm:p-6">
           {!isEdit && hasDraft && step === 0 && <DraftRestoredBanner savedAt={savedAt} onDiscard={discardDraft} />}
 
           {/* Step 0 — Details */}
@@ -338,7 +339,7 @@ export function ProductWizardModal({
                     {form.primary_image_index === i && (
                       <span className="absolute bottom-0 left-0 right-0 bg-emerald-600 text-center text-[9px] font-bold text-white py-0.5">PRIMARY</span>
                     )}
-                    <Button variant="ghost" type="button" onClick={(e) => removeImage(i, e)} className="absolute right-1 top-1 rounded-full bg-black/60 p-1 text-white opacity-0 transition-opacity hover:bg-rose-500 group-hover:opacity-100">
+                    <Button variant="ghost" type="button" onClick={(e) => removeImage(i, e)} className="absolute right-1 top-1 h-auto rounded-full bg-black/60 p-1.5 text-white transition-opacity hover:bg-rose-500 focus-visible:opacity-100 pointer-fine:opacity-0 pointer-fine:group-hover:opacity-100">
                       <X className="h-3 w-3" />
                     </Button>
                   </div>
@@ -349,7 +350,7 @@ export function ProductWizardModal({
                 </Button>
                 <Input ref={fileInputRef} type="file" accept="image/*" multiple className="hidden" onChange={handleImageChange} />
               </div>
-              <p className="mt-1 text-[10px] text-muted-foreground">Click an image to set it as primary.</p>
+              <p className="mt-1 text-[10px] text-muted-foreground">Tap an image to set it as primary.</p>
               <FieldError message={errors.images} />
             </div>
           )}
@@ -357,7 +358,7 @@ export function ProductWizardModal({
           {/* Step 2 — Pricing */}
           {step === 2 && (
             <div className="space-y-5">
-              <div className={`grid gap-4 ${hasVariants ? "grid-cols-1" : "grid-cols-2 sm:grid-cols-4"}`}>
+              <div className={`grid gap-4 ${hasVariants ? "grid-cols-1" : "grid-cols-2"}`}>
                 {!hasVariants && (
                   <>
                     <F label="Regular Price (₦) *">
@@ -403,7 +404,7 @@ export function ProductWizardModal({
                           )}
                         </span>
                       </div>
-                      <div className="flex justify-between">
+                      <div className="flex justify-between gap-3">
                         <span className="text-muted-foreground">Platform Commission ({pricingPreview.commission_percent_label})</span>
                         <span className="font-semibold text-rose-600">− {formatNaira(pricingPreview.commission_amount)}</span>
                       </div>
@@ -422,7 +423,7 @@ export function ProductWizardModal({
           {/* Step 3 — Options */}
           {step === 3 && (
             <div className="space-y-5">
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid gap-4 sm:grid-cols-2">
                 <F label="Location">
                   <Input value={form.location} onChange={(e) => setForm((f) => ({ ...f, location: e.target.value }))} placeholder="e.g. Banex Mall" />
                 </F>
@@ -437,6 +438,7 @@ export function ProductWizardModal({
                   {form.specifications.map((s, i) => (
                     <div key={i} className="flex gap-2">
                       <Input
+                        className="min-w-0"
                         value={s}
                         onChange={(e) => {
                           const specs = [...form.specifications]; specs[i] = e.target.value
@@ -495,7 +497,7 @@ export function ProductWizardModal({
         </div>
 
         {/* Footer */}
-        <div className="border-t border-border px-6 py-4">
+        <div className="shrink-0 border-t border-border bg-card px-4 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] sm:px-6 sm:py-4">
           <WizardFooter
             isFirst={step === 0}
             isLast={step === STEPS.length - 1}
@@ -516,7 +518,7 @@ export function ProductWizardModal({
 
 function F({ label, children }: { label: string; children: React.ReactNode }) {
   return (
-    <label className="block">
+    <label className="block min-w-0">
       <span className="mb-1.5 block text-[11px] font-semibold uppercase tracking-widest text-muted-foreground">{label}</span>
       {children}
     </label>
@@ -527,7 +529,7 @@ function Toggle({ checked, onChange, label }: { checked: boolean; onChange: (v: 
   return (
     <label className="flex cursor-pointer items-center justify-between rounded-xl border border-border bg-background px-4 py-3">
       <span className="text-sm font-medium">{label}</span>
-      <Switch checked={checked} onCheckedChange={onChange} />
+      <Switch className="flex-none" checked={checked} onCheckedChange={onChange} />
     </label>
   )
 }

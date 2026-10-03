@@ -112,7 +112,7 @@ export function WizardFooter({
         variant="outline"
         onClick={isFirst && onCancel ? onCancel : onBack}
         disabled={submitting}
-        className="h-auto rounded-xl px-5 py-2.5 text-xs font-semibold"
+        className="h-auto min-h-11 flex-1 rounded-xl px-5 py-2.5 text-sm font-semibold sm:min-h-0 sm:flex-none sm:text-xs"
       >
         {isFirst ? (onCancel ? "Cancel" : "Back") : "Back"}
       </Button>
@@ -121,7 +121,7 @@ export function WizardFooter({
           type="button"
           onClick={onSubmit}
           disabled={submitting}
-          className="h-auto rounded-xl bg-gradient-brand px-6 py-2.5 text-xs font-semibold text-primary-foreground shadow-brand disabled:opacity-60"
+          className="h-auto min-h-11 flex-1 rounded-xl bg-gradient-brand px-6 py-2.5 text-sm font-semibold text-primary-foreground shadow-brand disabled:opacity-60 sm:min-h-0 sm:flex-none sm:text-xs"
         >
           {submitting ? "Saving…" : submitLabel}
         </Button>
@@ -129,7 +129,7 @@ export function WizardFooter({
         <Button
           type="button"
           onClick={onNext}
-          className="h-auto rounded-xl bg-gradient-brand px-6 py-2.5 text-xs font-semibold text-primary-foreground shadow-brand"
+          className="h-auto min-h-11 flex-1 rounded-xl bg-gradient-brand px-6 py-2.5 text-sm font-semibold text-primary-foreground shadow-brand sm:min-h-0 sm:flex-none sm:text-xs"
         >
           {nextLabel}
         </Button>
