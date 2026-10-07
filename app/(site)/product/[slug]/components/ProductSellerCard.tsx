@@ -6,6 +6,7 @@ import { toast } from "sonner"
 import { useRouter } from "next/navigation"
 import { useCart } from "@/components/CartContext"
 import type { GenericProduct } from "@/lib/generic-api"
+import { absoluteUrl } from "@/lib/seo/config"
 import { formatNaira, saleInfo } from "@/lib/products"
 import { Button } from "@/components/ui/button"
 
@@ -34,7 +35,7 @@ export function ProductSellerCard({ product, sellerProduct, isBestPrice, index }
   const whatsappDigits = (s.whatsapp || "").replace(/[^\d]/g, "")
   const hasContact = whatsappDigits.length > 0
   const waLink = `https://wa.me/${whatsappDigits}?text=${encodeURIComponent(
-    `Hi ${s.shop_name}, I'm interested in your "${sellerProduct.name}" listing on Banex Mall.`,
+    `Hi ${s.shop_name}, I'm interested in your "${sellerProduct.name}" listing on Banex Mall.\n${absoluteUrl(`/product/${sellerProduct.slug}`)}`,
   )}`
 
   const primaryImg = sellerProduct.images?.find((img) => img.is_primary)?.url || sellerProduct.images?.[0]?.url || ""

@@ -2,6 +2,7 @@
 
 import { Phone, MessageCircle } from "lucide-react"
 import type { GenericProduct } from "@/lib/generic-api"
+import { absoluteUrl } from "@/lib/seo/config"
 
 /**
  * Contact actions on the single product page. Uses the product's assigned
@@ -14,7 +15,7 @@ export function ProductContactButtons({ product }: { product: GenericProduct }) 
   if (!digits) return null
 
   const waLink = `https://wa.me/${digits}?text=${encodeURIComponent(
-    `Hi Banex Mall, I'm interested in the "${product.name}" listing.`,
+    `Hi Banex Mall, I'm interested in the "${product.name}" listing.\n${absoluteUrl(`/product/${product.slug}`)}`,
   )}`
 
   return (
