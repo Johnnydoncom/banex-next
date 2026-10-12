@@ -165,6 +165,40 @@
   }
 }
 
+/* Soft edge fade on a horizontal scroller. Toggle data-fade-start / data-fade-end
+   on the element to fade the side that has more content to scroll to. */
+@property --fade-start {
+  syntax: "<length>";
+  inherits: false;
+  initial-value: 0px;
+}
+
+@property --fade-end {
+  syntax: "<length>";
+  inherits: false;
+  initial-value: 0px;
+}
+
+@utility scroll-fade-x {
+  --fade-size: 2.5rem;
+  mask-image: linear-gradient(
+    to right,
+    transparent,
+    #000 var(--fade-start),
+    #000 calc(100% - var(--fade-end)),
+    transparent
+  );
+  transition: --fade-start 200ms ease, --fade-end 200ms ease;
+
+  &[data-fade-start] {
+    --fade-start: var(--fade-size);
+  }
+
+  &[data-fade-end] {
+    --fade-end: var(--fade-size);
+  }
+}
+
 @layer utilities {
 
   /* Brand utilities */

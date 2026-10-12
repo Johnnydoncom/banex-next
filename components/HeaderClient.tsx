@@ -1,5 +1,6 @@
 "use client"
 
+import { useEffect, useRef } from "react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import {
@@ -41,6 +42,27 @@ export function HeaderClient({ categories, settings }: { categories: GenericCate
     await signOut()
     toast.success("Signed out")
   }
+
+  // Fade the category nav's edges only where there's more to scroll to.
+  // Written straight to data attributes so scrolling doesn't re-render the header.
+  const categoryNavRef = useRef<HTMLDivElement>(null)
+  useEffect(() => {
+    const el = categoryNavRef.current
+    if (!el) return
+    const update = () => {
+      const max = el.scrollWidth - el.clientWidth
+      el.toggleAttribute("data-fade-start", el.scrollLeft > 1)
+      el.toggleAttribute("data-fade-end", el.scrollLeft < max - 1)
+    }
+    update()
+    el.addEventListener("scroll", update, { passive: true })
+    const observer = new ResizeObserver(update)
+    observer.observe(el)
+    return () => {
+      el.removeEventListener("scroll", update)
+      observer.disconnect()
+    }
+  }, [categories])
 
   return (
     <header className="sticky top-0 z-40 border-b border-border bg-background/85 backdrop-blur-xl">
@@ -247,7 +269,10 @@ export function HeaderClient({ categories, settings }: { categories: GenericCate
 
       {/* Category nav */}
       <nav className="border-t border-border/60 bg-card/60">
-        <div className="mx-auto flex container items-center gap-1 overflow-x-auto scrollbar-hide py-2 text-sm">
+        <div
+          ref={categoryNavRef}
+          className="mx-auto flex container items-center gap-1 overflow-x-auto scrollbar-hide scroll-fade-x py-2 text-sm"
+        >
           <Link
             href="/shop"
             className="whitespace-nowrap rounded-full bg-brand-soft/30 px-3.5 py-1.5 font-semibold text-brand-deep transition-colors hover:bg-brand-soft/50"
