@@ -247,7 +247,7 @@ export function HeaderClient({ categories, settings }: { categories: GenericCate
 
       {/* Category nav */}
       <nav className="border-t border-border/60 bg-card/60">
-        <div className="mx-auto flex container items-center gap-1 overflow-x-auto py-2 text-sm">
+        <div className="mx-auto flex container items-center gap-1 overflow-x-auto scrollbar-hide py-2 text-sm">
           <Link
             href="/shop"
             className="whitespace-nowrap rounded-full bg-brand-soft/30 px-3.5 py-1.5 font-semibold text-brand-deep transition-colors hover:bg-brand-soft/50"
