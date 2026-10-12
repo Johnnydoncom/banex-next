@@ -95,8 +95,12 @@ export default async function ShopPage({
   const crumbs = trail.map((c) => ({ name: c.name, path: shopHrefFor(rootSlug!, c.slug) }))
   // Hero art: the viewed category's image, else the nearest ancestor that has one.
   const heroImage = [...trail].reverse().find((c) => c.image_url)?.image_url
+  // Category art is a mix of transparent cut-outs (PNG) and full-bleed photos (JPEG):
+  // photos fill the frame, cut-outs sit inside it uncropped.
+  const heroImageIsPhoto = !!heroImage && /\.jpe?g($|\?)/i.test(heroImage)
 
   const filteredProducts: GenericProduct[] = productsData.products || []
+  const listingCount = productsData.pagination?.total || filteredProducts.length
   const pagination = productsData.pagination as { current_page: number; last_page: number; total: number; per_page: number } | undefined
   const basePath = slugArray?.length ? `/shop/${slugArray.join("/")}` : "/shop"
 
@@ -123,16 +127,9 @@ export default async function ShopPage({
   return (
     <div>
       <JsonLd schema={shopJsonLd} />
-      <section className="relative overflow-hidden bg-white pt-10 pb-16 md:pt-16 md:pb-24 border-b border-border">
+      <section className="relative overflow-hidden bg-background pt-10 pb-16 md:pt-16 md:pb-24 border-b border-border">
         <div className="absolute inset-0 z-0 bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-brand-soft/20 via-transparent to-transparent"></div>
         <div className="absolute -top-[20%] -left-[10%] z-0 h-[500px] w-[500px] rounded-full bg-brand/5 blur-[100px] pointer-events-none"></div>
-
-        {heroImage && (
-          <div className="absolute right-0 top-0 z-0 hidden h-full w-1/3 md:block">
-            <div className="absolute inset-0 bg-gradient-to-r from-white via-white/80 to-transparent z-10"></div>
-            <img src={heroImage} alt="" className="h-full w-full object-cover object-center opacity-40 mix-blend-multiply" />
-          </div>
-        )}
 
         <div className="relative z-10 mx-auto container">
           <nav aria-label="Breadcrumb" className="mb-6 flex flex-wrap items-center gap-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
@@ -154,20 +151,53 @@ export default async function ShopPage({
             })}
           </nav>
 
-          <div className="max-w-4xl">
-            <h1 className="font-display text-5xl font-extrabold tracking-tight text-foreground md:text-6xl lg:text-7xl">
-              {activeCategory ? activeCategory.name : "Marketplace"}
-            </h1>
-            <p className="mt-5 text-lg font-medium text-muted-foreground md:text-xl max-w-2xl">
-              Discover <span className="font-bold text-foreground">{productsData.pagination?.total || filteredProducts.length}</span> verified listings
-              {trail.length > 1 ? <> in <span className="font-semibold text-foreground">{trail[trail.length - 2].name}</span></> : null} across Nigeria. The best deals, curated for you.
-            </p>
+          <div className={heroImage ? "lg:grid lg:grid-cols-[minmax(0,1fr)_340px] lg:items-center lg:gap-12 xl:grid-cols-[minmax(0,1fr)_400px] xl:gap-16" : undefined}>
+            <div className="max-w-4xl">
+              <h1 className="font-display text-5xl font-extrabold tracking-tight text-foreground md:text-6xl lg:text-7xl">
+                {activeCategory ? activeCategory.name : "Marketplace"}
+              </h1>
+              <p className="mt-5 text-lg font-medium text-muted-foreground md:text-xl max-w-2xl">
+                Discover <span className="font-bold text-foreground">{listingCount}</span> verified listings
+                {trail.length > 1 ? <> in <span className="font-semibold text-foreground">{trail[trail.length - 2].name}</span></> : null} across Nigeria. The best deals, curated for you.
+              </p>
 
-            <div className="mt-10">
-              <Suspense fallback={<div className="h-16 w-full max-w-4xl animate-pulse rounded-full bg-surface" />}>
-                <ShopHeaderFilters />
-              </Suspense>
+              <div className="mt-10">
+                <Suspense fallback={<div className="h-16 w-full max-w-4xl animate-pulse rounded-full bg-surface" />}>
+                  <ShopHeaderFilters />
+                </Suspense>
+              </div>
             </div>
+
+            {heroImage && (
+              <div aria-hidden className="relative hidden lg:block">
+                {/* Brand glow behind the frame */}
+                <div className="absolute -inset-6 rounded-full bg-gradient-to-br from-brand-soft/40 via-brand/15 to-brand-deep/20 blur-3xl"></div>
+
+                <div className="relative aspect-[5/4] overflow-hidden rounded-[2rem] bg-gradient-to-br from-surface to-surface-elevated shadow-[0_20px_50px_-12px_rgb(0,0,0,0.18)] ring-1 ring-border/70 rotate-[1.5deg] transition-transform duration-500 hover:rotate-0">
+                  <img
+                    src={heroImage}
+                    alt=""
+                    className={
+                      heroImageIsPhoto
+                        ? "h-full w-full object-cover"
+                        : "h-full w-full scale-[1.2] object-contain p-2 mix-blend-multiply dark:mix-blend-normal"
+                    }
+                  />
+                  {/* Hairline inner edge so light images don't bleed into the frame */}
+                  <div className="pointer-events-none absolute inset-0 rounded-[2rem] ring-1 ring-inset ring-black/5"></div>
+                </div>
+
+                {listingCount > 0 && (
+                  <div className="absolute -bottom-4 -left-5 flex items-center gap-2 rounded-full bg-card px-4 py-2 text-sm font-semibold text-foreground shadow-lg ring-1 ring-border">
+                    <span className="relative flex h-2.5 w-2.5">
+                      <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-brand opacity-60"></span>
+                      <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-brand"></span>
+                    </span>
+                    {listingCount} live {listingCount === 1 ? "listing" : "listings"}
+                  </div>
+                )}
+              </div>
+            )}
           </div>
         </div>
       </section>
