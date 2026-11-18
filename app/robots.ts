@@ -25,6 +25,13 @@ export default function robots(): MetadataRoute.Robots {
           "/otp",
           "/forgot-password",
           "/reset-password",
+          // Faceted/search URLs: every combination is a separate dynamic render
+          // (function invocation + CPU). Category paths and ?page= stay crawlable,
+          // and every product is already listed in the sitemap.
+          "/*?*q=",
+          "/*?*sort=",
+          "/*?*min_price=",
+          "/*?*max_price=",
         ],
       },
     ],

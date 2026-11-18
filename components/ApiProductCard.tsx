@@ -16,6 +16,7 @@ export function ApiProductCard({ product }: { product: GenericProduct }) {
   return (
     <Link
       href={`/product/${product.slug}`}
+      prefetch={false}
       className="group relative block overflow-hidden rounded-2xl border border-border bg-card transition-all duration-300 hover:-translate-y-1 hover:border-brand/60 hover:shadow-brand"
     >
       <div className="relative aspect-square overflow-hidden bg-surface">

@@ -77,8 +77,14 @@ export function AdminNotifications() {
   useEffect(() => {
     if (!token) return
     load()
-    const id = setInterval(load, 60_000)
-    return () => clearInterval(id)
+    // Skip polls while the tab is hidden; catch up as soon as it's visible again.
+    const tick = () => { if (document.visibilityState === "visible") load() }
+    const id = setInterval(tick, 60_000)
+    document.addEventListener("visibilitychange", tick)
+    return () => {
+      clearInterval(id)
+      document.removeEventListener("visibilitychange", tick)
+    }
   }, [token, load])
 
   const handleMarkAllRead = async () => {
