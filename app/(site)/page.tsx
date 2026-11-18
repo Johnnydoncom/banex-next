@@ -40,10 +40,11 @@ export const metadata = buildMetadata({
   path: "/",
 })
 
-// ISR: Regenerate the page every 60 seconds in the background.
-// The first build generates an empty page (if API is down), 
-// subsequent requests get a fresh cached version.
-export const revalidate = 60
+// ISR: Regenerate the page at most once an hour in the background.
+// COST NOTE (Vercel Hobby): every regeneration writes several ISR entries
+// (HTML + RSC + per-segment prefetch payloads). At 60s this page alone burned
+// ~200K+ ISR writes/month and paused the project. Keep this ≥ 3600.
+export const revalidate = 3600
 
 // ─── Icon map (API icon slug → Lucide component) ──────────────────────────────
 
@@ -87,6 +88,7 @@ function CategoryCard({ cat }: { cat: GenericCategory }) {
   return (
     <Link
       href={`/shop/${cat.slug}`}
+      prefetch={false}
       className="group flex flex-col items-center rounded-2xl border border-border bg-card p-4 text-center transition-all hover:-translate-y-0.5 hover:border-brand hover:shadow-soft"
     >
       <div className="relative h-20 w-20 overflow-hidden rounded-full border border-border bg-surface">

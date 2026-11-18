@@ -14,7 +14,8 @@ export const metadata = buildMetadata({
 })
 
 // Refresh the ranking periodically (ISR) so new/updated sellers appear without a rebuild.
-export const revalidate = 300
+// Hourly keeps Vercel ISR writes low (each regeneration = several writes).
+export const revalidate = 3600
 
 // The /generic/sellers endpoint only allows sort by shop_name/created_at/approved_at/products_count,
 // so we fetch and rank by rating (rating × review volume), falling back to catalogue size.

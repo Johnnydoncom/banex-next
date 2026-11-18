@@ -42,7 +42,10 @@ function GlobalFetchInterceptor({ children }: { children: ReactNode }) {
 
 export function Providers({ children }: { children: ReactNode }) {
   return (
-    <SessionProvider>
+    // refetchOnWindowFocus=false: by default every tab focus hits /api/auth/session
+    // (a serverless invocation) for EVERY visitor, signed in or not. The JWT is still
+    // read on page load and refreshed explicitly via useSession().update().
+    <SessionProvider refetchOnWindowFocus={false} refetchInterval={0}>
       <GlobalFetchInterceptor>
         <CartProvider>
           <WishlistProvider>

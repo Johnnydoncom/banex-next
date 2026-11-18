@@ -132,7 +132,8 @@ export type PublicSettings = {
 
 export async function fetchGenericSettings() {
   const res = await apiGet<ApiEnvelope<{ settings: PublicSettings }>>("/generic/settings", {
-    next: { revalidate: 300 },
+    // Site name/logo/support email rarely change; hourly keeps Data Cache (ISR) writes low.
+    next: { revalidate: 3600 },
   })
   return res.data?.settings ?? null
 }
