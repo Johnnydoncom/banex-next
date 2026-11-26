@@ -9,6 +9,7 @@ import type { Metadata } from "next"
 import { buildMetadata, metadataFromApiSeo } from "@/lib/seo/metadata"
 import { JsonLd } from "@/lib/seo/JsonLdComponent"
 import { itemListSchema, breadcrumbSchema } from "@/lib/seo/jsonld"
+import { parsePriceRange } from "@/lib/price-range"
 
 export const dynamic = 'force-dynamic'
 
@@ -63,26 +64,35 @@ export default async function ShopPage({
 
   const q = typeof resolvedSearchParams.q === "string" ? resolvedSearchParams.q : undefined
   const sort = typeof resolvedSearchParams.sort === "string" ? resolvedSearchParams.sort : undefined
-  const maxPriceParam = typeof resolvedSearchParams.max_price === "string" ? Number(resolvedSearchParams.max_price) : undefined
+  // Invalid/non-positive values are dropped; a reversed range is swapped.
+  const { min: minPriceParam, max: maxPriceParam } = parsePriceRange(resolvedSearchParams.min_price, resolvedSearchParams.max_price)
+  const hasPriceFilter = minPriceParam !== undefined || maxPriceParam !== undefined
   const pageParam = typeof resolvedSearchParams.page === "string" ? Math.max(1, parseInt(resolvedSearchParams.page, 10) || 1) : 1
   const PER_PAGE = 12
 
   let categoriesData: any = {}
   let productsData: any = {}
+  let productsFailed = false
 
   try {
     categoriesData = (await fetchGenericCategories()) || {}
+  } catch (e) {
+    console.error("[shop] Failed to fetch categories:", e)
+  }
+  try {
     // Filter by the viewed (most specific) category; the API includes its descendants.
     productsData = await fetchGenericProducts({
       q,
       category: viewedSlug,
       sort,
+      min_price: minPriceParam,
       max_price: maxPriceParam,
       page: pageParam,
       per_page: PER_PAGE,
     }) || {}
   } catch (e) {
-    console.error("[shop] Failed to fetch data:", e)
+    productsFailed = true
+    console.error("[shop] Failed to fetch products:", e)
   }
 
   const categories: GenericCategory[] = categoriesData.categories || []
@@ -214,7 +224,7 @@ export default async function ShopPage({
           </Suspense>
 
           <div>
-            <p className="mb-5 text-sm text-muted-foreground">
+            <p className={`mb-5 text-sm text-muted-foreground ${productsFailed ? "hidden" : ""}`}>
               {pagination && pagination.total > 0 ? (
                 <>
                   Showing{" "}
@@ -228,7 +238,24 @@ export default async function ShopPage({
                 <>Showing <span className="font-semibold text-foreground">{filteredProducts.length}</span></>
               )}
             </p>
-            {filteredProducts.length === 0 ? (
+            {productsFailed ? (
+              <div role="alert" className="rounded-xl border border-dashed border-border bg-card p-16 text-center">
+                <p className="font-display text-2xl font-semibold">We couldn&apos;t load listings</p>
+                <p className="mt-2 text-sm text-muted-foreground">
+                  {hasPriceFilter
+                    ? "Filtering by price isn't available right now. Clear the price range to keep browsing."
+                    : "Something went wrong on our side. Please try again in a moment."}
+                </p>
+                {hasPriceFilter && (
+                  <Link
+                    href={`${basePath}${buildQuery({ q, sort })}`}
+                    className="mt-5 inline-flex rounded-full bg-brand-deep px-5 py-2 text-sm font-semibold text-white hover:bg-brand-deep/90"
+                  >
+                    Clear price filter
+                  </Link>
+                )}
+              </div>
+            ) : filteredProducts.length === 0 ? (
               <div className="rounded-xl border border-dashed border-border bg-card p-16 text-center">
                 <p className="font-display text-2xl font-semibold">Nothing matches</p>
                 <p className="mt-2 text-sm text-muted-foreground">Try a different search or widen your filters.</p>
@@ -246,7 +273,7 @@ export default async function ShopPage({
                     lastPage={pagination.last_page}
                     total={pagination.total}
                     perPage={pagination.per_page}
-                    hrefForPage={(n) => `${basePath}${buildQuery({ q, sort, max_price: maxPriceParam, page: n > 1 ? n : undefined })}`}
+                    hrefForPage={(n) => `${basePath}${buildQuery({ q, sort, min_price: minPriceParam, max_price: maxPriceParam, page: n > 1 ? n : undefined })}`}
                   />
                 )}
               </>

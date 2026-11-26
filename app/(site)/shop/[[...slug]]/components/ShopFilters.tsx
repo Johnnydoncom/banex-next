@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useEffect, useRef, useState, type KeyboardEvent } from "react"
 import { useRouter, useSearchParams, usePathname } from "next/navigation"
 import { Search, SlidersHorizontal, MapPin, ChevronRight } from "lucide-react"
 import { useDebouncedCallback } from "use-debounce"
@@ -79,6 +79,164 @@ import { Sheet, SheetContent, SheetTrigger, SheetTitle, SheetHeader } from "@/co
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Slider } from "@/components/ui/slider"
+import {
+  PRICE_CEIL,
+  PRICE_FLOOR,
+  PRICE_STOPS,
+  formatNairaShort,
+  parsePriceRange,
+  stopIndexFor,
+} from "@/lib/price-range"
+
+type PriceRange = [min: number, max: number]
+
+/** Order the bounds and clamp them to the slider's floor/ceiling. */
+function normalizeRange([a, b]: PriceRange): PriceRange {
+  const clamp = (n: number) => Math.min(Math.max(Math.round(n), PRICE_FLOOR), PRICE_CEIL)
+  const lo = clamp(Math.min(a, b))
+  const hi = clamp(Math.max(a, b))
+  return [lo, hi]
+}
+
+function describeRange([lo, hi]: PriceRange): string {
+  const hasMin = lo > PRICE_FLOOR
+  const hasMax = hi < PRICE_CEIL
+  if (hasMin && hasMax) return `${formatNairaShort(lo)} – ${formatNairaShort(hi)}`
+  if (hasMin) return `${formatNairaShort(lo)}+`
+  if (hasMax) return `Up to ${formatNairaShort(hi)}`
+  return "Any"
+}
+
+/** Typed amount → whole naira; an empty box means "no limit" on that side. */
+function amountFrom(raw: string, fallback: number): number {
+  if (raw.trim() === "") return fallback
+  const n = Number(raw)
+  return Number.isFinite(n) ? Math.max(Math.round(n), PRICE_FLOOR) : fallback
+}
+
+/**
+ * Min + max price filter. Dragging updates the labels live; the URL (and so the
+ * server fetch) only changes when a drag is released or a typed value is applied
+ * with Enter/blur. A bound at the floor/ceiling is dropped from the URL, and the
+ * page resets to 1 so a narrower range never lands on an empty page.
+ */
+function PriceRangeFilter({ initialMin, initialMax }: { initialMin: number; initialMax: number }) {
+  const router = useRouter()
+  const pathname = usePathname()
+  const searchParams = useSearchParams()
+  const [range, setRange] = useState<PriceRange>(() => normalizeRange([initialMin, initialMax]))
+  const lastPushed = useRef<string | null>(null)
+
+  const shown = normalizeRange(range)
+  const active = shown[0] > PRICE_FLOOR || shown[1] < PRICE_CEIL
+
+  const commit = useDebouncedCallback((next: PriceRange) => {
+    const [lo, hi] = normalizeRange(next)
+    const params = new URLSearchParams(searchParams.toString())
+    if (lo > PRICE_FLOOR) params.set("min_price", String(lo))
+    else params.delete("min_price")
+    if (hi < PRICE_CEIL) params.set("max_price", String(hi))
+    else params.delete("max_price")
+
+    if (
+      params.get("min_price") === searchParams.get("min_price") &&
+      params.get("max_price") === searchParams.get("max_price")
+    ) {
+      return
+    }
+    params.delete("page")
+    const qs = params.toString()
+    // Enter followed by blur would otherwise push (and server-render) the same URL twice.
+    if (qs === lastPushed.current) return
+    lastPushed.current = qs
+    router.push(qs ? `${pathname}?${qs}` : pathname, { scroll: false })
+  }, 300)
+
+  const applyNow = (next: PriceRange) => {
+    const normalized = normalizeRange(next)
+    setRange(normalized)
+    commit(normalized)
+    commit.flush()
+  }
+
+  const applyOnEnter = (e: KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === "Enter") {
+      e.preventDefault()
+      applyNow(range)
+    }
+  }
+
+  return (
+    <div>
+      <div className="flex items-center justify-between gap-2">
+        <p className="text-[11px] font-semibold uppercase tracking-widest text-brand-deep">
+          Price · <span className="text-foreground">{describeRange(shown)}</span>
+        </p>
+        {active && (
+          <button
+            type="button"
+            onClick={() => applyNow([PRICE_FLOOR, PRICE_CEIL])}
+            className="text-[11px] font-medium text-muted-foreground underline-offset-2 hover:text-foreground hover:underline"
+          >
+            Clear
+          </button>
+        )}
+      </div>
+
+      <Slider
+        className="mt-4"
+        min={0}
+        max={PRICE_STOPS.length - 1}
+        step={1}
+        minStepsBetweenThumbs={1}
+        value={[stopIndexFor(shown[0]), stopIndexFor(shown[1])]}
+        onValueChange={([a, b]) => setRange([PRICE_STOPS[a], PRICE_STOPS[b]])}
+        onValueCommit={([a, b]) => commit([PRICE_STOPS[a], PRICE_STOPS[b]])}
+        thumbLabels={["Minimum price", "Maximum price"]}
+      />
+      <div className="mt-1.5 flex justify-between text-[10px] text-muted-foreground">
+        <span>{formatNairaShort(PRICE_FLOOR)}</span>
+        <span>{formatNairaShort(PRICE_CEIL)}+</span>
+      </div>
+
+      <div className="mt-3 grid grid-cols-2 gap-2">
+        <label className="relative block">
+          <span className="sr-only">Minimum price in naira</span>
+          <span className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">₦</span>
+          <Input
+            type="number"
+            inputMode="numeric"
+            min={PRICE_FLOOR}
+            step={1000}
+            placeholder="No min"
+            value={range[0] > PRICE_FLOOR ? range[0] : ""}
+            onChange={(e) => setRange([amountFrom(e.target.value, PRICE_FLOOR), range[1]])}
+            onBlur={() => applyNow(range)}
+            onKeyDown={applyOnEnter}
+            className="h-9 pl-6 text-xs"
+          />
+        </label>
+        <label className="relative block">
+          <span className="sr-only">Maximum price in naira</span>
+          <span className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">₦</span>
+          <Input
+            type="number"
+            inputMode="numeric"
+            min={PRICE_FLOOR}
+            step={1000}
+            placeholder="No max"
+            value={range[1] < PRICE_CEIL ? range[1] : ""}
+            onChange={(e) => setRange([range[0], amountFrom(e.target.value, PRICE_CEIL)])}
+            onBlur={() => applyNow(range)}
+            onKeyDown={applyOnEnter}
+            className="h-9 pl-6 text-xs"
+          />
+        </label>
+      </div>
+    </div>
+  )
+}
 
 interface ShopSidebarFiltersProps {
   categories: GenericCategory[]
@@ -181,8 +339,8 @@ function FilterContent({
   trailSlugs,
   totalListingsCount,
   router,
-  maxPrice,
-  handlePriceChange
+  initialMinPrice,
+  initialMaxPrice,
 }: any) {
   return (
     <div className="space-y-7">
@@ -219,31 +377,8 @@ function FilterContent({
         </div>
       </div>
 
-      <div>
-        <p className="text-[11px] font-semibold uppercase tracking-widest text-brand-deep">
-          Max price ·{" "}
-          <span className="text-foreground">
-            {new Intl.NumberFormat("en-NG", {
-              style: "currency",
-              currency: "NGN",
-              maximumFractionDigits: 0,
-            }).format(maxPrice)}
-          </span>
-        </p>
-        <Input
-          type="range"
-          min={5000}
-          max={20_000_000}
-          step={5000}
-          defaultValue={maxPrice}
-          onChange={(e) => handlePriceChange(Number(e.target.value))}
-          className="mt-3 w-full accent-[var(--brand)]"
-        />
-        <div className="mt-1 flex justify-between text-[10px] text-muted-foreground">
-          <span>₦5k</span>
-          <span>₦20m</span>
-        </div>
-      </div>
+      {/* Keyed on the URL range so back/forward and "Clear" re-seed the local state. */}
+      <PriceRangeFilter key={`${initialMinPrice}-${initialMaxPrice}`} initialMin={initialMinPrice} initialMax={initialMaxPrice} />
 
       <div className="rounded-xl border border-border bg-card p-4">
         <p className="flex items-center gap-1.5 text-xs font-semibold text-brand-deep">
@@ -257,24 +392,15 @@ function FilterContent({
 
 export function ShopSidebarFilters(props: ShopSidebarFiltersProps) {
   const router = useRouter()
-  const pathname = usePathname()
   const searchParams = useSearchParams()
 
-  const maxPrice = Number(searchParams.get("max_price")) || 20_000_000
-
-  const handlePriceChange = useDebouncedCallback((price: number) => {
-    const params = new URLSearchParams(searchParams)
-    params.set("max_price", price.toString())
-    router.push(`${pathname}?${params.toString()}`)
-  }, 300)
+  const urlRange = parsePriceRange(searchParams.get("min_price"), searchParams.get("max_price"))
 
   const contentProps = {
     ...props,
-    searchParams,
     router,
-    pathname,
-    maxPrice,
-    handlePriceChange
+    initialMinPrice: Math.max(urlRange.min ?? PRICE_FLOOR, PRICE_FLOOR),
+    initialMaxPrice: Math.min(urlRange.max ?? PRICE_CEIL, PRICE_CEIL),
   }
 
   return (
